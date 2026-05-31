@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志模式演化分析系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.85;
+            margin-top: 5px;
+        }
+        .container {
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .control-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        .control-group input,
+        .control-group select {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        .btn-secondary {
+            background: #52c41a;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #73d13d;
+        }
+        .btn-upload {
+            background: #faad14;
+            color: white;
+        }
+        .btn-upload:hover {
+            background: #ffc53d;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1890ff;
+        }
+        .stat-card .trend {
+            font-size: 12px;
+            color: #52c41a;
+            margin-top: 5px;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .chart-box {
+            width: 100%;
+            height: 400px;
+        }
+        .timeline-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .timeline-item {
+            display: flex;
+            padding: 15px;
+            border-left: 3px solid #1890ff;
+            margin-bottom: 10px;
+            background: #fafafa;
+            border-radius: 0 4px 4px 0;
+        }
+        .timeline-item.field_added {
+            border-left-color: #52c41a;
+        }
+        .timeline-item.field_removed {
+            border-left-color: #ff4d4f;
+        }
+        .timeline-item.type_changed {
+            border-left-color: #faad14;
+        }
+        .timeline-item.enum_added {
+            border-left-color: #1890ff;
+        }
+        .timeline-item.enum_removed {
+            border-left-color: #722ed1;
+        }
+        .timeline-item.field_reordered {
+            border-left-color: #8c8c8c;
+            background: #fafafa;
+        }
+        .timeline-item.field_renamed {
+            border-left-color: #13c2c2;
+        }
+        .timeline-item.low-severity {
+            opacity: 0.7;
+        }
+        .timeline-item.high-severity {
+            background: #fff1f0;
+        }
+        .timeline-time {
+            min-width: 180px;
+            font-size: 13px;
+            color: #999;
+        }
+        .timeline-content {
+            flex: 1;
+        }
+        .timeline-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .timeline-type.field_added {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        .timeline-type.field_removed {
+            background: #fff1f0;
+            color: #ff4d4f;
+        }
+        .timeline-type.type_changed {
+            background: #fffbe6;
+            color: #faad14;
+        }
+        .timeline-type.enum_added {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        .timeline-type.enum_removed {
+            background: #f9f0ff;
+            color: #722ed1;
+        }
+        .timeline-type.field_reordered {
+            background: #f5f5f5;
+            color: #8c8c8c;
+        }
+        .timeline-type.field_renamed {
+            background: #e6fffb;
+            color: #13c2c2;
+        }
+        .severity-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .severity-badge.low {
+            background: #f5f5f5;
+            color: #8c8c8c;
+        }
+        .severity-badge.medium {
+            background: #fffbe6;
+            color: #faad14;
+        }
+        .severity-badge.high {
+            background: #fff1f0;
+            color: #ff4d4f;
+        }
+        .timeline-details {
+            font-size: 14px;
+            color: #333;
+        }
+        .timeline-affected {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            text-align: right;
+        }
+        .upload-area {
+            border: 2px dashed #d9d9d9;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #1890ff;
+            background: #f0f7ff;
+        }
+        .upload-icon {
+            font-size: 48px;
+            color: #999;
+            margin-bottom: 15px;
+        }
+        .upload-text {
+            color: #666;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1890ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            color: #1890ff;
+            border-bottom-color: #1890ff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .field-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .field-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .field-item:hover {
+            background: #fafafa;
+        }
+        .field-name {
+            font-weight: 500;
+        }
+        .field-presence {
+            color: #666;
+            font-size: 13px;
+        }
+        .presence-bar {
+            display: inline-block;
+            width: 60px;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .presence-fill {
+            height: 100%;
+            background: #52c41a;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .presence-fill.low {
+            background: #faad14;
+        }
+        .presence-fill.critical {
+            background: #ff4d4f;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 日志模式演化分析系统</h1>
+        <p>自动检测日志格式变化，追踪模式演化时间线</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label>开始时间</label>
+                    <input type="datetime-local" id="startTime">
+                </div>
+                <div class="control-group">
+                    <label>结束时间</label>
+                    <input type="datetime-local" id="endTime">
+                </div>
+                <div class="control-group">
+                    <label>日志格式</label>
+                    <select id="formatType">
+                        <option value="">全部</option>
+                        <option value="combined">Combined</option>
+                        <option value="main">Main</option>
+                        <option value="json">JSON</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>变化类型</label>
+                    <select id="changeType">
+                        <option value="">全部</option>
+                        <option value="structural">仅结构变更</option>
+                        <option value="field_added">字段新增</option>
+                        <option value="field_removed">字段移除</option>
+                        <option value="field_renamed">字段重命名</option>
+                        <option value="field_reordered">字段顺序调整</option>
+                        <option value="type_changed">类型变更</option>
+                        <option value="enum_added">枚举值新增</option>
+                        <option value="enum_removed">枚举值移除</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadData()">🔍 查询</button>
+                <button class="btn btn-secondary" onclick="runDetection()">⚡ 检测变化</button>
+                <button class="btn btn-upload" onclick="showUploadModal()">📁 上传日志</button>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="label">总日志数</div>
+                <div class="value" id="totalLogs">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">变化事件数</div>
+                <div class="value" id="totalChanges">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">唯一字段数</div>
+                <div class="value" id="uniqueFields">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">受影响日志</div>
+                <div class="value" id="affectedLogs">-</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('sankey')">🔄 模式演化图</div>
+            <div class="tab" onclick="switchTab('timeline')">📅 变化时间线</div>
+            <div class="tab" onclick="switchTab('fields')">📋 字段分析</div>
+            <div class="tab" onclick="switchTab('versions')">📜 Schema版本</div>
+            <div class="tab" onclick="switchTab('prediction')">🔮 预测</div>
+        </div>
+
+        <div id="tab-sankey" class="tab-content active">
+            <div class="chart-container">
+                <div class="chart-title">日志模式演化 Sankey 图</div>
+                <div class="chart-box" id="sankeyChart"></div>
+            </div>
+        </div>
+
+        <div id="tab-timeline" class="tab-content">
+            <div class="timeline-container">
+                <div class="chart-title">模式变化时间线</div>
+                <div id="timelineContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div>暂无变化事件，请点击"检测变化"按钮开始分析</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-fields" class="tab-content">
+            <div class="chart-container">
+                <div class="chart-title">字段存在率分析</div>
+                <div class="field-list" id="fieldList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div>加载字段数据中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-versions" class="tab-content">
+            <div class="chart-container">
+                <div class="chart-title">Schema 版本演化</div>
+                <div class="chart-box" id="versionChart"></div>
+            </div>
+        </div>
+
+        <div id="tab-prediction" class="tab-content">
+            <div class="chart-container">
+                <div class="chart-title">🔮 未来 7 天模式变更预测</div>
+                <div class="prediction-summary" id="predictionSummary" style="display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap;"></div>
+            </div>
+
+            <div class="chart-container" style="margin-top:20px;">
+                <div class="chart-title">⚠️ 预测风险评估</div>
+                <div id="riskAssessment" class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <div>点击"查询预测"加载风险评估</div>
+                </div>
+            </div>
+
+            <div class="chart-container" style="margin-top:20px;">
+                <div class="chart-title">💡 Schema 兼容建议</div>
+                <div id="compatibilityAdvice" class="empty-state">
+                    <div class="empty-state-icon">💡</div>
+                    <div>点击"查询预测"加载兼容建议</div>
+                </div>
+            </div>
+
+            <div class="chart-container" style="margin-top:20px;">
+                <div class="chart-title">📈 字段趋势分析</div>
+                <div class="chart-box" id="trendChart"></div>
+            </div>
+
+            <div style="margin-top:20px; text-align:center;">
+                <button class="btn btn-primary" onclick="loadPredictions()">🔍 查询预测</button>
+                <button class="btn btn-secondary" onclick="loadDemoPredictions()">🎲 加载演示数据</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-title">上传日志文件</div>
+            <div class="modal-body">
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击选择日志文件或拖拽文件到此处</div>
+                    <div class="upload-text" style="font-size: 12px; margin-top: 10px;">支持 .log, .txt 格式</div>
+                </div>
+                <input type="file" id="fileInput" accept=".log,.txt" style="display: none;">
+                <div id="uploadStatus" style="margin-top: 15px; text-align: center;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="uploadFile()">上传</button>
+                <button class="btn" style="background: #f0f0f0;" onclick="hideUploadModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sankeyChart = null;
+        let versionChart = null;
+        let trendChart = null;
+        let currentFile = null;
+
+        function initCharts() {
+            sankeyChart = echarts.init(document.getElementById('sankeyChart'));
+            versionChart = echarts.init(document.getElementById('versionChart'));
+            trendChart = echarts.init(document.getElementById('trendChart'));
+            window.addEventListener('resize', () => {
+                sankeyChart.resize();
+                versionChart.resize();
+                if (trendChart) trendChart.resize();
+            });
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            if (tabName === 'sankey' && sankeyChart) {
+                sankeyChart.resize();
+            }
+            if (tabName === 'versions' && versionChart) {
+                versionChart.resize();
+            }
+            if (tabName === 'prediction' && trendChart) {
+                trendChart.resize();
+            }
+        }
+
+        function getQueryParams() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const formatType = document.getElementById('formatType').value;
+            const changeType = document.getElementById('changeType').value;
+
+            const params = new URLSearchParams();
+            if (startTime) params.append('start_time', new Date(startTime).toISOString());
+            if (endTime) params.append('end_time', new Date(endTime).toISOString());
+            if (formatType) params.append('format_type', formatType);
+            if (changeType) params.append('change_type', changeType);
+
+            return params.toString();
+        }
+
+        async function loadData() {
+            const params = getQueryParams();
+
+            try {
+                const [statsRes, sankeyRes, timelineRes, impactRes, versionsRes] = await Promise.all([
+                    fetch('/api/v1/stats/summary?' + params).then(r => r.json()),
+                    fetch('/api/v1/evolution/sankey?' + params).then(r => r.json()),
+                    fetch('/api/v1/evolution/timeline?' + params).then(r => r.json()),
+                    fetch('/api/v1/evolution/impact').then(r => r.json()),
+                    fetch('/api/v1/schema/versions').then(r => r.json())
+                ]);
+
+                updateStats(statsRes);
+                renderSankey(sankeyRes);
+                renderTimeline(timelineRes);
+                renderFields(impactRes);
+                renderVersions(versionsRes);
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                alert('加载数据失败: ' + error.message);
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('totalLogs').textContent = stats.total_logs?.toLocaleString() || '-';
+            document.getElementById('totalChanges').textContent = stats.total_change_events?.toLocaleString() || '-';
+            document.getElementById('uniqueFields').textContent = stats.unique_fields_count?.toLocaleString() || '-';
+            document.getElementById('affectedLogs').textContent = stats.timeline_summary?.total_affected_logs?.toLocaleString() || '-';
+        }
+
+        function renderSankey(data) {
+            if (!data.nodes || data.nodes.length === 0) {
+                sankeyChart.setOption({
+                    title: {
+                        text: '暂无演化数据',
+                        left: 'center',
+                        top: 'center',
+                        textStyle: { color: '#999' }
+                    }
+                });
+                return;
+            }
+
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    triggerOn: 'mousemove',
+                    formatter: function(params) {
+                        if (params.dataType === 'edge') {
+                            return `<strong>${params.data.field_name}</strong><br/>
+                                    变化类型: ${params.data.change_type}<br/>
+                                    影响数量: ${params.data.value.toLocaleString()}`;
+                        }
+                        return `<strong>${params.name}</strong>`;
+                    }
+                },
+                series: [{
+                    type: 'sankey',
+                    layout: 'none',
+                    emphasis: {
+                        focus: 'adjacency'
+                    },
+                    data: data.nodes.map(node => ({
+                        name: node.name,
+                        itemStyle: {
+                            color: getCategoryColor(node.category)
+                        }
+                    })),
+                    links: data.links.map(link => ({
+                        source: getNodeName(data.nodes, link.source),
+                        target: getNodeName(data.nodes, link.target),
+                        value: link.value,
+                        lineStyle: {
+                            color: getChangeColor(link.change_type)
+                        },
+                        field_name: link.field_name,
+                        change_type: link.change_type
+                    })),
+                    lineStyle: {
+                        curveness: 0.5
+                    },
+                    label: {
+                        fontSize: 12
+                    }
+                }]
+            };
+
+            sankeyChart.setOption(option, true);
+        }
+
+        function getNodeName(nodes, id) {
+            const node = nodes.find(n => n.id === id);
+            return node ? node.name : id;
+        }
+
+        function getCategoryColor(category) {
+            const colors = {
+                'combined': '#1890ff',
+                'main': '#52c41a',
+                'json': '#faad14',
+                'unknown': '#722ed1'
+            };
+            return colors[category] || '#1890ff';
+        }
+
+        function getChangeColor(changeType) {
+            const colors = {
+                'field_added': '#52c41a',
+                'field_removed': '#ff4d4f',
+                'field_renamed': '#13c2c2',
+                'field_reordered': '#8c8c8c',
+                'type_changed': '#faad14',
+                'enum_added': '#1890ff',
+                'enum_removed': '#722ed1'
+            };
+            return colors[changeType] || '#1890ff';
+        }
+
+        function getStructuralChangeTypes() {
+            return ['field_added', 'field_removed', 'type_changed'];
+        }
+
+        function renderTimeline(data) {
+            const container = document.getElementById('timelineContent');
+
+            if (!data.timeline || data.timeline.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div>暂无变化事件</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const selectedChangeType = document.getElementById('changeType').value;
+            let events = data.timeline;
+
+            if (selectedChangeType === 'structural') {
+                events = events.filter(e => getStructuralChangeTypes().includes(e.change_type));
+            } else if (selectedChangeType) {
+                events = events.filter(e => e.change_type === selectedChangeType);
+            }
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div>没有符合筛选条件的变化事件</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            events.forEach(event => {
+                const severity = event.severity || 'info';
+                const severityClass = severity === 'low' ? 'low-severity' : (severity === 'high' ? 'high-severity' : '');
+                const severityBadge = event.severity_label ? 
+                    `<span class="severity-badge ${severity}">${event.severity_label}</span>` : '';
+                
+                let details = event.details || `${event.field_name}: ${event.old_value} → ${event.new_value}`;
+                
+                if (event.is_order_only) {
+                    details = '⚠️ ' + details + ' <span style="color:#8c8c8c;font-size:12px;">(字段顺序调整，非结构变更)</span>';
+                } else if (event.is_rename) {
+                    details = '🔄 ' + details;
+                }
+
+                html += `
+                    <div class="timeline-item ${event.change_type} ${severityClass}">
+                        <div class="timeline-time">${formatTime(event.time)}</div>
+                        <div class="timeline-content">
+                            <span class="timeline-type ${event.change_type}">${event.change_type_label || event.change_type}</span>
+                            ${severityBadge}
+                            <div class="timeline-details">${details}</div>
+                            <div class="timeline-affected">影响 ${event.affected_logs?.toLocaleString() || 0} 条日志</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderFields(data) {
+            const container = document.getElementById('fieldList');
+
+            if (!data.fields_detail || data.fields_detail.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div>暂无字段数据</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            data.fields_detail.forEach(field => {
+                const presence = field.presence_rate || 0;
+                let presenceClass = '';
+                if (presence < 30) presenceClass = 'critical';
+                else if (presence < 70) presenceClass = 'low';
+
+                html += `
+                    <div class="field-item">
+                        <div>
+                            <span class="field-name">${field.field_name}</span>
+                            <span class="field-presence">
+                                <span class="presence-bar">
+                                    <span class="presence-fill ${presenceClass}" style="width: ${presence}%"></span>
+                                </span>
+                                ${presence}%
+                            </span>
+                        </div>
+                        <div style="color: #999; font-size: 13px;">
+                            ${field.present_count?.toLocaleString() || 0} 次出现
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderVersions(data) {
+            const versions = data.database_versions || [];
+
+            if (versions.length === 0) {
+                versionChart.setOption({
+                    title: {
+                        text: '暂无版本数据',
+                        left: 'center',
+                        top: 'center',
+                        textStyle: { color: '#999' }
+                    }
+                });
+                return;
+            }
+
+            const sortedVersions = versions.sort((a, b) => a.version_number - b.version_number);
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        const version = sortedVersions[params[0].dataIndex];
+                        return `<strong>v${version.version_number}</strong><br/>
+                                字段数: ${Object.keys(version.fields || {}).length}<br/>
+                                样本数: ${version.sample_count?.toLocaleString() || 0}<br/>
+                                时间: ${formatTime(version.version_time)}`;
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: sortedVersions.map(v => 'v' + v.version_number)
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '字段数'
+                },
+                series: [{
+                    type: 'line',
+                    data: sortedVersions.map(v => Object.keys(v.fields || {}).length),
+                    smooth: true,
+                    lineStyle: {
+                        width: 3,
+                        color: '#1890ff'
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                            ]
+                        }
+                    },
+                    symbol: 'circle',
+                    symbolSize: 10,
+                    itemStyle: {
+                        color: '#1890ff'
+                    }
+                }]
+            };
+
+            versionChart.setOption(option, true);
+        }
+
+        async function runDetection() {
+            const formatType = document.getElementById('formatType').value || 'unknown';
+
+            try {
+                const response = await fetch('/api/v1/detection/detect?format_type=' + formatType, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.changes_detected > 0) {
+                    alert(`检测到 ${data.changes_detected} 个模式变化!`);
+                } else {
+                    alert('未检测到新的模式变化');
+                }
+
+                loadData();
+            } catch (error) {
+                console.error('检测失败:', error);
+                alert('检测失败: ' + error.message);
+            }
+        }
+
+        function showUploadModal() {
+            document.getElementById('uploadModal').classList.add('active');
+        }
+
+        function hideUploadModal() {
+            document.getElementById('uploadModal').classList.remove('active');
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadStatus').innerHTML = '';
+            currentFile = null;
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            currentFile = e.target.files[0];
+            if (currentFile) {
+                document.querySelector('.upload-text').textContent = `已选择: ${currentFile.name} (${(currentFile.size / 1024).toFixed(2)} KB)`;
+            }
+        });
+
+        async function uploadFile() {
+            if (!currentFile) {
+                alert('请选择要上传的文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.innerHTML = '<div class="loading"></div> 上传中...';
+
+            try {
+                const response = await fetch('/api/v1/logs/ingest-file', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                statusDiv.innerHTML = `
+                    <div style="color: #52c41a;">
+                        ✅ 上传成功! 解析 ${data.ingested_count} 条日志
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    hideUploadModal();
+                    loadData();
+                }, 1500);
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ff4d4f;">❌ 上传失败: ${error.message}</div>`;
+            }
+        }
+
+        function formatTime(timeStr) {
+            if (!timeStr) return '-';
+            try {
+                const date = new Date(timeStr);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            } catch {
+                return timeStr;
+            }
+        }
+
+        async function loadPredictions() {
+            const formatType = document.getElementById('formatType').value || 'unknown';
+            const horizonDays = 7;
+
+            try {
+                const [predictionRes, adviceRes] = await Promise.all([
+                    fetch('/api/v1/prediction/summary?format_type=' + formatType + '&horizon_days=' + horizonDays).then(r => r.json()),
+                    fetch('/api/v1/prediction/advice?format_type=' + formatType).then(r => r.json())
+                ]);
+
+                renderPredictionSummary(predictionRes);
+                renderRiskAssessment(predictionRes);
+                renderCompatibilityAdvice(adviceRes);
+                renderFieldTrends(predictionRes);
+            } catch (error) {
+                console.error('加载预测数据失败:', error);
+                alert('加载预测数据失败: ' + error.message);
+            }
+        }
+
+        function renderPredictionSummary(data) {
+            const container = document.getElementById('predictionSummary');
+
+            const riskLevel = data.overall_risk_level || 'low';
+            const riskColor = riskLevel === 'high' ? '#ff4d4f' : (riskLevel === 'medium' ? '#faad14' : '#52c41a');
+            const riskLabel = riskLevel === 'high' ? '高' : (riskLevel === 'medium' ? '中' : '低');
+
+            const cadenceHours = data.change_cadence_hours;
+            const acceleration = data.change_acceleration || 'stable';
+            const accelerationLabel = acceleration === 'accelerating' ? '加速' : (acceleration === 'decelerating' ? '减速' : '稳定');
+
+            container.innerHTML = `
+                <div style="flex:1; min-width:200px; padding:15px; background:${riskColor}15; border-radius:8px; border-left:4px solid ${riskColor};">
+                    <div style="font-size:13px; color:#666;">整体风险等级</div>
+                    <div style="font-size:24px; font-weight:600; color:${riskColor};">${riskLabel}</div>
+                </div>
+                <div style="flex:1; min-width:200px; padding:15px; background:#f0f7ff; border-radius:8px; border-left:4px solid #1890ff;">
+                    <div style="font-size:13px; color:#666;">预测变更数</div>
+                    <div style="font-size:24px; font-weight:600; color:#1890ff;">${data.total_predictions || 0}</div>
+                </div>
+                <div style="flex:1; min-width:200px; padding:15px; background:#fff7e6; border-radius:8px; border-left:4px solid #faad14;">
+                    <div style="font-size:13px; color:#666;">高风险预测</div>
+                    <div style="font-size:24px; font-weight:600; color:#faad14;">${data.high_risk_predictions || 0}</div>
+                </div>
+                <div style="flex:1; min-width:200px; padding:15px; background:#f6ffed; border-radius:8px; border-left:4px solid #52c41a;">
+                    <div style="font-size:13px; color:#666;">变更频率</div>
+                    <div style="font-size:18px; font-weight:600; color:#52c41a;">
+                        ${cadenceHours ? '每 ' + cadenceHours.toFixed(1) + ' 小时' : '数据不足'}
+                    </div>
+                    <div style="font-size:12px; color:#999;">变化趋势: ${accelerationLabel}</div>
+                </div>
+            `;
+        }
+
+        function renderRiskAssessment(data) {
+            const container = document.getElementById('riskAssessment');
+            const keyRisks = data.key_risks || [];
+
+            if (keyRisks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div>暂无高风险预测</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            keyRisks.forEach(risk => {
+                const severityColor = risk.severity === 'warning' ? '#ff4d4f' : '#faad14';
+                const confidencePercent = (risk.confidence * 100).toFixed(0);
+
+                html += `
+                    <div style="padding:15px; margin-bottom:10px; background:#fff1f0; border-radius:8px; border-left:4px solid ${severityColor};">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-weight:600; color:#333;">${risk.field_name}</div>
+                            <div style="background:${severityColor}; color:white; padding:2px 8px; border-radius:4px; font-size:12px;">
+                                置信度 ${confidencePercent}%
+                            </div>
+                        </div>
+                        <div style="margin-top:8px; font-size:13px; color:#666;">${risk.rationale}</div>
+                        <div style="margin-top:5px; font-size:12px; color:#999;">
+                            预测时间: ${formatTime(risk.predicted_time)}
+                        </div>
+                        <div style="margin-top:8px; padding:8px; background:#fff; border-radius:4px; font-size:13px; color:#52c41a;">
+                            💡 ${risk.recommendation}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderCompatibilityAdvice(data) {
+            const container = document.getElementById('compatibilityAdvice');
+            const adviceList = data.advice || [];
+
+            if (adviceList.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💡</div>
+                        <div>暂无兼容建议（需要历史变化数据）</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const priorityColors = { high: '#ff4d4f', medium: '#faad14', low: '#52c41a' };
+            const priorityLabels = { high: '高', medium: '中', low: '低' };
+            const categoryLabels = {
+                'field_optional': '字段可选化',
+                'field_promotion': '字段提升',
+                'type_union': '联合类型',
+                'enum_flexible': '枚举弹性化',
+                'forward_compat': '前后兼容',
+                'versioning': '版本化管理',
+                'monitoring': '监控增强'
+            };
+
+            let html = '';
+            adviceList.forEach(advice => {
+                const priority = advice.priority || 'low';
+                const color = priorityColors[priority];
+                const categoryLabel = categoryLabels[advice.category] || advice.category;
+
+                html += `
+                    <div style="padding:15px; margin-bottom:10px; background:white; border-radius:8px; border:1px solid #e8e8e8;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div style="font-weight:600; color:#333;">
+                                <span style="background:${color}; color:white; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:8px;">
+                                    ${categoryLabel}
+                                </span>
+                                ${advice.field_name}
+                            </div>
+                            <div style="font-size:12px; color:${color}; font-weight:500;">
+                                优先级: ${priorityLabels[priority]}
+                            </div>
+                        </div>
+                        <div style="font-size:13px; color:#666; margin-bottom:8px;">
+                            <strong>当前状态:</strong> ${advice.current_state}
+                        </div>
+                        <div style="font-size:13px; color:#52c41a; margin-bottom:8px;">
+                            <strong>建议:</strong> ${advice.recommendation}
+                        </div>
+                        <details style="margin-top:5px;">
+                            <summary style="cursor:pointer; font-size:12px; color:#1890ff;">查看代码示例</summary>
+                            <pre style="margin-top:8px; padding:10px; background:#f5f5f5; border-radius:4px; font-size:12px; overflow-x:auto;">${advice.code_snippet || 'N/A'}</pre>
+                        </details>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderFieldTrends(data) {
+            if (!trendChart) return;
+
+            const fieldTrends = data.field_trends || [];
+            if (fieldTrends.length === 0) {
+                trendChart.setOption({
+                    title: {
+                        text: '暂无字段趋势数据',
+                        left: 'center',
+                        top: 'center',
+                        textStyle: { color: '#999', fontSize: 14 }
+                    }
+                });
+                return;
+            }
+
+            const categories = fieldTrends.map(t => t.field_name);
+            const currentRates = fieldTrends.map(t => (t.current_rate * 100).toFixed(1));
+            const predictedRates = fieldTrends.map(t => (t.predicted_rate * 100).toFixed(1));
+            const trendColors = fieldTrends.map(t => {
+                if (t.prediction === 'decreasing') return '#ff4d4f';
+                if (t.prediction === 'increasing') return '#52c41a';
+                return '#1890ff';
+            });
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' }
+                },
+                legend: {
+                    data: ['当前存在率', '7天后预测'],
+                    top: 0
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: categories,
+                    axisLabel: { rotate: 30, fontSize: 11 }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '存在率 (%)',
+                    min: 0,
+                    max: 100
+                },
+                series: [
+                    {
+                        name: '当前存在率',
+                        type: 'bar',
+                        data: currentRates,
+                        itemStyle: { color: '#1890ff' }
+                    },
+                    {
+                        name: '7天后预测',
+                        type: 'bar',
+                        data: predictedRates,
+                        itemStyle: {
+                            color: function(params) {
+                                return trendColors[params.dataIndex];
+                            }
+                        }
+                    }
+                ]
+            };
+
+            trendChart.setOption(option, true);
+        }
+
+        function loadDemoPredictions() {
+            const demoData = {
+                overall_risk_level: 'medium',
+                total_predictions: 4,
+                high_risk_predictions: 1,
+                change_cadence_hours: 72.5,
+                change_acceleration: 'stable',
+                key_risks: [
+                    {
+                        field_name: 'http_x_forwarded_for',
+                        severity: 'warning',
+                        confidence: 0.75,
+                        predicted_time: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString(),
+                        rationale: "Field 'http_x_forwarded_for' presence rate trending downwards (slope: -0.035), predicted to reach 25.0% in 7 days",
+                        recommendation: 'Consider making this field optional in schema'
+                    }
+                ],
+                field_trends: [
+                    { field_name: 'remote_addr', prediction: 'stable', current_rate: 1.0, predicted_rate: 0.98, confidence: 0.3 },
+                    { field_name: 'status', prediction: 'stable', current_rate: 1.0, predicted_rate: 0.99, confidence: 0.3 },
+                    { field_name: 'http_x_forwarded_for', prediction: 'decreasing', current_rate: 0.55, predicted_rate: 0.25, confidence: 0.75 },
+                    { field_name: 'request_time', prediction: 'increasing', current_rate: 0.45, predicted_rate: 0.72, confidence: 0.65 }
+                ]
+            };
+
+            const demoAdvice = {
+                advice: [
+                    {
+                        category: 'field_optional',
+                        field_name: 'http_x_forwarded_for',
+                        current_state: 'Presence rate: 55.0%, trending down',
+                        recommendation: 'Make this field optional and provide default values',
+                        priority: 'high',
+                        code_snippet: '# In your schema definition\n# Before: http_x_forwarded_for: String Required\n# After:  http_x_forwarded_for: Optional[str] = None'
+                    },
+                    {
+                        category: 'forward_compat',
+                        field_name: 'schema',
+                        current_state: 'Fields being added or removed',
+                        recommendation: 'Implement forward/backward compatibility layer',
+                        priority: 'high',
+                        code_snippet: 'def parse_log(data: Dict) -> ParsedLog:\n    result = {}\n    for field in CURRENT_FIELDS:\n        if field in data:\n            result[field] = data[field]\n        else:\n            result[field] = DEFAULTS.get(field)\n    return result'
+                    },
+                    {
+                        category: 'monitoring',
+                        field_name: 'schema',
+                        current_state: 'Changes every 72.5 hours',
+                        recommendation: 'Increase monitoring frequency and alert thresholds',
+                        priority: 'medium',
+                        code_snippet: '# Set up automated alerts\nALERT_THRESHOLD = {\n    "field_change_rate": 0.1,  # 10% change rate\n    "check_interval": 3600,  # Check every hour\n}'
+                    }
+                ]
+            };
+
+            renderPredictionSummary(demoData);
+            renderRiskAssessment(demoData);
+            renderCompatibilityAdvice(demoAdvice);
+            renderFieldTrends(demoData);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            document.getElementById('startTime').value = yesterday.toISOString().slice(0, 16);
+            document.getElementById('endTime').value = now.toISOString().slice(0, 16);
+
+            loadData();
+            setInterval(loadData, 60000);
+        });
+    </script>
+</body>
+</html>
