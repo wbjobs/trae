@@ -1,0 +1,493 @@
+import { StandardButton, HorizontalBox, VerticalBox } from "std-widgets.slint";
+
+global ThermostatLogic {
+    in-out property <float> current-temperature: 21.0;
+    in-out property <float> target-temperature: 22.0;
+    in-out property <float> outdoor-temperature: 5.0;
+    in-out property <int>   mode: 0;
+    in-out property <string> status-text: "Standby";
+    callback target-changed(float);
+    callback save-schedule([[int]], int);
+    callback load-schedule(int) -> [[int]];
+    callback get-schedule() -> [[int]];
+    callback get-energy-24h() -> [float];
+    callback get-total-energy-24h() -> float;
+    callback get-outdoor-temp() -> float;
+    callback get-current-hour() -> int;
+    callback switch-page(int);
+}
+
+struct TemperatureCell {
+    value: int,
+    color: color,
+}
+
+component TemperatureKnob inherits Rectangle {
+    in property <float> value: 20.0;
+    in property <float> min-value: 5.0;
+    in property <float> max-value: 35.0;
+    in property <float> step: 0.5;
+    out property <float> normalized: (self.value - self.min-value) / (self.max-value - self.min-value);
+    in-out property <bool> pressed: false;
+
+    callback changed(float);
+
+    width: 260px;
+    height: 260px;
+    border-radius: self.width/2;
+    background: #1b1f2a;
+    box-shadow: 0px 6px 18px rgba(0,0,0,0.5);
+
+    TouchArea {
+        width: 100%; height: 100%;
+        mouse-event(ev) => {
+            if (ev.kind == ev.pressed || ev.kind == ev.moved) {
+                root.pressed = true;
+                let cx = root.width/2;
+                let cy = root.height/2;
+                let dx = ev.position.x - cx;
+                let dy = ev.position.y - cy;
+                let angle = math.atan2(dy, dx) * 180 / 3.1415926535;
+                let a = angle + 90;
+                let n = a / 300;
+                if (n < 0) { n = 0; }
+                if (n > 1) { n = 1; }
+                let new-val = root.min-value + n * (root.max-value - root.min-value);
+                let stepped = math.round(new-val / root.step) * root.step;
+                if (stepped != root.value) {
+                    root.value = stepped;
+                }
+            } else if (ev.kind == ev.released || ev.kind == ev.canceled) {
+                root.pressed = false;
+                root.changed(root.value);
+            }
+        }
+        clicked => { }
+    }
+
+    Circle {
+        width: parent.width - 20px;
+        height: parent.height - 20px;
+        x: 10px; y: 10px;
+        border-width: 2px;
+        border-color: #2a3142;
+        background: transparent;
+    }
+
+    Arc {
+        width: parent.width - 30px;
+        height: parent.height - 30px;
+        x: 15px; y: 15px;
+        start: 120deg;
+        end: 120deg + (root.normalized * 300deg);
+        background: linear-gradient(90deg, #4fc3f7, #ff7043);
+        border-radius: 6px;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        y: parent.height/2 - 60px;
+        x: 0; width: parent.width;
+        Text {
+            text: "目标温度";
+            font-size: 14px;
+            color: #9aa4b8;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: Math.round(root.value * 10) / 10 + " °C";
+            font-size: 54px;
+            font-weight: 700;
+            color: #ffffff;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: "拖动旋钮调整";
+            font-size: 12px;
+            color: #6b7487;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+component ScheduleCell inherits Rectangle {
+    in property <int> temperature: 20;
+    in property <bool> selected: false;
+    in property <color> base-color: #2a3142;
+
+    width: 100%; height: 100%;
+    border-radius: 4px;
+    background: self.selected ? #4fc3f7 : self.base-color;
+    border-width: 1px;
+    border-color: self.selected ? #81d4fa : #1b1f2a;
+
+    Text {
+        text: self.temperature;
+        font-size: 10px;
+        color: #ffffff;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component ScheduleGrid inherits Rectangle {
+    in-out property <[[int]]> schedule: [
+        [20,20,20,20,20,20,20,20,21,22,22,22,22,22,22,22,22,21,21,20,20,20,20,20],
+        [20,20,20,20,20,20,20,20,21,22,22,22,22,22,22,22,22,21,21,20,20,20,20,20],
+        [20,20,20,20,20,20,20,20,21,22,22,22,22,22,22,22,22,21,21,20,20,20,20,20],
+        [20,20,20,20,20,20,20,20,21,22,22,22,22,22,22,22,22,21,21,20,20,20,20,20],
+        [20,20,20,20,20,20,20,20,21,22,22,22,22,22,22,22,22,21,21,20,20,20,20,20],
+        [20,20,20,20,20,20,20,20,21,21,21,21,21,21,21,21,21,20,20,20,20,20,20,20],
+        [20,20,20,20,20,20,20,20,21,21,21,21,21,21,21,21,21,20,20,20,20,20,20,20]
+    ];
+    in property <int> selected-day: 0;
+    in property <int> selected-hour: -1;
+
+    callback cell-clicked(int, int);
+
+    private function color_for(t: int) -> color {
+        if (t <= 16) { return #1565c0; }
+        if (t <= 19) { return #1e88e5; }
+        if (t <= 21) { return #43a047; }
+        if (t <= 23) { return #fb8c00; }
+        return #e53935;
+    }
+
+    private function day_label(i: int) => ["一","二","三","四","五","六","日"][i];
+
+    width: 100%; height: 100%;
+    background: #141821;
+
+    VerticalLayout {
+        padding: 8px;
+        spacing: 4px;
+        width: 100%; height: 100%;
+
+        HorizontalLayout {
+            spacing: 2px;
+            height: 20px;
+            padding-left: 34px;
+            for h in 0..24 : Rectangle {
+                Text {
+                    text: h;
+                    font-size: 10px;
+                    color: #9aa4b8;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        for day in 0..7 : HorizontalLayout {
+            spacing: 2px;
+            height: 28px;
+            Text {
+                text: "周" + root.day_label(day);
+                font-size: 11px;
+                color: #9aa4b8;
+                vertical-alignment: center;
+                width: 30px;
+            }
+            for h in 0..24 : TouchArea {
+                width: 100%; height: 100%;
+                clicked => {
+                    root.cell-clicked(day, h);
+                }
+                ScheduleCell {
+                    width: 100%; height: 100%;
+                    temperature: root.schedule[day][h];
+                    selected: day == root.selected-day && h == root.selected-hour;
+                    base-color: root.color_for(root.schedule[day][h]);
+                }
+            }
+        }
+    }
+}
+
+component EnergyBar inherits Rectangle {
+    in property <float> value: 0.0;
+    in property <float> max-value: 1.0;
+    in property <int> hour: 0;
+    in property <bool> is-current: false;
+
+    private function bar_height() -> length {
+        if (self.max-value <= 0) { return 0px; }
+        let ratio = self.value / self.max-value;
+        if (ratio < 0) { ratio = 0; }
+        if (ratio > 1) { ratio = 1; }
+        return ratio * 100%;
+    }
+
+    private function bar_color() -> color {
+        if (self.is-current) { return #ff7043; }
+        if (self.value <= 0.01) { return #2a3142; }
+        if (self.value < 0.3) { return #1e88e5; }
+        if (self.value < 0.6) { return #43a047; }
+        if (self.value < 0.9) { return #fb8c00; }
+        return #e53935;
+    }
+
+    width: 100%; height: 100%;
+    background: transparent;
+
+    VerticalLayout {
+        width: 100%; height: 100%;
+        alignment: bottom;
+
+        Rectangle {
+            width: 100%;
+            height: self.bar_height();
+            background: self.bar_color();
+            border-radius: 2px;
+        }
+    }
+
+    Text {
+        y: parent.height + 2px;
+        width: 100%;
+        text: self.hour;
+        font-size: 9px;
+        color: self.is-current ? #ff7043 : #6b7487;
+        horizontal-alignment: center;
+    }
+}
+
+component EnergyChart inherits Rectangle {
+    in property <[float]> energy-data: [];
+    in property <int> current-hour: 0;
+
+    private function max_energy() -> float {
+        let m = 0.0;
+        for v in self.energy-data: v {
+            if (v > m) { m = v; }
+        }
+        if (m < 0.1) { m = 0.1; }
+        return m;
+    }
+
+    width: 100%; height: 100%;
+    background: #141821;
+
+    VerticalLayout {
+        padding: 8px 12px 24px 12px;
+        spacing: 4px;
+        width: 100%; height: 100%;
+
+        HorizontalLayout {
+            spacing: 4px;
+            height: 100%;
+
+            for i in 0..24 : EnergyBar {
+                value: self.energy-data[i] < 0 ? 0 : self.energy-data[i];
+                max-value: self.max_energy();
+                hour: i;
+                is-current: i == self.current-hour;
+            }
+        }
+    }
+
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: 1px;
+        height: 100%;
+        background: transparent;
+    }
+}
+
+export component AppWindow inherits Window {
+    in-out property <int> page: 0;
+
+    width: 800px;
+    height: 480px;
+    title: "智能温控器";
+    background: #0f1320;
+    default-font-size: 14px;
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 10px;
+        width: 100%; height: 100%;
+
+        HorizontalLayout {
+            spacing: 8px;
+            height: 44px;
+            Text {
+                text: "🌡  智能温控器";
+                font-size: 22px;
+                font-weight: 700;
+                color: #ffffff;
+                vertical-alignment: center;
+            }
+            HorizontalLayout { alignment: right; }
+            Text {
+                text: ThermostatLogic.status-text;
+                font-size: 14px;
+                color: #4fc3f7;
+                vertical-alignment: center;
+            }
+        }
+
+        if (root.page == 0) : HorizontalLayout {
+            spacing: 20px;
+
+            VerticalLayout {
+                spacing: 6px;
+                alignment: center;
+                Rectangle {
+                    width: 260px; height: 140px;
+                    border-radius: 12px;
+                    background: #1b1f2a;
+                    box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
+                    VerticalLayout {
+                        padding: 16px;
+                        alignment: center;
+                        Text {
+                            text: "当前温度";
+                            font-size: 14px;
+                            color: #9aa4b8;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: Math.round(ThermostatLogic.current-temperature * 10) / 10 + " °C";
+                            font-size: 52px;
+                            font-weight: 700;
+                            color: #ff7043;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 260px; height: 50px;
+                    border-radius: 8px;
+                    background: #1b1f2a;
+                    VerticalLayout {
+                        padding: 8px 12px;
+                        alignment: center;
+                        Text {
+                            text: "室外 " + Math.round(ThermostatLogic.outdoor-temperature * 10) / 10 + " °C";
+                            font-size: 16px;
+                            color: #81d4fa;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+                Text {
+                    text: "实时 · MQTT";
+                    font-size: 12px;
+                    color: #6b7487;
+                    horizontal-alignment: center;
+                }
+            }
+
+            TemperatureKnob {
+                value: ThermostatLogic.target-temperature;
+                changed(v) => {
+                    ThermostatLogic.target-temperature = v;
+                    ThermostatLogic.target-changed(v);
+                }
+            }
+        }
+
+        if (root.page == 1) : VerticalLayout {
+            spacing: 8px;
+            Text {
+                text: "周编程计划 (7×24)  点击网格修改";
+                font-size: 16px;
+                color: #ffffff;
+            }
+            ScheduleGrid {
+                schedule: ThermostatLogic.get-schedule();
+                cell-clicked(day, hour) => {
+                    let cur = ThermostatLogic.get-schedule()[day][hour];
+                    let nxt = cur + 1;
+                    if (nxt > 30) { nxt = 15; }
+                    let sched = ThermostatLogic.get-schedule();
+                    sched[day][hour] = nxt;
+                    ThermostatLogic.save-schedule(sched, day);
+                }
+            }
+            HorizontalLayout {
+                spacing: 12px;
+                height: 40px;
+                Text { text: "16°"; color: #1565c0; }
+                Text { text: "19°"; color: #1e88e5; }
+                Text { text: "21°"; color: #43a047; }
+                Text { text: "23°"; color: #fb8c00; }
+                Text { text: "≥25°"; color: #e53935; }
+                Text { text: "点击循环: 15→16→…→30→15"; color: #9aa4b8; }
+            }
+        }
+
+        if (root.page == 2) : VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 20px;
+                Text {
+                    text: "能耗统计 · 过去 24 小时";
+                    font-size: 18px;
+                    color: #ffffff;
+                    vertical-alignment: center;
+                }
+                HorizontalLayout { alignment: right; }
+                Text {
+                    text: "总计 " + Math.round(ThermostatLogic.get-total-energy-24h() * 100) / 100 + " kWh";
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #ff7043;
+                    vertical-alignment: center;
+                }
+            }
+
+            EnergyChart {
+                energy-data: ThermostatLogic.get-energy-24h();
+                current-hour: ThermostatLogic.get-current-hour();
+                height: 260px;
+            }
+
+            HorizontalLayout {
+                spacing: 16px;
+                height: 36px;
+                alignment: center;
+                Rectangle { width: 12px; height: 12px; background: #1e88e5; border-radius: 2px; }
+                Text { text: "低"; color: #9aa4b8; font-size: 12px; }
+                Rectangle { width: 12px; height: 12px; background: #43a047; border-radius: 2px; }
+                Text { text: "中"; color: #9aa4b8; font-size: 12px; }
+                Rectangle { width: 12px; height: 12px; background: #fb8c00; border-radius: 2px; }
+                Text { text: "高"; color: #9aa4b8; font-size: 12px; }
+                Rectangle { width: 12px; height: 12px; background: #e53935; border-radius: 2px; }
+                Text { text: "极高"; color: #9aa4b8; font-size: 12px; }
+                Rectangle { width: 12px; height: 12px; background: #ff7043; border-radius: 2px; }
+                Text { text: "当前小时"; color: #ff7043; font-size: 12px; }
+            }
+
+            Text {
+                text: "能耗估算基于室内外温差与目标温度差 · 每 60 秒采样一次";
+                font-size: 11px;
+                color: #6b7487;
+                horizontal-alignment: center;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+            height: 48px;
+            alignment: center;
+            StandardButton {
+                text: "主界面";
+                clicked => { ThermostatLogic.switch-page(0); root.page = 0; }
+                primary: root.page == 0;
+            }
+            StandardButton {
+                text: "周编程";
+                clicked => { ThermostatLogic.switch-page(1); root.page = 1; }
+                primary: root.page == 1;
+            }
+            StandardButton {
+                text: "能耗统计";
+                clicked => { ThermostatLogic.switch-page(2); root.page = 2; }
+                primary: root.page == 2;
+            }
+        }
+    }
+}
