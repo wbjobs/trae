@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "order-workflow/api/proto";
+
+// OrderState represents the state of an order
+enum OrderState {
+    ORDER_STATE_UNSPECIFIED = 0;
+    CREATED       = 1;
+    PENDING_PAYMENT = 2;
+    PAYING        = 3;
+    PAID          = 4;
+    SHIPPED       = 5;
+    COMPLETED     = 6;
+    CANCELLED     = 7;
+}
+
+// OrderEvent represents an event that can trigger a state transition
+enum OrderEvent {
+    ORDER_EVENT_UNSPECIFIED = 0;
+    CREATE          = 1;
+    INITIATE_PAYMENT = 2;
+    PAY_SUCCESS     = 3;
+    PAY_FAIL        = 4;
+    SHIP            = 5;
+    CONFIRM_RECEIPT = 6;
+    CANCEL          = 7;
+    TIMEOUT         = 8;
+}
+
+message OrderItem {
+    string product_id = 1;
+    int32  quantity   = 2;
+    double price      = 3;
+}
+
+message Order {
+    string       order_id     = 1;
+    string       user_id      = 2;
+    repeated OrderItem items  = 3;
+    double       total_amount = 4;
+    OrderState   state        = 5;
+    int64        created_at   = 6;
+    int64        updated_at   = 7;
+    string       error_msg    = 8;
+}
+
+message CreateOrderRequest {
+    string          user_id = 1;
+    repeated OrderItem items = 2;
+}
+
+message CreateOrderResponse {
+    string order_id = 1;
+    Order  order    = 2;
+}
+
+message TriggerEventRequest {
+    string     order_id = 1;
+    OrderEvent event    = 2;
+    string     reason   = 3;
+}
+
+message TriggerEventResponse {
+    Order order = 1;
+}
+
+message GetOrderRequest {
+    string order_id = 1;
+}
+
+message GetOrderResponse {
+    Order order = 1;
+}
+
+message StateTransition {
+    OrderState from_state = 1;
+    OrderState to_state   = 2;
+    OrderEvent event      = 3;
+    int64      timestamp  = 4;
+    string     reason     = 5;
+}
+
+message GetOrderHistoryRequest {
+    string order_id = 1;
+}
+
+message GetOrderHistoryResponse {
+    repeated StateTransition transitions = 1;
+    Order                    current_order = 2;
+}
+
+// OrderService defines the gRPC interface for order operations
+service OrderService {
+    rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+    rpc TriggerEvent(TriggerEventRequest) returns (TriggerEventResponse);
+    rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+    rpc GetOrderHistory(GetOrderHistoryRequest) returns (GetOrderHistoryResponse);
+}

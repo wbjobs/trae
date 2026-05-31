@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分布式订单状态机引擎 - 时序图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    color: #e4e4e4;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 30px 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  header p {
+    color: #999;
+    font-size: 1rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 968px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 24px;
+  }
+
+  .panel h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #a8b2d1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel h2::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, #667eea, #764ba2);
+    border-radius: 2px;
+  }
+
+  .order-form {
+    display: grid;
+    gap: 12px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .form-row input, .form-row select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.2);
+    color: #e4e4e4;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-row input:focus, .form-row select:focus {
+    border-color: #667eea;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #fff;
+  }
+
+  .btn-primary {
+    background: linear-gradient(90deg, #667eea, #764ba2);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.15);
+  }
+
+  .btn-success {
+    background: #10b981;
+  }
+
+  .btn-success:hover {
+    background: #059669;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .orders-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .order-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border-left: 3px solid #667eea;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .order-item:hover {
+    background: rgba(102, 126, 234, 0.1);
+  }
+
+  .order-item.active {
+    background: rgba(102, 126, 234, 0.15);
+    border-left-color: #10b981;
+  }
+
+  .order-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .order-id {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #a8b2d1;
+  }
+
+  .state-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .state-CREATED       { background: #3b82f6; color: #fff; }
+  .state-PENDING_PAYMENT { background: #f59e0b; color: #fff; }
+  .state-PAYING        { background: #6366f1; color: #fff; }
+  .state-PAID          { background: #10b981; color: #fff; }
+  .state-SHIPPED       { background: #06b6d4; color: #fff; }
+  .state-COMPLETED     { background: #22c55e; color: #fff; }
+  .state-CANCELLED     { background: #ef4444; color: #fff; }
+
+  .order-amount {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e4e4e4;
+  }
+
+  .diagram-panel {
+    min-height: 600px;
+  }
+
+  .mermaid {
+    background: rgba(0,0,0,0.2);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-x: auto;
+  }
+
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .log-panel {
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+  }
+
+  .log-entry {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.3);
+    border-left: 2px solid #667eea;
+  }
+
+  .log-entry.info    { border-left-color: #3b82f6; }
+  .log-entry.success { border-left-color: #10b981; }
+  .log-entry.warn    { border-left-color: #f59e0b; }
+  .log-entry.error   { border-left-color: #ef4444; }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+
+  @media (max-width: 968px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .stat-card {
+    padding: 16px;
+    border-radius: 12px;
+    text-align: center;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .stat-card .label {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 4px;
+  }
+
+  .stat-card .value {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🔄 分布式订单状态机引擎</h1>
+    <p>基于 Go + Temporal 的分布式工作流系统 | gRPC 接口 | 超时自动取消 | 库存回滚</p>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>📦 创建订单</h2>
+      <div class="order-form">
+        <div class="form-row">
+          <input id="userId" type="text" placeholder="用户 ID" value="user_001">
+          <input id="productId" type="text" placeholder="商品 ID" value="PROD-001">
+          <input id="quantity" type="number" placeholder="数量" value="1" min="1">
+        </div>
+        <div class="form-row">
+          <input id="price" type="number" placeholder="单价" value="99.99" step="0.01">
+          <button class="btn btn-primary" onclick="addItem()">添加商品</button>
+          <button class="btn btn-secondary" onclick="submitOrder()">创建订单</button>
+        </div>
+        <div id="itemsPreview" style="font-size:0.85rem;color:#888;"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📊 状态统计</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">已创建</div><div class="value" id="stat-created">0</div></div>
+        <div class="stat-card"><div class="label">待支付</div><div class="value" id="stat-pending">0</div></div>
+        <div class="stat-card"><div class="label">已支付</div><div class="value" id="stat-paid">0</div></div>
+        <div class="stat-card"><div class="label">已发货</div><div class="value" id="stat-shipped">0</div></div>
+        <div class="stat-card"><div class="label">已完成</div><div class="value" id="stat-completed">0</div></div>
+        <div class="stat-card"><div class="label">已取消</div><div class="value" id="stat-cancelled">0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>📋 订单列表</h2>
+      <div class="orders-list" id="ordersList">
+        <p style="color:#666;text-align:center;padding:40px;">暂无订单，点击"创建订单"开始</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>🎮 订单操作</h2>
+      <div id="orderActions" style="display:none;">
+        <div style="margin-bottom:16px;">
+          <p style="color:#888;font-size:0.9rem;margin-bottom:8px;">
+            当前订单: <span id="currentOrderId" style="color:#667eea;font-family:monospace;"></span>
+          </p>
+          <p style="color:#888;font-size:0.9rem;">
+            当前状态: <span id="currentOrderState" class="state-badge"></span>
+          </p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-success" onclick="triggerEvent('PAY_SUCCESS')" id="btn-pay-success">支付成功</button>
+          <button class="btn btn-danger" onclick="triggerEvent('PAY_FAIL')" id="btn-pay-fail">支付失败</button>
+          <button class="btn btn-secondary" onclick="triggerEvent('SHIP')" id="btn-ship">发货</button>
+          <button class="btn btn-secondary" onclick="triggerEvent('CONFIRM_RECEIPT')" id="btn-confirm">确认收货</button>
+          <button class="btn btn-danger" onclick="triggerEvent('CANCEL')" id="btn-cancel">取消订单</button>
+        </div>
+      </div>
+      <div id="noOrderSelected" style="text-align:center;color:#666;padding:40px;">
+        请从左侧选择一个订单进行操作
+      </div>
+
+      <div style="margin-top:20px;">
+        <h3 style="font-size:0.95rem;margin-bottom:10px;color:#a8b2d1;">状态机流转规则</h3>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot state-CREATED"></div>已创建</div>
+          <div class="legend-item"><div class="legend-dot state-PENDING_PAYMENT"></div>待支付</div>
+          <div class="legend-item"><div class="legend-dot state-PAID"></div>已支付</div>
+          <div class="legend-item"><div class="legend-dot state-SHIPPED"></div>已发货</div>
+          <div class="legend-item"><div class="legend-dot state-COMPLETED"></div>已完成</div>
+          <div class="legend-item"><div class="legend-dot state-CANCELLED"></div>已取消</div>
+        </div>
+        <p style="font-size:0.8rem;color:#666;margin-top:10px;">
+          ⚠️ 30 分钟未支付将自动取消订单并回滚库存
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel full-width" style="margin-bottom:20px;">
+    <h2>📈 订单时序图</h2>
+    <div class="mermaid" id="diagram">
+      <pre>sequenceDiagram
+    participant 客户端
+    participant gRPC_Server
+    participant Temporal_Workflow
+    participant Activity_Inventory
+    participant Activity_Payment
+    participant Activity_Shipping
+
+    Note over 客户端,Temporal_Workflow: === 订单创建阶段 ===
+    客户端->>gRPC_Server: CreateOrder(user_id, items)
+    gRPC_Server->>Temporal_Workflow: Start Workflow
+    Temporal_Workflow->>Activity_Inventory: ReserveInventory()
+    Activity_Inventory-->>Temporal_Workflow: OK (库存已锁定)
+    Temporal_Workflow-->>gRPC_Server: Workflow Running
+    gRPC_Server-->>客户端: Order { state: PENDING_PAYMENT }
+
+    Note over 客户端,Temporal_Workflow: === 等待支付 (30分钟超时) ===
+    alt 支付成功
+        客户端->>gRPC_Server: TriggerEvent(PAY_SUCCESS)
+        gRPC_Server->>Temporal_Workflow: Signal Payment
+        Temporal_Workflow->>Activity_Payment: ProcessPayment()
+        Activity_Payment-->>Temporal_Workflow: Payment OK
+    else 支付超时
+        Temporal_Workflow->>Temporal_Workflow: Timer (30min)
+        Temporal_Workflow->>Activity_Inventory: RollbackInventory()
+        Temporal_Workflow->>Activity_Inventory: CancelOrder()
+        Temporal_Workflow-->>gRPC_Server: CANCELLED
+    else 支付失败
+        客户端->>gRPC_Server: TriggerEvent(PAY_FAIL)
+        gRPC_Server->>Temporal_Workflow: Signal Payment(Fail)
+        Temporal_Workflow->>Activity_Inventory: RollbackInventory()
+        Temporal_Workflow-->>gRPC_Server: CANCELLED
+    end
+
+    Note over 客户端,Temporal_Workflow: === 发货与完成 ===
+    Temporal_Workflow->>Activity_Shipping: ShipOrder()
+    Activity_Shipping-->>Temporal_Workflow: Shipped (tracking_id)
+    Temporal_Workflow->>Activity_Shipping: ConfirmReceipt()
+    Temporal_Workflow-->>gRPC_Server: COMPLETED
+    gRPC_Server-->>客户端: Final State: COMPLETED</pre>
+    </div>
+  </div>
+
+  <div class="panel full-width">
+    <h2>📝 操作日志</h2>
+    <div class="log-panel" id="logPanel">
+      <div class="log-entry info">[系统] 订单状态机引擎就绪，等待操作...</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: 'transparent',
+      primaryColor: '#1a1a2e',
+      primaryTextColor: '#e4e4e4',
+      primaryBorderColor: '#667eea',
+      lineColor: '#667eea',
+      secondaryColor: '#16213e',
+      tertiaryColor: '#0f3460',
+      noteBackgroundColor: 'rgba(102,126,234,0.2)',
+      noteBorderColor: '#667eea',
+      noteTextColor: '#e4e4e4',
+      actorBkg: '#16213e',
+      actorBorder: '#667eea',
+      actorTextColor: '#e4e4e4',
+      actorLineColor: '#667eea',
+      signalColor: '#10b981',
+      signalTextColor: '#e4e4e4'
+    },
+    sequence: {
+      actorMargin: 50,
+      messageMargin: 40,
+      mirrorActors: false
+    }
+  });
+
+  let pendingItems = [];
+  let orders = [];
+  let selectedOrderId = null;
+
+  function updateItemsPreview() {
+    const preview = document.getElementById('itemsPreview');
+    if (pendingItems.length === 0) {
+      preview.textContent = '';
+      return;
+    }
+    const total = pendingItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    preview.textContent = `已添加 ${pendingItems.length} 件商品，合计 ¥${total.toFixed(2)}`;
+  }
+
+  function addItem() {
+    const productId = document.getElementById('productId').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const price = parseFloat(document.getElementById('price').value);
+
+    if (!productId || !quantity || !price) {
+      alert('请填写完整商品信息');
+      return;
+    }
+
+    pendingItems.push({ product_id: productId, quantity, price });
+    addLog(`添加商品: ${productId} × ${quantity} = ¥${(price * quantity).toFixed(2)}`, 'info');
+    updateItemsPreview();
+  }
+
+  async function submitOrder() {
+    const userId = document.getElementById('userId').value;
+    if (!userId || pendingItems.length === 0) {
+      alert('请填写用户ID并添加商品');
+      return;
+    }
+
+    addLog(`创建订单: 用户=${userId}, 商品数=${pendingItems.length}`, 'info');
+
+    const orderId = 'ORD-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+    const totalAmount = pendingItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const now = Math.floor(Date.now() / 1000);
+
+    const order = {
+      order_id: orderId,
+      user_id: userId,
+      items: [...pendingItems],
+      total_amount: totalAmount,
+      state: 'PENDING_PAYMENT',
+      created_at: now,
+      updated_at: now,
+      transitions: [
+        { from: 'UNSPECIFIED', to: 'CREATED', event: 'CREATE', timestamp: now, reason: '订单创建' },
+        { from: 'CREATED', to: 'PENDING_PAYMENT', event: 'INITIATE_PAYMENT', timestamp: now + 1, reason: '等待支付 (30分钟超时)' }
+      ]
+    };
+
+    orders.unshift(order);
+    pendingItems = [];
+    updateItemsPreview();
+    renderOrders();
+    selectOrder(orderId);
+    updateStats();
+    addLog(`订单 ${orderId} 创建成功，状态: PENDING_PAYMENT`, 'success');
+
+    setTimeout(() => {
+      addLog(`Temporal Workflow 已启动: ORDER-${orderId}`, 'info');
+      addLog(`库存已锁定: ${order.items.map(i => i.product_id + ' × ' + i.quantity).join(', ')}`, 'info');
+    }, 300);
+  }
+
+  function renderOrders() {
+    const list = document.getElementById('ordersList');
+    if (orders.length === 0) {
+      list.innerHTML = '<p style="color:#666;text-align:center;padding:40px;">暂无订单，点击"创建订单"开始</p>';
+      return;
+    }
+
+    list.innerHTML = orders.map(o => `
+      <div class="order-item ${o.order_id === selectedOrderId ? 'active' : ''}" onclick="selectOrder('${o.order_id}')">
+        <div class="order-item-header">
+          <span class="order-id">${o.order_id}</span>
+          <span class="state-badge state-${o.state}">${o.state.replace(/_/g, ' ')}</span>
+        </div>
+        <div class="order-amount">¥${o.total_amount.toFixed(2)}</div>
+        <div style="font-size:0.75rem;color:#666;margin-top:4px;">
+          ${new Date(o.created_at * 1000).toLocaleString('zh-CN')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function selectOrder(orderId) {
+    selectedOrderId = orderId;
+    const order = orders.find(o => o.order_id === orderId);
+    if (!order) return;
+
+    document.getElementById('orderActions').style.display = 'block';
+    document.getElementById('noOrderSelected').style.display = 'none';
+    document.getElementById('currentOrderId').textContent = orderId;
+    document.getElementById('currentOrderState').textContent = order.state.replace(/_/g, ' ');
+    document.getElementById('currentOrderState').className = 'state-badge state-' + order.state;
+
+    updateActionButtons(order.state);
+    renderOrderTimeline(order);
+    renderOrders();
+  }
+
+  function updateActionButtons(state) {
+    const btns = {
+      'btn-pay-success': state === 'PENDING_PAYMENT',
+      'btn-pay-fail': state === 'PENDING_PAYMENT',
+      'btn-ship': state === 'PAID',
+      'btn-confirm': state === 'SHIPPED',
+      'btn-cancel': ['PENDING_PAYMENT', 'PAID', 'SHIPPED'].includes(state)
+    };
+
+    for (const [id, enabled] of Object.entries(btns)) {
+      document.getElementById(id).disabled = !enabled;
+    }
+  }
+
+  function triggerEvent(event) {
+    if (!selectedOrderId) return;
+    const order = orders.find(o => o.order_id === selectedOrderId);
+    if (!order) return;
+
+    const stateMap = {
+      'PAY_SUCCESS': 'PAID',
+      'PAY_FAIL': 'CANCELLED',
+      'SHIP': 'SHIPPED',
+      'CONFIRM_RECEIPT': 'COMPLETED',
+      'CANCEL': 'CANCELLED'
+    };
+
+    const newState = stateMap[event];
+    const now = Math.floor(Date.now() / 1000);
+
+    const reasons = {
+      'PAY_SUCCESS': '支付成功',
+      'PAY_FAIL': '支付失败: 用户取消或余额不足',
+      'SHIP': '订单已发货',
+      'CONFIRM_RECEIPT': '用户确认收货',
+      'CANCEL': '用户主动取消订单'
+    };
+
+    order.transitions.push({
+      from: order.state,
+      to: newState,
+      event: event,
+      timestamp: now,
+      reason: reasons[event]
+    });
+
+    order.state = newState;
+    order.updated_at = now;
+
+    addLog(`订单 ${order.order_id}: ${event} → ${newState}`, event === 'PAY_FAIL' || event === 'CANCEL' ? 'warn' : 'success');
+
+    if (event === 'PAY_FAIL' || event === 'CANCEL') {
+      addLog(`库存回滚: ${order.items.map(i => i.product_id + ' × ' + i.quantity).join(', ')}`, 'warn');
+    }
+
+    updateActionButtons(newState);
+    renderOrderTimeline(order);
+    renderOrders();
+    updateStats();
+  }
+
+  function renderOrderTimeline(order) {
+    const diagram = document.getElementById('diagram');
+    const steps = order.transitions.map((t, i) => {
+      const fromLabel = t.from.replace(/_/g, ' ');
+      const toLabel = t.to.replace(/_/g, ' ');
+      const time = new Date(t.timestamp * 1000).toLocaleTimeString('zh-CN');
+      return `    Note over Client: ${time}\n    Client->>gRPC_Server: ${t.event}\n    gRPC_Server->>Workflow: State ${fromLabel} → ${toLabel}`;
+    }).join('\n');
+
+    const mermaidCode = `sequenceDiagram
+    participant Client
+    participant gRPC_Server
+    participant Workflow
+    participant Inventory
+    participant Payment
+    participant Shipping
+
+${steps}
+    Note right of Workflow: 最终状态: ${order.state.replace(/_/g, ' ')}`;
+
+    diagram.innerHTML = '<pre>' + mermaidCode + '</pre>';
+    mermaid.run({ querySelector: '#diagram pre' });
+  }
+
+  function updateStats() {
+    const stats = {
+      created: orders.filter(o => o.state === 'CREATED').length,
+      pending: orders.filter(o => o.state === 'PENDING_PAYMENT').length,
+      paid: orders.filter(o => o.state === 'PAID').length,
+      shipped: orders.filter(o => o.state === 'SHIPPED').length,
+      completed: orders.filter(o => o.state === 'COMPLETED').length,
+      cancelled: orders.filter(o => o.state === 'CANCELLED').length
+    };
+
+    for (const [key, value] of Object.entries(stats)) {
+      const el = document.getElementById('stat-' + key);
+      if (el) el.textContent = value;
+    }
+  }
+
+  function addLog(message, type = 'info') {
+    const panel = document.getElementById('logPanel');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry ' + type;
+    const time = new Date().toLocaleTimeString('zh-CN');
+    entry.textContent = `[${time}] ${message}`;
+    panel.insertBefore(entry, panel.firstChild);
+
+    while (panel.children.length > 50) {
+      panel.removeChild(panel.lastChild);
+    }
+  }
+</script>
+
+</body>
+</html>
