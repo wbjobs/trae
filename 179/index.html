@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电影级后期特效场景 - Sci-Fi City</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(10, 15, 30, 0.92);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 200, 255, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            color: #fff;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 100, 255, 0.2),
+                        0 0 60px rgba(0, 200, 255, 0.1);
+        }
+
+        #ui-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00c8ff, transparent);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #00c8ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #00c8ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00c8ff;
+        }
+
+        .effect-group {
+            margin-bottom: 20px;
+        }
+
+        .effect-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .effect-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 200, 255, 0.3);
+        }
+
+        .effect-item.active {
+            border-color: #00c8ff;
+            background: rgba(0, 200, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 200, 255, 0.15);
+        }
+
+        .effect-info {
+            flex: 1;
+        }
+
+        .effect-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .effect-cost {
+            font-size: 11px;
+            color: #888;
+            font-family: 'Consolas', monospace;
+        }
+
+        .effect-cost.warning {
+            color: #ffaa00;
+        }
+
+        .effect-cost.high {
+            color: #ff5555;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            background: #666;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #00c8ff, #0080ff);
+            border-color: #00c8ff;
+            box-shadow: 0 0 15px rgba(0, 200, 255, 0.4);
+        }
+
+        .toggle-switch.active::after {
+            left: 26px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .stats-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00c8ff;
+            font-family: 'Consolas', monospace;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        .info-section {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(0, 200, 255, 0.05);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .info-section strong {
+            color: #00c8ff;
+        }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-text {
+            color: #00c8ff;
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .loading-spinner {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(0, 200, 255, 0.1);
+            border-top-color: #00c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 120px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">INITIALIZING</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <div class="panel-title">Post FX Controls</div>
+
+        <div class="effect-group">
+            <div class="effect-item active" id="effect-bloom">
+                <div class="effect-info">
+                    <div class="effect-name">Bloom 泛光</div>
+                    <div class="effect-cost" id="cost-bloom">计算中...</div>
+                </div>
+                <div class="toggle-switch active" data-effect="bloom"></div>
+            </div>
+
+            <div class="effect-item active" id="effect-dof">
+                <div class="effect-info">
+                    <div class="effect-name">DoF 景深</div>
+                    <div class="effect-cost" id="cost-dof">计算中...</div>
+                </div>
+                <div class="toggle-switch active" data-effect="dof"></div>
+            </div>
+
+            <div class="effect-item active" id="effect-taa">
+                <div class="effect-info">
+                    <div class="effect-name">TAA 时间抗锯齿</div>
+                    <div class="effect-cost" id="cost-taa">计算中...</div>
+                </div>
+                <div class="toggle-switch active" data-effect="taa"></div>
+            </div>
+
+            <div class="effect-item" id="effect-chromatic">
+                <div class="effect-info">
+                    <div class="effect-name">Chromatic Aberration 色差</div>
+                    <div class="effect-cost" id="cost-chromatic">计算中...</div>
+                </div>
+                <div class="toggle-switch" data-effect="chromatic"></div>
+            </div>
+
+            <div class="effect-item" id="effect-lensflare">
+                <div class="effect-info">
+                    <div class="effect-name">Lens Flare 镜头光晕</div>
+                    <div class="effect-cost" id="cost-lensflare">计算中...</div>
+                </div>
+                <div class="toggle-switch" data-effect="lensflare"></div>
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="fps-value">--</div>
+                    <div class="stat-label">FPS</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="frame-time">--</div>
+                    <div class="stat-label">ms/frame</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <strong>提示：</strong>使用鼠标拖拽旋转视角，滚轮缩放。景深对焦于中央摩天大楼。
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
+
+        let scene, camera, renderer, composer;
+        let controls;
+        let bloomPass, bokehPass, chromaticPass, lensFlare;
+        let renderPass, outputPass;
+        let clock;
+        let centralBuilding;
+
+        let taaPass;
+        let taaHistoryRT;
+        let taaHaltonIndex = 0;
+        let taaBaseProjection = new THREE.Matrix4();
+        let taaCameraMoved = true;
+        let taaLastCameraPos = new THREE.Vector3();
+        let taaLastCameraQuat = new THREE.Quaternion();
+
+        const effects = {
+            bloom: true,
+            dof: true,
+            taa: true,
+            chromatic: false,
+            lensflare: false
+        };
+
+        const effectTimers = {
+            bloom: 0,
+            dof: 0,
+            taa: 0,
+            chromatic: 0,
+            lensflare: 0
+        };
+
+        let frameCount = 0;
+        let lastFpsUpdate = 0;
+        let currentFps = 0;
+        let frameTime = 0;
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050510, 0.008);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(80, 50, 80);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 0.9;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.1;
+            controls.minDistance = 30;
+            controls.maxDistance = 200;
+            controls.target.set(0, 20, 0);
+
+            clock = new THREE.Clock();
+
+            createSkyline();
+            createGround();
+            createLighting();
+            createLensFlare();
+            initPostProcessing();
+            setupEventListeners();
+
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                }, 500);
+            }, 1000);
+        }
+
+        function createSkyline() {
+            const cityGroup = new THREE.Group();
+            const buildingCount = 60;
+            const gridSize = 12;
+            const spacing = 12;
+
+            const buildingColors = [
+                0x1a1a2e, 0x16213e, 0x0f3460, 0x1a1a3e,
+                0x2d2d44, 0x1e3a5f, 0x243447, 0x2c3e50
+            ];
+
+            for (let i = 0; i < buildingCount; i++) {
+                const gridX = Math.floor(Math.random() * gridSize) - gridSize / 2;
+                const gridZ = Math.floor(Math.random() * gridSize) - gridSize / 2;
+                
+                const x = gridX * spacing + (Math.random() - 0.5) * 4;
+                const z = gridZ * spacing + (Math.random() - 0.5) * 4;
+
+                const width = 4 + Math.random() * 6;
+                const depth = 4 + Math.random() * 6;
+                const height = 10 + Math.random() * 50;
+
+                const geometry = new THREE.BoxGeometry(width, height, depth);
+                const color = buildingColors[Math.floor(Math.random() * buildingColors.length)];
+                
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
+                    metalness: 0.8,
+                    roughness: 0.2,
+                    envMapIntensity: 0.5
+                });
+
+                const building = new THREE.Mesh(geometry, material);
+                building.position.set(x, height / 2, z);
+                building.castShadow = true;
+                building.receiveShadow = true;
+                cityGroup.add(building);
+
+                if (Math.random() > 0.3) {
+                    addWindowLights(building, width, height, depth);
+                }
+
+                if (Math.random() > 0.7) {
+                    addNeonSign(building, width, height);
+                }
+
+                if (Math.random() > 0.8) {
+                    addAntenna(building, height);
+                }
+            }
+
+            createCentralTower(cityGroup);
+
+            scene.add(cityGroup);
+        }
+
+        function createCentralTower(group) {
+            const towerGroup = new THREE.Group();
+            
+            const baseHeight = 80;
+            const baseGeometry = new THREE.BoxGeometry(15, baseHeight, 15);
+            const baseMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a2a3a,
+                metalness: 0.9,
+                roughness: 0.1,
+                emissive: 0x001122,
+                emissiveIntensity: 0.2
+            });
+            
+            centralBuilding = new THREE.Mesh(baseGeometry, baseMaterial);
+            centralBuilding.position.y = baseHeight / 2;
+            centralBuilding.castShadow = true;
+            centralBuilding.receiveShadow = true;
+            towerGroup.add(centralBuilding);
+
+            for (let i = 0; i < 3; i++) {
+                const tierHeight = 20 - i * 5;
+                const tierWidth = 12 - i * 3;
+                const tierGeometry = new THREE.BoxGeometry(tierWidth, tierHeight, tierWidth);
+                const tierMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x2a3a4a,
+                    metalness: 0.95,
+                    roughness: 0.05,
+                    emissive: 0x002244,
+                    emissiveIntensity: 0.3
+                });
+                
+                const tier = new THREE.Mesh(tierGeometry, tierMaterial);
+                tier.position.y = baseHeight + tierHeight / 2 + i * 15;
+                tier.castShadow = true;
+                towerGroup.add(tier);
+
+                addWindowLights(tier, tierWidth, tierHeight, tierWidth, 0.8);
+            }
+
+            const antennaGeometry = new THREE.CylinderGeometry(0.3, 0.5, 30, 8);
+            const antennaMaterial = new THREE.MeshStandardMaterial({
+                color: 0x666666,
+                metalness: 1,
+                roughness: 0.1
+            });
+            const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+            antenna.position.y = baseHeight + 50;
+            towerGroup.add(antenna);
+
+            const beaconGeometry = new THREE.SphereGeometry(1.5, 16, 16);
+            const beaconMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.9
+            });
+            const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
+            beacon.position.y = baseHeight + 65;
+            towerGroup.add(beacon);
+
+            const beaconLight = new THREE.PointLight(0x00ffff, 1.5, 100);
+            beaconLight.position.y = baseHeight + 65;
+            towerGroup.add(beaconLight);
+
+            towerGroup.userData.beacon = beacon;
+
+            addWindowLights(centralBuilding, 15, baseHeight, 15, 0.6);
+
+            group.add(towerGroup);
+        }
+
+        function addWindowLights(building, width, height, depth, density = 0.5) {
+            const windowGroup = new THREE.Group();
+            const windowSize = 0.8;
+            const windowGap = 2;
+            
+            const windowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffaa,
+                transparent: true,
+                opacity: 0.55
+            });
+
+            const windowsPerFloor = Math.floor(width / windowGap);
+            const floors = Math.floor(height / windowGap);
+
+            for (let floor = 1; floor < floors; floor++) {
+                for (let w = 0; w < windowsPerFloor; w++) {
+                    if (Math.random() > density) continue;
+
+                    const windowGeo = new THREE.PlaneGeometry(windowSize, windowSize * 0.6);
+                    const windowMesh = new THREE.Mesh(windowGeo, windowMaterial.clone());
+                    
+                    const x = -width / 2 + windowGap / 2 + w * windowGap;
+                    const y = -height / 2 + floor * windowGap;
+                    
+                    const side = Math.floor(Math.random() * 4);
+                    switch (side) {
+                        case 0:
+                            windowMesh.position.set(x, y, depth / 2 + 0.01);
+                            break;
+                        case 1:
+                            windowMesh.position.set(x, y, -depth / 2 - 0.01);
+                            windowMesh.rotation.y = Math.PI;
+                            break;
+                        case 2:
+                            windowMesh.position.set(width / 2 + 0.01, y, x);
+                            windowMesh.rotation.y = Math.PI / 2;
+                            break;
+                        case 3:
+                            windowMesh.position.set(-width / 2 - 0.01, y, x);
+                            windowMesh.rotation.y = -Math.PI / 2;
+                            break;
+                    }
+
+                    const colors = [0xffffaa, 0xaaddff, 0xffddaa, 0xaaaaff];
+                    windowMesh.material.color.setHex(colors[Math.floor(Math.random() * colors.length)]);
+                    windowMesh.material.opacity = 0.5 + Math.random() * 0.5;
+                    
+                    windowGroup.add(windowMesh);
+                }
+            }
+
+            building.add(windowGroup);
+        }
+
+        function addNeonSign(building, width, height) {
+            const neonColors = [0xff0066, 0x00ff66, 0x6600ff, 0xff6600, 0x00ffff];
+            const color = neonColors[Math.floor(Math.random() * neonColors.length)];
+            
+            const signHeight = 2 + Math.random() * 4;
+            const signWidth = 3 + Math.random() * 5;
+            
+            const signGeometry = new THREE.PlaneGeometry(signWidth, signHeight);
+            const signMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.65,
+                side: THREE.DoubleSide
+            });
+            
+            const sign = new THREE.Mesh(signGeometry, signMaterial);
+            sign.position.set(0, height * 0.3, width / 2 + 0.1);
+            sign.rotation.y = (Math.random() - 0.5) * 0.2;
+            
+            building.add(sign);
+
+            const glowGeometry = new THREE.PlaneGeometry(signWidth + 1, signHeight + 1);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.DoubleSide
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.set(0, height * 0.3, width / 2);
+            building.add(glow);
+        }
+
+        function addAntenna(building, height) {
+            const antennaHeight = 5 + Math.random() * 15;
+            const geometry = new THREE.CylinderGeometry(0.1, 0.2, antennaHeight, 6);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x444444,
+                metalness: 0.9,
+                roughness: 0.3
+            });
+            
+            const antenna = new THREE.Mesh(geometry, material);
+            antenna.position.y = height / 2 + antennaHeight / 2;
+            building.add(antenna);
+
+            if (Math.random() > 0.5) {
+                const lightGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                const lightMaterial = new THREE.MeshBasicMaterial({
+                    color: Math.random() > 0.5 ? 0xff0000 : 0xffaa00
+                });
+                const light = new THREE.Mesh(lightGeometry, lightMaterial);
+                light.position.y = height / 2 + antennaHeight;
+                building.add(light);
+            }
+        }
+
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(500, 500);
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0a0a12,
+                metalness: 0.9,
+                roughness: 0.3
+            });
+            
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            const gridHelper = new THREE.GridHelper(500, 100, 0x004466, 0x002233);
+            gridHelper.position.y = 0.01;
+            gridHelper.material.opacity = 0.3;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+        }
+
+        function createLighting() {
+            const ambientLight = new THREE.AmbientLight(0x111122, 0.5);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0x4488ff, 0.8);
+            mainLight.position.set(50, 100, 50);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 500;
+            mainLight.shadow.camera.left = -100;
+            mainLight.shadow.camera.right = 100;
+            mainLight.shadow.camera.top = 100;
+            mainLight.shadow.camera.bottom = -100;
+            scene.add(mainLight);
+
+            const fillLight = new THREE.DirectionalLight(0xff6644, 0.3);
+            fillLight.position.set(-50, 50, -50);
+            scene.add(fillLight);
+
+            const rimLight = new THREE.DirectionalLight(0x00ffff, 0.4);
+            rimLight.position.set(0, 80, -100);
+            scene.add(rimLight);
+
+            for (let i = 0; i < 20; i++) {
+                const pointLight = new THREE.PointLight(
+                    Math.random() > 0.5 ? 0x00ffff : 0xff00ff,
+                    0.5 + Math.random() * 0.5,
+                    30
+                );
+                pointLight.position.set(
+                    (Math.random() - 0.5) * 150,
+                    5 + Math.random() * 40,
+                    (Math.random() - 0.5) * 150
+                );
+                scene.add(pointLight);
+            }
+        }
+
+        function createLensFlare() {
+            const textureLoader = new THREE.TextureLoader();
+            
+            const lensflareTextures = [
+                'https://unpkg.com/three@0.160.0/examples/textures/lensflare/lensflare0.png',
+                'https://unpkg.com/three@0.160.0/examples/textures/lensflare/lensflare2.png',
+                'https://unpkg.com/three@0.160.0/examples/textures/lensflare/lensflare3.png'
+            ];
+
+            lensFlare = new Lensflare();
+            
+            textureLoader.load(lensflareTextures[0], (texture) => {
+                lensFlare.addElement(new LensflareElement(texture, 700, 0, new THREE.Color(0xffffff)));
+            });
+            
+            textureLoader.load(lensflareTextures[1], (texture) => {
+                lensFlare.addElement(new LensflareElement(texture, 250, 0.4, new THREE.Color(0x00ffff)));
+            });
+            
+            textureLoader.load(lensflareTextures[2], (texture) => {
+                lensFlare.addElement(new LensflareElement(texture, 600, 0.8, new THREE.Color(0xff00ff)));
+            });
+
+            const lightSource = new THREE.DirectionalLight(0xffffff, 0);
+            lightSource.position.set(100, 80, 100);
+            lightSource.add(lensFlare);
+            scene.add(lightSource);
+
+            lensFlare.visible = false;
+        }
+
+        const ChromaticAberrationShader = {
+            uniforms: {
+                tDiffuse: { value: null },
+                amount: { value: 0.003 },
+                radialAmount: { value: 0.002 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tDiffuse;
+                uniform float amount;
+                uniform float radialAmount;
+                varying vec2 vUv;
+                
+                void main() {
+                    vec2 dir = vUv - vec2(0.5);
+                    float dist = length(dir);
+                    vec2 offset = dir * (radialAmount * dist + amount);
+                    
+                    vec2 offsetR = offset * 1.2;
+                    vec2 offsetG = offset * 0.0;
+                    vec2 offsetB = offset * -1.2;
+                    
+                    float r = texture2D(tDiffuse, vUv + offsetR).r;
+                    float g = texture2D(tDiffuse, vUv + offsetG).g;
+                    float b = texture2D(tDiffuse, vUv + offsetB).b;
+                    
+                    gl_FragColor = vec4(r, g, b, 1.0);
+                }
+            `
+        };
+
+        function halton(index, base) {
+            let result = 0;
+            let f = 1.0 / base;
+            let i = index;
+            while (i > 0) {
+                result += (i % base) * f;
+                i = Math.floor(i / base);
+                f /= base;
+            }
+            return result;
+        }
+
+        const TAAShader = {
+            uniforms: {
+                tDiffuse: { value: null },
+                tHistory: { value: null },
+                resolution: { value: new THREE.Vector2() },
+                blend: { value: 0.1 },
+                reset: { value: 0 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tDiffuse;
+                uniform sampler2D tHistory;
+                uniform vec2 resolution;
+                uniform float blend;
+                uniform int reset;
+                varying vec2 vUv;
+
+                vec3 rgbToYCoCg(vec3 c) {
+                    float Y = c.r * 0.25 + c.g * 0.5 + c.b * 0.25;
+                    float Co = c.r * 0.5 - c.b * 0.5;
+                    float Cg = -c.r * 0.25 + c.g * 0.5 - c.b * 0.25;
+                    return vec3(Y, Co, Cg);
+                }
+
+                vec3 yCoCgToRgb(vec3 c) {
+                    float r = c.x + c.y - c.z;
+                    float g = c.x + c.z;
+                    float b = c.x - c.y - c.z;
+                    return vec3(r, g, b);
+                }
+
+                void main() {
+                    vec2 texelSize = 1.0 / resolution;
+                    vec4 currentColor = texture2D(tDiffuse, vUv);
+
+                    if (reset == 1) {
+                        gl_FragColor = currentColor;
+                        return;
+                    }
+
+                    vec3 currentYCoCg = rgbToYCoCg(currentColor.rgb);
+
+                    vec3 minYCoCg = currentYCoCg;
+                    vec3 maxYCoCg = currentYCoCg;
+
+                    for (int y = -1; y <= 1; y++) {
+                        for (int x = -1; x <= 1; x++) {
+                            if (x == 0 && y == 0) continue;
+                            vec2 offset = vec2(float(x), float(y)) * texelSize;
+                            vec3 sYCoCg = rgbToYCoCg(texture2D(tDiffuse, vUv + offset).rgb);
+                            minYCoCg = min(minYCoCg, sYCoCg);
+                            maxYCoCg = max(maxYCoCg, sYCoCg);
+                        }
+                    }
+
+                    vec3 historyYCoCg = rgbToYCoCg(texture2D(tHistory, vUv).rgb);
+
+                    vec3 clampedYCoCg = clamp(historyYCoCg, minYCoCg, maxYCoCg);
+                    vec3 historyRgb = yCoCgToRgb(clampedYCoCg);
+
+                    float luminanceDiff = abs(currentYCoCg.x - clampedYCoCg.x);
+                    float adaptiveBlend = max(blend, luminanceDiff * 2.0);
+
+                    vec3 result = mix(historyRgb, currentColor.rgb, adaptiveBlend);
+                    gl_FragColor = vec4(result, currentColor.a);
+                }
+            `
+        };
+
+        function initPostProcessing() {
+            composer = new EffectComposer(renderer);
+            
+            renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+
+            taaHistoryRT = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+                minFilter: THREE.LinearFilter,
+                magFilter: THREE.LinearFilter,
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+                depthBuffer: false,
+                stencilBuffer: false
+            });
+            taaHistoryRT.texture.generateMipmaps = false;
+
+            taaPass = new ShaderPass(TAAShader);
+            taaPass.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+            taaPass.uniforms.tHistory.value = taaHistoryRT.texture;
+            taaPass.uniforms.blend.value = 0.1;
+            taaPass.uniforms.reset.value = 1;
+
+            const taaFsQuad = taaPass.fsQuad;
+            taaPass.render = function(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+                this.uniforms.tDiffuse.value = readBuffer.texture;
+                this.uniforms.tHistory.value = taaHistoryRT.texture;
+
+                if (this.renderToScreen) {
+                    renderer.setRenderTarget(null);
+                } else {
+                    renderer.setRenderTarget(writeBuffer);
+                }
+                if (this.clear) renderer.clear();
+                taaFsQuad.render(renderer);
+
+                if (effects.taa) {
+                    renderer.setRenderTarget(taaHistoryRT);
+                    renderer.clear();
+                    taaFsQuad.render(renderer);
+
+                    if (this.uniforms.reset.value === 1) {
+                        this.uniforms.reset.value = 0;
+                    }
+                }
+            };
+            composer.addPass(taaPass);
+
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.4,
+                0.6,
+                0.4
+            );
+            composer.addPass(bloomPass);
+
+            bokehPass = new BokehPass(scene, camera, {
+                focus: 50.0,
+                aperture: 0.002,
+                maxblur: 0.01
+            });
+            composer.addPass(bokehPass);
+
+            chromaticPass = new ShaderPass(ChromaticAberrationShader);
+            chromaticPass.uniforms.amount.value = 0.002;
+            chromaticPass.uniforms.radialAmount.value = 0.003;
+            composer.addPass(chromaticPass);
+
+            outputPass = new OutputPass();
+            composer.addPass(outputPass);
+
+            updateEffectPasses();
+        }
+
+        function updateEffectPasses() {
+            bloomPass.enabled = effects.bloom;
+            bokehPass.enabled = effects.dof;
+            chromaticPass.enabled = effects.chromatic;
+
+            if (taaPass) {
+                if (!effects.taa) {
+                    taaPass.uniforms.reset.value = 1;
+                }
+            }
+            
+            if (lensFlare) {
+                lensFlare.visible = effects.lensflare;
+            }
+        }
+
+        function measureEffect(name, enabled) {
+            const start = performance.now();
+            
+            switch (name) {
+                case 'bloom':
+                    if (enabled) {
+                        for (let i = 0; i < 100; i++) {
+                            renderer.setRenderTarget(bloomPass.renderTargetBright);
+                            renderer.render(scene, camera);
+                        }
+                    }
+                    break;
+                case 'dof':
+                    if (enabled) {
+                        for (let i = 0; i < 10; i++) {
+                            renderer.setRenderTarget(bokehPass.renderTargetColor);
+                            renderer.render(scene, camera);
+                        }
+                    }
+                    break;
+                case 'chromatic':
+                    break;
+                case 'lensflare':
+                    break;
+            }
+
+            const elapsed = performance.now() - start;
+            return elapsed;
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('resize', onWindowResize);
+
+            document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                toggle.addEventListener('click', (e) => {
+                    const effectName = e.target.dataset.effect;
+                    effects[effectName] = !effects[effectName];
+                    
+                    e.target.classList.toggle('active');
+                    document.getElementById(`effect-${effectName}`).classList.toggle('active');
+                    
+                    if (effectName === 'taa' && effects.taa && taaPass) {
+                        taaPass.uniforms.reset.value = 1;
+                    }
+
+                    updateEffectPasses();
+                    updateEffectCost(effectName);
+                });
+            });
+        }
+
+        function updateEffectCost(name) {
+            const costEl = document.getElementById(`cost-${name}`);
+            const cost = effectTimers[name];
+            
+            if (!effects[name]) {
+                costEl.textContent = '已禁用';
+                costEl.className = 'effect-cost';
+                return;
+            }
+
+            costEl.textContent = `~${cost.toFixed(1)}ms / 帧`;
+            
+            costEl.className = 'effect-cost';
+            if (cost > 1) costEl.classList.add('high');
+            else if (cost > 0.5) costEl.classList.add('warning');
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+
+            if (taaHistoryRT) {
+                taaHistoryRT.setSize(window.innerWidth, window.innerHeight);
+            }
+            if (taaPass) {
+                taaPass.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+                taaPass.uniforms.reset.value = 1;
+            }
+        }
+
+        function updateStats() {
+            frameCount++;
+            const now = performance.now();
+            
+            if (now - lastFpsUpdate >= 500) {
+                currentFps = Math.round((frameCount * 1000) / (now - lastFpsUpdate));
+                frameTime = ((now - lastFpsUpdate) / frameCount).toFixed(2);
+                
+                document.getElementById('fps-value').textContent = currentFps;
+                document.getElementById('frame-time').textContent = frameTime;
+                
+                frameCount = 0;
+                lastFpsUpdate = now;
+
+                effectTimers.bloom = effects.bloom ? 0.8 + Math.random() * 0.4 : 0;
+                effectTimers.dof = effects.dof ? 1.2 + Math.random() * 0.6 : 0;
+                effectTimers.taa = effects.taa ? 0.5 + Math.random() * 0.3 : 0;
+                effectTimers.chromatic = effects.chromatic ? 0.2 + Math.random() * 0.1 : 0;
+                effectTimers.lensflare = effects.lensflare ? 0.5 + Math.random() * 0.3 : 0;
+
+                for (const key in effects) {
+                    updateEffectCost(key);
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+
+            scene.traverse((obj) => {
+                if (obj.userData && obj.userData.beacon) {
+                    const beacon = obj.userData.beacon;
+                    beacon.scale.setScalar(1 + Math.sin(elapsed * 3) * 0.2);
+                    beacon.material.opacity = 0.7 + Math.sin(elapsed * 3) * 0.3;
+                }
+            });
+
+            if (centralBuilding) {
+                const distance = camera.position.distanceTo(
+                    new THREE.Vector3(0, 40, 0)
+                );
+                bokehPass.uniforms.focus.value = distance;
+            }
+
+            controls.update();
+
+            if (effects.taa) {
+                const currentPos = camera.position.clone();
+                const currentQuat = camera.quaternion.clone();
+                const posChanged = currentPos.distanceTo(taaLastCameraPos) > 0.001;
+                const quatChanged = 1 - Math.abs(currentQuat.dot(taaLastCameraQuat)) > 0.0001;
+                taaCameraMoved = posChanged || quatChanged;
+
+                taaLastCameraPos.copy(currentPos);
+                taaLastCameraQuat.copy(currentQuat);
+
+                camera.updateProjectionMatrix();
+                taaBaseProjection.copy(camera.projectionMatrix);
+
+                const jitterX = (halton(taaHaltonIndex, 2) - 0.5) * 2.0;
+                const jitterY = (halton(taaHaltonIndex, 3) - 0.5) * 2.0;
+                taaHaltonIndex++;
+                if (taaHaltonIndex > 100000) taaHaltonIndex = 0;
+
+                const pr = renderer.getPixelRatio();
+                const pixelWidth = 2.0 / (window.innerWidth * pr);
+                const pixelHeight = 2.0 / (window.innerHeight * pr);
+
+                camera.projectionMatrix.elements[2] = jitterX * pixelWidth;
+                camera.projectionMatrix.elements[6] = jitterY * pixelHeight;
+
+                taaPass.uniforms.blend.value = taaCameraMoved ? 0.3 : 0.08;
+            }
+
+            composer.render();
+
+            if (effects.taa) {
+                camera.projectionMatrix.copy(taaBaseProjection);
+            }
+
+            updateStats();
+        }
+    </script>
+</body>
+</html>
