@@ -1,0 +1,5 @@
+PyQt5>=5.15.0
+pyserial>=3.5
+pywin32>=305; platform_system == "Windows"
+pyyaml>=6.0
+json5>=0.9.10
