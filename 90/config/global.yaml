@@ -1,0 +1,6 @@
+max_workers: 10
+ssh_timeout: 10
+log_retention_days: 30
+archive_format: json
+session_pool_enabled: false
+session_idle_timeout: 300

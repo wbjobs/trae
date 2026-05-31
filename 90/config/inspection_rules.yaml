@@ -1,0 +1,56 @@
+process_check:
+  process_names:
+    - nginx
+    - sshd
+    - crond
+  min_instances: 1
+  check_zombie: true
+  exact_match: true
+
+disk_check:
+  usage_threshold: 80
+  inode_threshold: 80
+  check_paths:
+    - /
+
+log_grep:
+  log_paths:
+    - /var/log/
+  keywords:
+    - error
+    - Error
+    - ERROR
+    - failed
+    - warning
+  max_lines: 50
+  case_insensitive: true
+  include_gzip: false
+
+permission_sync:
+  sync_tasks:
+    - name: web_config
+      targets:
+        - path: /etc/nginx/
+          mode: '644'
+          owner: root:root
+          recursive: true
+
+resource_monitor:
+  cpu_warning: 70
+  memory_warning: 80
+  disk_warning: 80
+  load_multiplier: 1.0
+  session_idle_time: 300
+
+process_selfheal:
+  auto_heal_processes:
+    - name: nginx
+      restart_command: "systemctl restart nginx"
+    - name: sshd
+      restart_command: "systemctl restart sshd"
+    - name: crond
+      restart_command: "systemctl restart crond"
+  restart_commands:
+    nginx: "systemctl restart nginx"
+    mysql: "systemctl restart mysqld"
+    redis: "systemctl restart redis"

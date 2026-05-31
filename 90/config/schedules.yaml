@@ -1,0 +1,23 @@
+schedules:
+  - name: 每5分钟存活检测
+    cron: "*/5 * * * *"
+    tool: alive
+    enabled: true
+
+  - name: 每小时资源水位检测
+    cron: "0 * * * *"
+    tool: resource
+    group: production
+    enabled: true
+
+  - name: 每日凌晨进程自愈
+    cron: "0 3 * * *"
+    tool: selfheal
+    group: production
+    enabled: true
+
+  - name: 每日凌晨全量巡检
+    cron: "0 2 * * *"
+    tool: all
+    group: production
+    enabled: true

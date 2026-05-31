@@ -1,0 +1,84 @@
+linux:
+  name: "Linux (通用)"
+  commands:
+    cpu_usage: "grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'"
+    memory_usage: "free -m | awk '/Mem:/ {print int($3/$2*100)}'"
+    disk_usage: "df -hP | awk 'NR>1 {print $6":"$5}'"
+    process_list: "ps aux"
+    service_restart: "systemctl restart {service}"
+    service_status: "systemctl is-active {service}"
+    open_files: "lsof -i :{port} | wc -l"
+    tcp_connections: "ss -s | grep TCP"
+    kernel_logs: "dmesg -T | tail -50"
+    system_logs: "tail -100 /var/log/messages /var/log/syslog 2>/dev/null || tail -100 /var/log/syslog 2>/dev/null"
+
+centos:
+  name: "CentOS/RHEL"
+  parent: "linux"
+  package_manager: "yum"
+  commands:
+    service_restart: "systemctl restart {service}"
+    install_package: "yum install -y {package}"
+
+ubuntu:
+  name: "Ubuntu/Debian"
+  parent: "linux"
+  package_manager: "apt"
+  commands:
+    service_restart: "systemctl restart {service}"
+    install_package: "apt-get install -y {package}"
+
+darwin:
+  name: "macOS"
+  commands:
+    cpu_usage: "top -l 1 | awk '/CPU usage/ {print $3+$7}'"
+    memory_usage: "top -l 1 | awk '/PhysMem/ {print $0}'"
+    disk_usage: "df -h | awk 'NR>1 {print $9\":\"$5}'"
+    process_list: "ps aux"
+    service_restart: "launchctl stop {service} && launchctl start {service}"
+    service_status: "launchctl list | grep {service}"
+    system_logs: "log show --predicate 'process == \"{service}\" --info --last 1h"
+
+aix:
+  name: "AIX"
+  commands:
+    cpu_usage: "lparstat 1 1 | awk 'END {print $4+$6}'"
+    memory_usage: "svmon -G | awk '/memory/ {print int($3/$2*100)}'"
+    disk_usage: "df -g | awk 'NR>1 {print $7\":\"$4}'"
+    process_list: "ps aux"
+    service_restart: "stopsrc -s {service} && startsrc -s {service}"
+    service_status: "lssrc -s {service}"
+    system_logs: "errpt -a | head -100"
+
+solaris:
+  name: "Solaris"
+  commands:
+    cpu_usage: "mpstat 1 1 | awk 'END {print 100-$NF}'"
+    memory_usage: "prstat -Z 1 1 | awk 'END {print $4}'"
+    disk_usage: "df -h | awk 'NR>1 {print $NF\":\"$5}'"
+    process_list: "ps aux"
+    service_restart: "svcadm restart {service}"
+    service_status: "svcs {service}"
+    system_logs: "dmesg | tail -50"
+
+freebsd:
+  name: "FreeBSD"
+  parent: "unix"
+  commands:
+    cpu_usage: "sysctl vm.loadavg | awk '{print $3}'"
+    memory_usage: "top -b | awk '/Mem:/ {print $0}'"
+    disk_usage: "df -h | awk 'NR>1 {print $NF\":\"$8}'"
+    process_list: "ps aux"
+    service_restart: "service {service} restart"
+    service_status: "service {service} status"
+
+windows:
+  name: "Windows (PowerShell"
+  commands:
+    cpu_usage: "Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average"
+    memory_usage: "Get-CimInstance Win32_OperatingSystem | ForEach-Object {($_.TotalVisibleMemorySize - $_.FreePhysicalMemory) / $_.TotalVisibleMemorySize * 100}"
+    disk_usage: "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{n='Used';e={\"$([math]::Round(($_.Used/($_.Used+$_.Free))*100,2)}}%"
+    process_list: "Get-Process"
+    service_restart: "Restart-Service -Name {service} -Force"
+    service_status: "Get-Service -Name {service} | Select-Object -ExpandProperty Status"
+    system_logs: "Get-WinEvent -LogName System -MaxEvents 100"
