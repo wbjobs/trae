@@ -1,0 +1,6 @@
+/target
+Cargo.lock
+*.mp4
+*.h264
+*.h265
+*.bin
