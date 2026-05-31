@@ -1,0 +1,25 @@
+{
+  "name": "wasm-lz4",
+  "version": "1.0.0",
+  "description": "LZ4 compression with WebAssembly, original implementation",
+  "main": "lib/wasm-lz4.js",
+  "bin": {
+    "wasm-lz4": "./bin/wasm-lz4.js"
+  },
+  "scripts": {
+    "build:wasm": "make",
+    "benchmark": "node scripts/benchmark.js",
+    "test": "node tests/test.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "lz4",
+    "webassembly",
+    "wasm",
+    "compression",
+    "decompression"
+  ],
+  "license": "MIT"
+}

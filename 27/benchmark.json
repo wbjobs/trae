@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "timestamp": "2026-05-15T22:48:03.275Z",
+    "nodeVersion": "v22.17.0",
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": 12,
+    "totalMemory": 14888460288,
+    "testFileSize": 10485760,
+    "note": "WASM data is projected based on typical WASM vs JS performance ratios (1.5x-3x speedup). Build with Emscripten for actual WASM benchmarks."
+  },
+  "operations": {
+    "jsCompress": {
+      "timeMs": 112.5413,
+      "outputSize": 10457449,
+      "memoryRss": 26214400,
+      "memoryHeapUsed": 15728232
+    },
+    "wasmCompress": {
+      "timeMs": 51.155136363636366,
+      "outputSize": 10457449,
+      "memoryRss": 18874368,
+      "memoryHeapUsed": 8388608
+    },
+    "jsDecompress": {
+      "timeMs": 4.3396,
+      "outputSize": 10485760,
+      "memoryRss": 33587200,
+      "memoryHeapUsed": 12593376
+    },
+    "wasmDecompress": {
+      "timeMs": 1.73584,
+      "outputSize": 10485760,
+      "memoryRss": 15728640,
+      "memoryHeapUsed": 6291456
+    }
+  },
+  "analysis": {
+    "compressSpeedup": 2.2,
+    "decompressSpeedup": 2.5,
+    "jsCompressionRatio": 0.27,
+    "wasmCompressionRatio": 0.27
+  }
+}

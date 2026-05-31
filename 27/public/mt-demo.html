@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LZ4 多线程压缩演示</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 30px;
+        }
+        .warning {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #fbbf24;
+        }
+        .warning h3 {
+            color: #fbbf24;
+            margin-bottom: 10px;
+        }
+        .warning code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card h2 {
+            margin-bottom: 16px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            font-size: 0.7em;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+        }
+        .badge.experimental {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+        }
+        .file-drop {
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+        }
+        .file-drop:hover, .file-drop.dragover {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.05);
+        }
+        .file-drop input {
+            display: none;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9em;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .progress-container {
+            margin-top: 16px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff 0%, #7c3aed 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        .progress-text {
+            font-size: 0.85em;
+            color: rgba(255,255,255,0.6);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .stat {
+            background: rgba(255,255,255,0.05);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .stat-label {
+            font-size: 0.85em;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+        .log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        .log-entry {
+            padding: 4px 0;
+            color: rgba(255,255,255,0.7);
+        }
+        .log-entry.success {
+            color: #10b981;
+        }
+        .log-entry.error {
+            color: #ef4444;
+        }
+        .log-entry.info {
+            color: #3b82f6;
+        }
+        .feature-list {
+            list-style: none;
+            margin-top: 16px;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            color: rgba(255,255,255,0.8);
+        }
+        .feature-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 LZ4 多线程压缩</h1>
+        <p class="subtitle">实验性功能 · Web Worker + SharedArrayBuffer · 分块并行压缩</p>
+
+        <div class="warning">
+            <h3>⚠️ SharedArrayBuffer 要求</h3>
+            <p>使用多线程功能需要设置以下 HTTP 头：</p>
+            <code>Cross-Origin-Opener-Policy: same-origin</code><br>
+            <code>Cross-Origin-Embedder-Policy: require-corp</code>
+            <p style="margin-top: 10px;">可以使用以下命令启动支持 COOP/COEP 的服务器：</p>
+            <code>npx http-server --cors --coop --coep</code>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📤 多线程压缩 <span class="badge experimental">实验性</span></h2>
+                <div class="file-drop" id="fileDrop">
+                    <input type="file" id="fileInput">
+                    <div style="font-size: 2em; margin-bottom: 10px;">📁</div>
+                    <div>点击或拖拽文件到此处</div>
+                    <div style="font-size: 0.85em; color: rgba(255,255,255,0.5); margin-top: 8px;">
+                        支持任意类型文件，将自动分块并行压缩
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>线程数</label>
+                    <select id="threadCount">
+                        <option value="1">1 线程（单线程）</option>
+                        <option value="2">2 线程</option>
+                        <option value="4" selected>4 线程</option>
+                        <option value="8">8 线程</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>块大小</label>
+                    <select id="chunkSize">
+                        <option value="262144">256 KB</option>
+                        <option value="524288">512 KB</option>
+                        <option value="1048576" selected>1 MB</option>
+                        <option value="2097152">2 MB</option>
+                        <option value="4194304">4 MB</option>
+                    </select>
+                </div>
+
+                <button id="compressBtn" disabled>选择文件后开始压缩</button>
+
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">准备中...</div>
+                </div>
+
+                <div class="stats" id="stats" style="display: none;">
+                    <div class="stat">
+                        <div class="stat-value" id="originalSize">-</div>
+                        <div class="stat-label">原始大小</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="compressedSize">-</div>
+                        <div class="stat-label">压缩后大小</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="compressionRatio">-</div>
+                        <div class="stat-label">压缩率</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="compressionTime">-</div>
+                        <div class="stat-label">耗时</div>
+                    </div>
+                </div>
+
+                <button id="downloadBtn" style="display: none; margin-top: 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    💾 下载压缩文件
+                </button>
+            </div>
+
+            <div class="card">
+                <h2>📋 功能说明</h2>
+                <ul class="feature-list">
+                    <li>基于 Web Worker 的多线程并行压缩</li>
+                    <li>自动文件分块，各块独立压缩</li>
+                    <li>支持 SharedArrayBuffer 零拷贝传输</li>
+                    <li>输出标准 .lz4 多帧格式</li>
+                    <li>各块包含独立索引，支持随机访问</li>
+                    <li>进度实时显示，可随时取消</li>
+                </ul>
+
+                <h3 style="margin-top: 24px; margin-bottom: 12px;">🔧 技术架构</h3>
+                <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 16px; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.6;">
+┌─────────────────────────────────────┐<br>
+│           主线程                     │<br>
+│  ┌──────────┐  ┌────────┐  ┌──────┐│<br>
+│  │  文件分块 │→│ 调度器 │→│ 合并器 ││<br>
+│  └──────────┘  └────────┘  └──────┘│<br>
+└────────────┬──────────┬─────────────┘<br>
+             │          │<br>
+    ┌────────▼──┐  ┌────▼────────┐<br>
+    │ Worker 0  │  │ Worker 1  │...<br>
+    └───────────┘  └───────────┘<br>
+                </div>
+
+                <h3 style="margin-top: 24px; margin-bottom: 12px;">📝 执行日志</h3>
+                <div class="log" id="log">
+                    <div class="log-entry info">等待文件上传...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../dist/lz4-browser.js"></script>
+    <script src="../dist/threadpool-compressor-browser.js"></script>
+    <script>
+        const fileDrop = document.getElementById('fileDrop');
+        const fileInput = document.getElementById('fileInput');
+        const compressBtn = document.getElementById('compressBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const threadCountSelect = document.getElementById('threadCount');
+        const chunkSizeSelect = document.getElementById('chunkSize');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const stats = document.getElementById('stats');
+        const logDiv = document.getElementById('log');
+
+        let selectedFile = null;
+        let compressedBlob = null;
+        let compressor = null;
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        fileDrop.addEventListener('click', () => fileInput.click());
+        
+        fileDrop.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDrop.classList.add('dragover');
+        });
+        
+        fileDrop.addEventListener('dragleave', () => {
+            fileDrop.classList.remove('dragover');
+        });
+        
+        fileDrop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDrop.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            compressBtn.disabled = false;
+            compressBtn.textContent = `压缩 ${file.name} (${formatBytes(file.size)})`;
+            log(`已选择文件: ${file.name} (${formatBytes(file.size)})`);
+            
+            const sabSupported = typeof SharedArrayBuffer !== 'undefined';
+            log(`SharedArrayBuffer 支持: ${sabSupported ? '✅ 是' : '❌ 否'}`, sabSupported ? 'success' : 'error');
+            
+            if (!sabSupported) {
+                log('⚠️  未启用 COOP/COEP 头，将使用结构化克隆传输数据', 'info');
+            }
+        }
+
+        compressBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            compressBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            stats.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            
+            const threadCount = parseInt(threadCountSelect.value);
+            const chunkSize = parseInt(chunkSizeSelect.value);
+
+            log(`开始压缩，线程数: ${threadCount}, 块大小: ${formatBytes(chunkSize)}`);
+
+            try {
+                const reader = new FileReader();
+                
+                const arrayBuffer = await new Promise((resolve, reject) => {
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(selectedFile);
+                });
+
+                const inputData = new Uint8Array(arrayBuffer);
+                
+                log(`文件加载完成，大小: ${formatBytes(inputData.length)}`);
+
+                if (compressor) {
+                    await compressor.shutdown();
+                }
+
+                compressor = new ThreadPoolCompressor({
+                    threadCount,
+                    chunkSize,
+                    workerUrl: '../src/worker/compress-worker.js'
+                });
+
+                log('正在初始化线程池...');
+                await compressor.init();
+                log(`线程池初始化完成，${threadCount} 个 Worker 就绪`, 'success');
+
+                const startTime = performance.now();
+
+                compressedBlob = await compressor.compressBuffer(inputData, {
+                    onProgress: (progress) => {
+                        const percent = progress.progress.toFixed(1);
+                        progressFill.style.width = percent + '%';
+                        progressText.textContent = `${progress.phase}: ${percent}% (块 ${progress.blockIndex + 1}/${progress.totalBlocks})`;
+                    }
+                });
+
+                const endTime = performance.now();
+                const duration = (endTime - startTime).toFixed(2);
+
+                log(`压缩完成！耗时: ${duration}ms`, 'success');
+
+                document.getElementById('originalSize').textContent = formatBytes(inputData.length);
+                document.getElementById('compressedSize').textContent = formatBytes(compressedBlob.length);
+                document.getElementById('compressionRatio').textContent = 
+                    ((1 - compressedBlob.length / inputData.length) * 100).toFixed(2) + '%';
+                document.getElementById('compressionTime').textContent = duration + ' ms';
+
+                stats.style.display = 'grid';
+                downloadBtn.style.display = 'block';
+                progressFill.style.width = '100%';
+                progressText.textContent = '压缩完成！';
+
+                await compressor.shutdown();
+
+            } catch (error) {
+                log(`压缩失败: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                compressBtn.disabled = false;
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            if (!compressedBlob) return;
+            
+            const blob = new Blob([compressedBlob], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = selectedFile.name + '.lz4';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            log('文件已下载', 'success');
+        });
+
+        log('页面加载完成', 'info');
+        log(`硬件并发数: ${navigator.hardwareConcurrency || '未知'}`, 'info');
+    </script>
+</body>
+</html>
