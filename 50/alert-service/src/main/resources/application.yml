@@ -1,0 +1,42 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: alert-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    consumer:
+      group-id: alert-service-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+alert:
+  email:
+    enabled: ${ALERT_EMAIL_ENABLED:false}
+    from: ${ALERT_EMAIL_FROM:}
+    to: ${ALERT_EMAIL_TO:}
+  sms:
+    enabled: ${ALERT_SMS_ENABLED:false}
+    api-url: ${ALERT_SMS_API_URL:}
+    api-key: ${ALERT_SMS_API_KEY:}
+    phone-numbers: ${ALERT_SMS_PHONES:}
+  wechat:
+    enabled: ${ALERT_WECHAT_ENABLED:false}
+    webhook-url: ${ALERT_WECHAT_WEBHOOK:}
+
+logging:
+  level:
+    com.anomaly.alert: INFO
