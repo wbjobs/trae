@@ -1,0 +1,74 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: task-scheduler
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/task_scheduler?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: always
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceName: DistributedScheduler
+            instanceId: AUTO
+          jobStore:
+            class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            useProperties: true
+            misfireThreshold: 60000
+            clusterCheckinInterval: 5000
+            isClustered: true
+          threadPool:
+            class: org.quartz.simpl.SimpleThreadPool
+            threadCount: 20
+            threadPriority: 5
+
+scheduler:
+  task:
+    queue-prefix: "task:queue:"
+    priority-queue-prefix: "task:priority-queue:"
+    use-priority-queue: true
+    heartbeat-timeout-seconds: 30
+    failover-check-interval-seconds: 60
+    preemption-enabled: true
+    preemption-priority-gap: 3
+    suspend-signal-prefix: "task:suspend:"
+  otel:
+    enabled: ${OTEL_ENABLED:true}
+    endpoint: ${OTEL_ENDPOINT:http://localhost:4317}
+    service-name: ${OTEL_SERVICE_NAME:task-scheduler}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.distributed.scheduler: INFO
+    org.quartz: WARN

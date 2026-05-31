@@ -1,0 +1,9 @@
+celery==5.3.4
+redis==5.0.1
+requests==2.31.0
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
+opentelemetry-exporter-otlp-proto-grpc==1.21.0
+opentelemetry-instrumentation-celery==0.42b0
+python-dotenv==1.0.0
+click==8.1.7

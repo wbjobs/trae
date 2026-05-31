@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: task_scheduler
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - task-scheduler
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - task-scheduler
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.51
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - task-scheduler
+
+  scheduler:
+    build: ./scheduler
+    ports:
+      - "8080:8080"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OTEL_ENABLED: "true"
+      OTEL_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: task-scheduler
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - task-scheduler
+    deploy:
+      replicas: 1
+
+  executor:
+    build: ./executor
+    environment:
+      SCHEDULER_URL: http://scheduler:8080
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EXECUTOR_ID: executor-${HOSTNAME}
+      EXECUTOR_NAME: celery-executor
+      EXECUTOR_HOST: executor
+      EXECUTOR_PORT: 5555
+      HEARTBEAT_INTERVAL: 10
+      CELERY_CONCURRENCY: 4
+      OTEL_ENABLED: "true"
+      OTEL_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: task-executor
+    depends_on:
+      - scheduler
+      - redis
+    networks:
+      - task-scheduler
+    deploy:
+      replicas: 2
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  task-scheduler:
+    driver: bridge

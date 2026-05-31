@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-executor
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: task-executor
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: task-executor
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - task-executor
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: task-executor
+          image: task-executor:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SCHEDULER_URL
+              value: "http://task-scheduler:8080"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: EXECUTOR_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: EXECUTOR_NAME
+              value: "celery-executor"
+            - name: EXECUTOR_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EXECUTOR_PORT
+              value: "5555"
+            - name: HEARTBEAT_INTERVAL
+              value: "10"
+            - name: CELERY_CONCURRENCY
+              value: "4"
+            - name: CELERY_LOG_LEVEL
+              value: "INFO"
+            - name: OTEL_ENABLED
+              value: "true"
+            - name: OTEL_ENDPOINT
+              value: "http://jaeger-collector:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "task-executor"
+          ports:
+            - containerPort: 5555
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - "-c"
+                - "import os; import requests; response = requests.get('http://localhost:5555/api/health', timeout=5); exit(0 if response.status_code == 200 else 1)"
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-executor
+  labels:
+    app: task-executor
+spec:
+  ports:
+    - port: 5555
+      targetPort: 5555
+  selector:
+    app: task-executor
+  type: ClusterIP
