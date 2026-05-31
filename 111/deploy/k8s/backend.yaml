@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaos-injector-backend
+  namespace: chaos-injector
+  labels:
+    app: chaos-injector-backend
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chaos-injector-backend
+  template:
+    metadata:
+      labels:
+        app: chaos-injector-backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: chaos-injector
+      containers:
+        - name: backend
+          image: chaos-injector-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: PORT
+              value: "8080"
+            - name: GIN_MODE
+              value: "release"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaos-injector-backend
+  namespace: chaos-injector
+  labels:
+    app: chaos-injector-backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    app: chaos-injector-backend
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-injector
+  namespace: chaos-injector
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chaos-injector
+rules:
+  - apiGroups: ["chaos-injector.io"]
+    resources: ["chaosexperiments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["chaos-injector.io"]
+    resources: ["chaosexperiments/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["networking.istio.io"]
+    resources: ["virtualservices", "destinationrules"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chaos-injector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chaos-injector
+subjects:
+  - kind: ServiceAccount
+    name: chaos-injector
+    namespace: chaos-injector

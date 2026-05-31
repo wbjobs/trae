@@ -1,0 +1,16 @@
+apiVersion: chaos-injector.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: abort-test-1
+  namespace: default
+spec:
+  description: "Return HTTP 500 for 10% of inventory service requests"
+  faultType: abort
+  abort:
+    httpStatus: 500
+    percent: 10.0
+  targets:
+    - service: inventory-service
+      namespace: default
+      subset: v1
+  duration: 10m

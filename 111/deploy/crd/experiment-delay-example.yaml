@@ -1,0 +1,20 @@
+apiVersion: chaos-injector.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: delay-test-1
+  namespace: default
+  labels:
+    environment: staging
+    team: platform
+spec:
+  description: "Inject 500ms delay to payment service"
+  faultType: delay
+  delay:
+    minMs: 500
+    maxMs: 800
+    percent: 30.0
+  targets:
+    - service: payment-service
+      namespace: default
+      subset: v1
+  duration: 5m

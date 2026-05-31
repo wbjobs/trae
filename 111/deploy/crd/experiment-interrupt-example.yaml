@@ -1,0 +1,15 @@
+apiVersion: chaos-injector.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: interrupt-test-1
+  namespace: default
+spec:
+  description: "Interrupt connections to order service"
+  faultType: interrupt
+  interrupt:
+    percent: 15.0
+  targets:
+    - service: order-service
+      namespace: default
+      subset: v1
+  duration: 3m

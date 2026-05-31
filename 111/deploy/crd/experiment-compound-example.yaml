@@ -1,0 +1,23 @@
+apiVersion: chaos-injector.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: compound-test-1
+  namespace: default
+  labels:
+    environment: staging
+    team: platform
+spec:
+  description: "Compound fault: inject both delay and abort to order-service in a single VirtualService rule. This avoids Envoy config conflicts that occur when two separate experiments target the same service."
+  faultType: compound
+  delay:
+    minMs: 200
+    maxMs: 500
+    percent: 15.0
+  abort:
+    httpStatus: 503
+    percent: 5.0
+  targets:
+    - service: order-service
+      namespace: default
+      subset: v1
+  duration: 10m
