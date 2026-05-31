@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://*.tile.openstreetmap.org https://*.openstreetmap.org; connect-src 'self' ws: wss: http: https:;">
+  <title>LocationShare - P2P实时位置共享</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div id="app">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="app-title">📍 LocationShare</h1>
+      </div>
+
+      <div class="sidebar-section" id="room-section">
+        <div id="room-init" class="room-controls">
+          <button id="btn-create-room" class="btn btn-primary">创建房间</button>
+          <div class="divider">
+            <span>或</span>
+          </div>
+          <div class="join-form">
+            <input type="text" id="input-room-code" placeholder="输入邀请码" maxlength="6" class="input">
+            <button id="btn-join-room" class="btn btn-secondary">加入房间</button>
+          </div>
+        </div>
+
+        <div id="room-active" class="room-info hidden">
+          <div class="room-code-display">
+            <span class="label">邀请码</span>
+            <span id="display-room-code" class="code">------</span>
+            <button id="btn-copy-code" class="btn-icon" title="复制邀请码">📋</button>
+          </div>
+          <div class="room-stats">
+            <span id="member-count">成员数: 0</span>
+          </div>
+          <button id="btn-leave-room" class="btn btn-danger">离开房间</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-header">
+          <h2>👥 成员列表</h2>
+        </div>
+        <div id="member-list" class="member-list">
+          <div class="empty-state">暂无可用成员</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-header">
+          <h2>🗺️ 地理围栏</h2>
+          <div class="geofence-actions">
+            <button id="btn-add-circle" class="btn btn-small" title="添加圆形围栏">⭕ 圆形</button>
+            <button id="btn-add-polygon" class="btn btn-small" title="添加多边形围栏">⬡ 多边形</button>
+          </div>
+        </div>
+        <div id="geofence-list" class="geofence-list">
+          <div class="empty-state">暂无围栏</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-header">
+          <h2>🔥 热力图分析</h2>
+          <button id="btn-toggle-heatmap" class="btn btn-small" title="切换热力图">
+            {{heatmapStatus}}
+          </button>
+        </div>
+        
+        <div id="heatmap-controls" class="heatmap-controls">
+          <div class="control-group">
+            <label>时间筛选</label>
+            <select id="heatmap-time-filter" class="input">
+              <option value="all">全部时间</option>
+              <option value="hour">按小时</option>
+              <option value="day">按天</option>
+            </select>
+          </div>
+          
+          <div class="control-group" id="hour-select-container" style="display: none;">
+            <label>选择小时</label>
+            <select id="heatmap-hour-select" class="input">
+              <option value="0">00:00</option>
+              <option value="1">01:00</option>
+              <option value="2">02:00</option>
+              <option value="3">03:00</option>
+              <option value="4">04:00</option>
+              <option value="5">05:00</option>
+              <option value="6">06:00</option>
+              <option value="7">07:00</option>
+              <option value="8">08:00</option>
+              <option value="9">09:00</option>
+              <option value="10">10:00</option>
+              <option value="11">11:00</option>
+              <option value="12">12:00</option>
+              <option value="13">13:00</option>
+              <option value="14">14:00</option>
+              <option value="15">15:00</option>
+              <option value="16">16:00</option>
+              <option value="17">17:00</option>
+              <option value="18">18:00</option>
+              <option value="19">19:00</option>
+              <option value="20">20:00</option>
+              <option value="21">21:00</option>
+              <option value="22">22:00</option>
+              <option value="23">23:00</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <button id="btn-play-animation" class="btn btn-secondary btn-block">
+              ▶️ 播放动画
+            </button>
+          </div>
+
+          <div class="control-group">
+            <button id="btn-show-hotspots" class="btn btn-secondary btn-block">
+              🏆 显示热点
+            </button>
+          </div>
+
+          <div class="control-group">
+            <button id="btn-export-geojson" class="btn btn-primary btn-block">
+              📥 导出 GeoJSON
+            </button>
+          </div>
+        </div>
+
+        <div id="heatmap-stats" class="heatmap-stats" style="margin-top: 12px;">
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div id="map-container" class="map-container">
+        <div id="map" class="map"></div>
+        
+        <div class="map-controls">
+          <button id="btn-toggle-simulation" class="btn btn-control" title="模拟GPS设备">
+            ▶️ 启动模拟
+          </button>
+          <button id="btn-center-location" class="btn btn-control" title="定位到中心">
+            🎯 中心
+          </button>
+        </div>
+
+        <div id="tooltip" class="tooltip hidden"></div>
+      </div>
+    </div>
+
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-title">标题</h3>
+          <button id="modal-close" class="btn-icon">✕</button>
+        </div>
+        <div id="modal-body" class="modal-body">
+        </div>
+        <div id="modal-footer" class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

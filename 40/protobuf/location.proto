@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+message LocationUpdate {
+  string peer_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  float accuracy = 4;
+  float speed = 5;
+  float heading = 6;
+  int64 timestamp = 7;
+}
+
+message PeerInfo {
+  string peer_id = 1;
+  string nickname = 2;
+  string avatar_color = 3;
+}
+
+message GeofenceEvent {
+  string peer_id = 1;
+  string geofence_id = 2;
+  string geofence_name = 3;
+  bool entered = 4;
+  int64 timestamp = 5;
+}
+
+message RoomCreate {
+  string room_code = 1;
+  string host_id = 2;
+  string host_nickname = 3;
+}
+
+message RoomJoin {
+  string room_code = 1;
+  string peer_id = 2;
+  string nickname = 3;
+}
+
+message SignalingOffer {
+  string from_peer_id = 1;
+  string to_peer_id = 2;
+  string room_code = 3;
+  string sdp = 4;
+}
+
+message SignalingAnswer {
+  string from_peer_id = 1;
+  string to_peer_id = 2;
+  string room_code = 3;
+  string sdp = 4;
+}
+
+message IceCandidate {
+  string from_peer_id = 1;
+  string to_peer_id = 2;
+  string room_code = 3;
+  string candidate = 4;
+  string sdp_mid = 5;
+  int32 sdp_m_line_index = 6;
+}

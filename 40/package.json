@@ -1,0 +1,53 @@
+{
+  "name": "location-share",
+  "version": "1.0.0",
+  "description": "P2P Real-time Location Sharing Desktop Application",
+  "main": "src/main/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"vite\" \"electron .\"",
+    "package": "electron-builder",
+    "proto": "pbjs -t static-module -w commonjs -o src/renderer/js/protobuf.js protobuf/location.proto"
+  },
+  "author": "LocationShare Team",
+  "license": "MIT",
+  "dependencies": {
+    "electron-log": "^5.0.1",
+    "ioredis": "^5.3.2",
+    "leaflet": "^1.9.4",
+    "leaflet-editable": "^1.2.0",
+    "mqtt": "^5.3.0",
+    "protobufjs": "^6.11.4",
+    "simple-peer": "^9.11.1",
+    "@turf/turf": "^6.5.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "vite": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.locationshare.app",
+    "productName": "LocationShare",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "protobuf/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
