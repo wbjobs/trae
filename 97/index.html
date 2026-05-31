@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时股票异常监控系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/js/china.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #0a1628;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #1a2a4a 0%, #0d1f3c 100%);
+            padding: 15px 30px;
+            border-bottom: 2px solid #00d4ff;
+            box-shadow: 0 2px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .header .subtitle {
+            color: #8aa4be;
+            margin-top: 3px;
+            font-size: 12px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 30px;
+            padding: 10px 30px;
+            background: #0d1f3c;
+            border-bottom: 1px solid #1a3a5c;
+            font-size: 13px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background: #dc3545;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 110px);
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1a2a4a 0%, #0d1f3c 100%);
+            border: 1px solid #1a3a5c;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            color: #8aa4be;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            font-size: 26px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .stat-card.high .value {
+            color: #ff4757;
+        }
+
+        .stat-card.medium .value {
+            color: #ffa502;
+        }
+
+        .stat-card.warning .value {
+            color: #ff6b81;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .charts-row-bottom {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            height: 280px;
+        }
+
+        .chart-container {
+            background: #0d1f3c;
+            border: 1px solid #1a3a5c;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chart-title {
+            color: #00d4ff;
+            font-size: 14px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #1a3a5c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-title .badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #1a3a5c;
+            color: #8aa4be;
+        }
+
+        .chart-title .badge.high {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        .chart {
+            flex: 1;
+            min-height: 0;
+        }
+
+        #mapChart {
+            height: 100%;
+            min-height: 250px;
+        }
+
+        #typeChart {
+            height: 100%;
+            min-height: 250px;
+        }
+
+        #predictionChart {
+            height: 100%;
+        }
+
+        #stockRadarChart {
+            height: 100%;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            background: #0d1f3c;
+            border: 1px solid #1a3a5c;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: #1a2a4a;
+            padding: 12px 15px;
+            border-bottom: 1px solid #1a3a5c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h3 {
+            color: #00d4ff;
+            font-size: 14px;
+        }
+
+        .prediction-preview {
+            padding: 10px 15px;
+            background: #0a1628;
+            border-bottom: 1px solid #1a3a5c;
+        }
+
+        .prediction-preview .label {
+            color: #8aa4be;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+
+        .high-risk-stocks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .risk-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: rgba(255, 71, 87, 0.2);
+            color: #ff4757;
+            border: 1px solid #ff4757;
+        }
+
+        .risk-tag.medium {
+            background: rgba(255, 165, 2, 0.2);
+            color: #ffa502;
+            border-color: #ffa502;
+        }
+
+        .anomaly-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .anomaly-item {
+            background: #1a2a4a;
+            border: 1px solid #1a3a5c;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 4px solid #00d4ff;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .anomaly-item.high {
+            border-left-color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        .anomaly-item.medium {
+            border-left-color: #ffa502;
+            background: rgba(255, 165, 2, 0.1);
+        }
+
+        .anomaly-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .anomaly-symbol {
+            font-weight: bold;
+            color: #00d4ff;
+            font-size: 14px;
+        }
+
+        .anomaly-type {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: #1a3a5c;
+        }
+
+        .anomaly-type.flash_crash {
+            background: #ff4757;
+        }
+
+        .anomaly-type.high_cancel_rate {
+            background: #ffa502;
+        }
+
+        .anomaly-type.large_order {
+            background: #2ed573;
+        }
+
+        .anomaly-desc {
+            color: #c4d4e3;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .anomaly-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #8aa4be;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 15px;
+            color: #8aa4be;
+            font-size: 12px;
+        }
+
+        .empty-state .icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0d1f3c;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1a3a5c;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a4a6c;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📈 实时股票异常监控系统</h1>
+        <div class="subtitle">Real-time Stock Anomaly Detection & Prediction System</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot" id="anomalyStatus"></div>
+            <span id="anomalyText">异常服务连接中...</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="predictionStatus"></div>
+            <span id="predictionText">预测服务连接中...</span>
+        </div>
+        <div class="status-item">
+            <span style="color: #8aa4be;">数据速率:</span>
+            <span style="color: #00d4ff;">5000 ticks/秒</span>
+        </div>
+        <div class="status-item">
+            <span style="color: #8aa4be;">监控股票:</span>
+            <span style="color: #00d4ff;">10 只</span>
+        </div>
+        <div class="status-item">
+            <span style="color: #8aa4be;">预测窗口:</span>
+            <span style="color: #00d4ff;">未来 10 秒</span>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">异常总数</div>
+                    <div class="value" id="totalAnomalies">0</div>
+                </div>
+                <div class="stat-card high">
+                    <div class="label">闪崩警报</div>
+                    <div class="value" id="flashCrashCount">0</div>
+                </div>
+                <div class="stat-card medium">
+                    <div class="label">频繁撤单</div>
+                    <div class="value" id="cancelRateCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">大单砸盘</div>
+                    <div class="value" id="largeOrderCount">0</div>
+                </div>
+                <div class="stat-card warning" id="highRiskCard">
+                    <div class="label">高风险股票</div>
+                    <div class="value" id="highRiskCount">0</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <div class="chart-title">
+                        🗺️ 异常地域分布
+                        <span class="badge">实时</span>
+                    </div>
+                    <div id="mapChart" class="chart"></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">
+                        📊 异常类型分布
+                        <span class="badge">实时</span>
+                    </div>
+                    <div id="typeChart" class="chart"></div>
+                </div>
+            </div>
+
+            <div class="charts-row-bottom">
+                <div class="chart-container">
+                    <div class="chart-title">
+                        🎯 闪崩预测概率曲线
+                        <span class="badge" id="predictionBadge">等待数据...</span>
+                    </div>
+                    <div id="predictionChart" class="chart"></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">
+                        📡 股票风险雷达
+                        <span class="badge">10 只股票</span>
+                    </div>
+                    <div id="stockRadarChart" class="chart"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-header">
+                <h3>⚠️ 实时异常事件</h3>
+                <span id="eventCount" style="color: #8aa4be; font-size: 12px;">0 条</span>
+            </div>
+
+            <div class="prediction-preview">
+                <div class="label">🔴 高风险预警（概率 > 70%）</div>
+                <div class="high-risk-stocks" id="highRiskStocks">
+                    <span style="color: #8aa4be; font-size: 11px;">暂无高风险股票</span>
+                </div>
+            </div>
+
+            <div class="anomaly-list" id="anomalyList">
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <div>等待异常事件...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const REGION_COORDS = {
+            "北京": [116.4074, 39.9042],
+            "上海": [121.4737, 31.2304],
+            "深圳": [114.0579, 22.5431],
+            "杭州": [120.1551, 30.2741],
+            "广州": [113.2644, 23.1291],
+            "成都": [104.0668, 30.5728],
+            "武汉": [114.3055, 30.5928],
+            "南京": [118.7969, 32.0603],
+            "西安": [108.9398, 34.3416],
+            "重庆": [106.5516, 29.5630],
+        };
+
+        const TYPE_NAMES = {
+            "flash_crash": "闪崩",
+            "high_cancel_rate": "频繁撤单",
+            "large_order": "大单砸盘"
+        };
+
+        const TYPE_COLORS = {
+            "flash_crash": "#ff4757",
+            "high_cancel_rate": "#ffa502",
+            "large_order": "#2ed573"
+        };
+
+        const STOCK_SYMBOLS = ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "META", "NVDA", "BABA", "JD", "PDD"];
+
+        let anomalies = [];
+        let stats = {
+            total_anomalies: 0,
+            by_type: { flash_crash: 0, high_cancel_rate: 0, large_order: 0 },
+            by_region: {},
+            by_symbol: {}
+        };
+
+        let predictionHistory = {};
+        STOCK_SYMBOLS.forEach(s => predictionHistory[s] = []);
+        let currentPredictions = {};
+
+        const mapChart = echarts.init(document.getElementById('mapChart'));
+        const typeChart = echarts.init(document.getElementById('typeChart'));
+        const predictionChart = echarts.init(document.getElementById('predictionChart'));
+        const stockRadarChart = echarts.init(document.getElementById('stockRadarChart'));
+
+        function initMapChart() {
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(13, 31, 60, 0.95)',
+                    borderColor: '#1a3a5c',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        if (params.value && params.value[2]) {
+                            return `${params.name}<br/>异常数: ${params.value[2]}`;
+                        }
+                        return params.name;
+                    }
+                },
+                geo: {
+                    map: 'china',
+                    roam: false,
+                    label: { show: false },
+                    itemStyle: {
+                        areaColor: '#1a2a4a',
+                        borderColor: '#2a4a6c',
+                        borderWidth: 1
+                    },
+                    emphasis: {
+                        itemStyle: { areaColor: '#2a4a6c' },
+                        label: { show: false }
+                    }
+                },
+                series: [{
+                    name: '异常分布',
+                    type: 'scatter',
+                    coordinateSystem: 'geo',
+                    symbolSize: function(val) {
+                        return Math.max(8, val[2] * 2.5);
+                    },
+                    itemStyle: {
+                        color: '#ff4757',
+                        shadowBlur: 8,
+                        shadowColor: '#ff4757'
+                    },
+                    data: []
+                }, {
+                    name: '涟漪效果',
+                    type: 'effectScatter',
+                    coordinateSystem: 'geo',
+                    symbolSize: function(val) {
+                        return Math.max(10, val[2] * 3);
+                    },
+                    showEffectOn: 'render',
+                    rippleEffect: {
+                        brushType: 'stroke',
+                        scale: 3,
+                        period: 2.5
+                    },
+                    itemStyle: {
+                        color: '#ff4757',
+                        shadowBlur: 12,
+                        shadowColor: '#ff4757'
+                    },
+                    data: []
+                }]
+            };
+            mapChart.setOption(option);
+        }
+
+        function updateMapChart() {
+            const scatterData = [];
+            const effectData = [];
+
+            for (const [region, count] of Object.entries(stats.by_region)) {
+                const coords = REGION_COORDS[region];
+                if (coords) {
+                    const item = {
+                        name: region,
+                        value: [...coords, count]
+                    };
+                    scatterData.push(item);
+                    if (count > 0) {
+                        effectData.push(item);
+                    }
+                }
+            }
+
+            mapChart.setOption({
+                series: [{
+                    data: scatterData
+                }, {
+                    data: effectData.slice(0, 5)
+                }]
+            });
+        }
+
+        function initTypeChart() {
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(13, 31, 60, 0.95)',
+                    borderColor: '#1a3a5c',
+                    textStyle: { color: '#fff' }
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: '5%',
+                    top: 'center',
+                    textStyle: { color: '#8aa4be', fontSize: 12 }
+                },
+                series: [{
+                    name: '异常类型',
+                    type: 'pie',
+                    radius: ['35%', '65%'],
+                    center: ['35%', '50%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 6,
+                        borderColor: '#0d1f3c',
+                        borderWidth: 2
+                    },
+                    label: { show: false },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 13,
+                            fontWeight: 'bold',
+                            color: '#fff'
+                        }
+                    },
+                    labelLine: { show: false },
+                    data: [
+                        { value: 0, name: '闪崩', itemStyle: { color: '#ff4757' } },
+                        { value: 0, name: '频繁撤单', itemStyle: { color: '#ffa502' } },
+                        { value: 0, name: '大单砸盘', itemStyle: { color: '#2ed573' } }
+                    ]
+                }]
+            };
+            typeChart.setOption(option);
+        }
+
+        function updateTypeChart() {
+            const data = [
+                { value: stats.by_type.flash_crash || 0, name: '闪崩', itemStyle: { color: '#ff4757' } },
+                { value: stats.by_type.high_cancel_rate || 0, name: '频繁撤单', itemStyle: { color: '#ffa502' } },
+                { value: stats.by_type.large_order || 0, name: '大单砸盘', itemStyle: { color: '#2ed573' } }
+            ];
+            typeChart.setOption({ series: [{ data: data }] });
+        }
+
+        function initPredictionChart() {
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(13, 31, 60, 0.95)',
+                    borderColor: '#1a3a5c',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        let result = params[0].axisValue + '<br/>';
+                        params.forEach(p => {
+                            const prob = (p.value * 100).toFixed(1);
+                            result += `${p.marker} ${p.seriesName}: ${prob}%<br/>`;
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['AAPL', 'TSLA', 'NVDA'],
+                    textStyle: { color: '#8aa4be', fontSize: 11 },
+                    top: 0
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    top: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: [],
+                    axisLine: { lineStyle: { color: '#2a4a6c' } },
+                    axisLabel: { color: '#8aa4be', fontSize: 10 }
+                },
+                yAxis: {
+                    type: 'value',
+                    max: 1,
+                    axisLine: { lineStyle: { color: '#2a4a6c' } },
+                    axisLabel: {
+                        color: '#8aa4be',
+                        fontSize: 10,
+                        formatter: function(val) {
+                            return (val * 100).toFixed(0) + '%';
+                        }
+                    },
+                    splitLine: { lineStyle: { color: '#1a3a5c', type: 'dashed' } }
+                },
+                series: [
+                    {
+                        name: 'AAPL',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 2, color: '#00d4ff' },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(0, 212, 255, 0.3)' },
+                                    { offset: 1, color: 'rgba(0, 212, 255, 0)' }
+                                ]
+                            }
+                        },
+                        data: []
+                    },
+                    {
+                        name: 'TSLA',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 2, color: '#ff6b81' },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(255, 107, 129, 0.3)' },
+                                    { offset: 1, color: 'rgba(255, 107, 129, 0)' }
+                                ]
+                            }
+                        },
+                        data: []
+                    },
+                    {
+                        name: 'NVDA',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 2, color: '#7bed9f' },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(123, 237, 159, 0.3)' },
+                                    { offset: 1, color: 'rgba(123, 237, 159, 0)' }
+                                ]
+                            }
+                        },
+                        data: []
+                    }
+                ]
+            };
+            predictionChart.setOption(option);
+        }
+
+        function updatePredictionChart(timestamp) {
+            const timeLabel = new Date(timestamp * 1000).toLocaleTimeString('zh-CN', { hour12: false });
+
+            const maxPoints = 60;
+            const displayStocks = ['AAPL', 'TSLA', 'NVDA'];
+
+            const xData = [];
+            const seriesData = {};
+            displayStocks.forEach(s => seriesData[s] = []);
+
+            const allTimes = new Set();
+            displayStocks.forEach(symbol => {
+                predictionHistory[symbol].forEach(p => allTimes.add(p.time));
+            });
+
+            const sortedTimes = Array.from(allTimes).sort().slice(-maxPoints);
+            sortedTimes.forEach(t => {
+                xData.push(new Date(t * 1000).toLocaleTimeString('zh-CN', { hour12: false }));
+                displayStocks.forEach(symbol => {
+                    const point = predictionHistory[symbol].find(p => Math.abs(p.time - t) < 0.5);
+                    seriesData[symbol].push(point ? point.prob : null);
+                });
+            });
+
+            predictionChart.setOption({
+                xAxis: { data: xData },
+                series: displayStocks.map((symbol, idx) => ({
+                    name: symbol,
+                    data: seriesData[symbol]
+                }))
+            });
+
+            const highRiskCount = Object.values(currentPredictions).filter(p => p.probability > 0.7).length;
+            document.getElementById('highRiskCount').textContent = highRiskCount;
+            document.getElementById('predictionBadge').textContent = `更新: ${timeLabel}`;
+            document.getElementById('predictionBadge').className = highRiskCount > 0 ? 'badge high' : 'badge';
+
+            updateHighRiskPreview();
+        }
+
+        function updateHighRiskPreview() {
+            const container = document.getElementById('highRiskStocks');
+            const highRisk = [];
+            const mediumRisk = [];
+
+            for (const [symbol, data] of Object.entries(currentPredictions)) {
+                const prob = data.probability;
+                if (prob > 0.7) {
+                    highRisk.push({ symbol, prob });
+                } else if (prob > 0.4) {
+                    mediumRisk.push({ symbol, prob });
+                }
+            }
+
+            if (highRisk.length === 0 && mediumRisk.length === 0) {
+                container.innerHTML = '<span style="color: #8aa4be; font-size: 11px;">暂无高风险股票</span>';
+                return;
+            }
+
+            let html = '';
+            highRisk.forEach(item => {
+                html += `<span class="risk-tag">${item.symbol} ${(item.prob * 100).toFixed(0)}%</span>`;
+            });
+            mediumRisk.forEach(item => {
+                html += `<span class="risk-tag medium">${item.symbol} ${(item.prob * 100).toFixed(0)}%</span>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function initStockRadarChart() {
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(13, 31, 60, 0.95)',
+                    borderColor: '#1a3a5c',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        return `${params.name}<br/>闪崩概率: ${(params.value * 100).toFixed(1)}%`;
+                    }
+                },
+                radar: {
+                    indicator: STOCK_SYMBOLS.map(s => ({
+                        name: s,
+                        max: 1
+                    })),
+                    shape: 'circle',
+                    radius: '65%',
+                    center: ['50%', '50%'],
+                    splitNumber: 4,
+                    axisName: {
+                        color: '#8aa4be',
+                        fontSize: 10
+                    },
+                    splitLine: {
+                        lineStyle: { color: '#2a4a6c' }
+                    },
+                    splitArea: {
+                        areaStyle: {
+                            color: ['rgba(26, 42, 74, 0.3)', 'rgba(26, 42, 74, 0.5)']
+                        }
+                    },
+                    axisLine: {
+                        lineStyle: { color: '#2a4a6c' }
+                    }
+                },
+                series: [{
+                    name: '闪崩概率',
+                    type: 'radar',
+                    data: [{
+                        value: STOCK_SYMBOLS.map(() => 0),
+                        name: '当前概率',
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        lineStyle: { width: 2, color: '#00d4ff' },
+                        itemStyle: { color: '#00d4ff' },
+                        areaStyle: {
+                            color: 'rgba(0, 212, 255, 0.3)'
+                        }
+                    }]
+                }]
+            };
+            stockRadarChart.setOption(option);
+        }
+
+        function updateStockRadarChart() {
+            const values = STOCK_SYMBOLS.map(s => currentPredictions[s]?.probability || 0);
+            stockRadarChart.setOption({
+                series: [{
+                    data: [{
+                        value: values,
+                        name: '当前概率'
+                    }]
+                }]
+            });
+        }
+
+        function updateStats(newStats) {
+            stats = newStats;
+            document.getElementById('totalAnomalies').textContent = stats.total_anomalies;
+            document.getElementById('flashCrashCount').textContent = stats.by_type.flash_crash || 0;
+            document.getElementById('cancelRateCount').textContent = stats.by_type.high_cancel_rate || 0;
+            document.getElementById('largeOrderCount').textContent = stats.by_type.large_order || 0;
+            updateMapChart();
+            updateTypeChart();
+        }
+
+        function formatTime(isoString) {
+            const d = new Date(isoString);
+            return d.toLocaleTimeString('zh-CN', { hour12: false });
+        }
+
+        function addAnomaly(anomaly) {
+            anomalies.unshift(anomaly);
+            if (anomalies.length > 50) {
+                anomalies.pop();
+            }
+
+            const list = document.getElementById('anomalyList');
+            const emptyState = list.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const item = document.createElement('div');
+            item.className = `anomaly-item ${anomaly.severity}`;
+            item.innerHTML = `
+                <div class="anomaly-header">
+                    <span class="anomaly-symbol">${anomaly.symbol}</span>
+                    <span class="anomaly-type ${anomaly.type}">${TYPE_NAMES[anomaly.type] || anomaly.type}</span>
+                </div>
+                <div class="anomaly-desc">${anomaly.description}</div>
+                <div class="anomaly-meta">
+                    <span>${anomaly.region} · ¥${anomaly.price}</span>
+                    <span>${formatTime(anomaly.timestamp)}</span>
+                </div>
+            `;
+
+            list.insertBefore(item, list.firstChild);
+            document.getElementById('eventCount').textContent = `${anomalies.length} 条`;
+
+            while (list.children.length > 50) {
+                list.removeChild(list.lastChild);
+            }
+        }
+
+        function connectAnomalyWebSocket() {
+            const ws = new WebSocket('ws://localhost:8765');
+            const statusDot = document.getElementById('anomalyStatus');
+            const statusText = document.getElementById('anomalyText');
+
+            ws.onopen = () => {
+                statusDot.className = 'status-dot';
+                statusText.textContent = '异常服务已连接';
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                if (message.type === 'history') {
+                    anomalies = message.data || [];
+                    if (message.stats) {
+                        updateStats(message.stats);
+                    }
+                    anomalies.forEach(a => addAnomaly(a));
+                } else if (message.type === 'anomaly') {
+                    if (message.stats) {
+                        updateStats(message.stats);
+                    }
+                    addAnomaly(message.data);
+                } else if (message.type === 'batch') {
+                    if (message.stats) {
+                        updateStats(message.stats);
+                    }
+                    if (Array.isArray(message.data)) {
+                        message.data.forEach(a => addAnomaly(a));
+                    }
+                }
+            };
+
+            ws.onclose = () => {
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = '异常服务已断开，3秒后重连...';
+                setTimeout(connectAnomalyWebSocket, 3000);
+            };
+
+            ws.onerror = () => {
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = '异常服务连接错误';
+            };
+        }
+
+        function connectPredictionWebSocket() {
+            const ws = new WebSocket('ws://localhost:8766');
+            const statusDot = document.getElementById('predictionStatus');
+            const statusText = document.getElementById('predictionText');
+
+            ws.onopen = () => {
+                statusDot.className = 'status-dot';
+                statusText.textContent = '预测服务已连接';
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                if (message.type === 'prediction') {
+                    currentPredictions = message.predictions || {};
+
+                    for (const [symbol, data] of Object.entries(currentPredictions)) {
+                        predictionHistory[symbol].push({
+                            time: message.timestamp,
+                            prob: data.probability
+                        });
+                        if (predictionHistory[symbol].length > 120) {
+                            predictionHistory[symbol].shift();
+                        }
+                    }
+
+                    updatePredictionChart(message.timestamp);
+                    updateStockRadarChart();
+                }
+            };
+
+            ws.onclose = () => {
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = '预测服务已断开，3秒后重连...';
+                setTimeout(connectPredictionWebSocket, 3000);
+            };
+
+            ws.onerror = () => {
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = '预测服务连接错误';
+            };
+        }
+
+        window.addEventListener('resize', () => {
+            mapChart.resize();
+            typeChart.resize();
+            predictionChart.resize();
+            stockRadarChart.resize();
+        });
+
+        initMapChart();
+        initTypeChart();
+        initPredictionChart();
+        initStockRadarChart();
+        connectAnomalyWebSocket();
+        connectPredictionWebSocket();
+    </script>
+</body>
+</html>
