@@ -1,0 +1,35 @@
+{
+  "Filters": [
+    {
+      "name": "jwt-validator",
+      "path": "./wasm/jwt.wasm",
+      "order": 0,
+      "enabled": true,
+      "needBody": 0,
+      "config": {
+        "expected_issuer": "my-app"
+      }
+    },
+    {
+      "name": "request-rewrite",
+      "path": "./wasm/rewrite.wasm",
+      "order": 1,
+      "enabled": true,
+      "needBody": 0,
+      "config": {
+        "strip_prefix": "/api/v1"
+      }
+    },
+    {
+      "name": "access-logger",
+      "path": "./wasm/logger.wasm",
+      "order": 2,
+      "enabled": true,
+      "needBody": 0,
+      "config": {
+        "log_level": "INFO",
+        "add_header": "true"
+      }
+    }
+  ]
+}
