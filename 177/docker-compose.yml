@@ -1,0 +1,78 @@
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: lakehouse-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - lakehouse-net
+
+  mc:
+    image: minio/mc:latest
+    container_name: lakehouse-mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/warehouse;
+      /usr/bin/mc anonymous set public myminio/warehouse;
+      exit 0;
+      "
+    networks:
+      - lakehouse-net
+
+  rest-catalog:
+    image: tabulario/iceberg-rest:latest
+    container_name: lakehouse-iceberg-rest
+    depends_on:
+      minio:
+        condition: service_started
+      mc:
+        condition: service_completed_successfully
+    environment:
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_REGION=us-east-1
+      - S3_ENDPOINT=http://minio:9000
+      - S3_PATH_STYLE_ACCESS=true
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
+    ports:
+      - "8181:8181"
+    networks:
+      - lakehouse-net
+
+  trino:
+    image: trinodb/trino:latest
+    container_name: lakehouse-trino
+    depends_on:
+      - rest-catalog
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino/catalog/iceberg.properties:/etc/trino/catalog/iceberg.properties
+      - ./trino/config/config.properties:/etc/trino/config.properties
+      - ./trino/config/jvm.config:/etc/trino/jvm.config
+      - ./trino/config/log.properties:/etc/trino/log.properties
+      - trino_data:/data/trino
+    environment:
+      - TRINO_CATALOG=iceberg
+    networks:
+      - lakehouse-net
+
+volumes:
+  minio_data:
+  trino_data:
+
+networks:
+  lakehouse-net:
+    driver: bridge
