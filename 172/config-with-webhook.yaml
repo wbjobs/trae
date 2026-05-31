@@ -1,0 +1,25 @@
+service:
+  name: config-sync-node-1
+  http_port: 8080
+  data_dir: ./data
+
+nats:
+  url: nats://localhost:4222
+  kv_bucket: config_sync
+  watch_subject: config.*
+
+webhook:
+  url: http://localhost:8888/webhook
+  timeout: 10s
+  retry_count: 3
+  retry_interval: 5s
+
+encryption:
+  enabled: false
+  master_key: ""
+  master_key_file: ""
+  encrypt_by_default: false
+
+log:
+  level: info
+  format: json

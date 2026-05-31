@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: config-sync-nats
+    command: "--jetstream"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    restart: unless-stopped
+
+  webhook-receiver:
+    image: mendhak/http-https-echo
+    container_name: webhook-receiver
+    ports:
+      - "8888:8080"
+    restart: unless-stopped
+
+volumes:
+  nats-data:
