@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态情感交互系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .recording {
+            animation: pulse 1s infinite;
+        }
+        .emotion-badge {
+            transition: all 0.3s ease;
+        }
+        .chat-message {
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                🎭 多模态情感交互系统
+            </h1>
+            <p class="text-gray-400">实时捕捉面部表情 + 语音情感分析 + 智能对话</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>📹</span> 面部表情捕捉
+                    </h2>
+                    <div class="relative">
+                        <video id="video" class="w-full rounded-xl bg-black" playsinline></video>
+                        <canvas id="output_canvas" class="absolute top-0 left-0 w-full h-full rounded-xl"></canvas>
+                        <div id="loading_overlay" class="absolute inset-0 bg-black/70 flex items-center justify-center rounded-xl">
+                            <div class="text-center">
+                                <div class="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                <p>正在加载面部识别模型...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-gray-400">当前表情:</span>
+                            <span id="current_emotion" class="px-4 py-2 bg-purple-600 rounded-full font-semibold emotion-badge">
+                                检测中...
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-400">
+                            置信度: <span id="emotion_confidence">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-7 gap-2">
+                        <div class="text-center">
+                            <div class="text-2xl">😊</div>
+                            <div class="text-xs text-gray-400">高兴</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_happy" class="h-full bg-yellow-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl">😢</div>
+                            <div class="text-xs text-gray-400">悲伤</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_sad" class="h-full bg-blue-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl">😠</div>
+                            <div class="text-xs text-gray-400">愤怒</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_angry" class="h-full bg-red-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl">😨</div>
+                            <div class="text-xs text-gray-400">恐惧</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_fear" class="h-full bg-purple-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl">😲</div>
+                            <div class="text-xs text-gray-400">惊讶</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_surprise" class="h-full bg-orange-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl">🤢</div>
+                            <div class="text-xs text-gray-400">厌恶</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_disgust" class="h-full bg-green-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl">😐</div>
+                            <div class="text-xs text-gray-400">中性</div>
+                            <div class="h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                <div id="bar_neutral" class="h-full bg-gray-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>🎤</span> 语音输入
+                        <span class="ml-auto text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">流式分片 · 支持长语音</span>
+                    </h2>
+                    <div class="flex flex-col items-center">
+                        <button id="record_btn" class="w-24 h-24 rounded-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 flex items-center justify-center text-4xl shadow-lg transition-all transform hover:scale-105 active:scale-95">
+                            🎙️
+                        </button>
+                        <p id="record_status" class="mt-3 text-gray-400">按住按钮开始录音</p>
+                        <div class="flex items-center gap-4 mt-2">
+                            <p id="record_timer" class="text-sm text-gray-500">00:00</p>
+                            <p id="chunk_counter" class="text-sm text-purple-400 hidden">分片: 0</p>
+                        </div>
+                    </div>
+                    
+                    <div id="audio_waveform" class="mt-4 h-16 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden hidden">
+                        <div class="flex items-end gap-1 h-8">
+                            <div class="w-1 bg-purple-500 rounded" style="height: 30%; animation: wave 0.5s infinite"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 60%; animation: wave 0.5s infinite 0.1s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 40%; animation: wave 0.5s infinite 0.2s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 80%; animation: wave 0.5s infinite 0.3s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 50%; animation: wave 0.5s infinite 0.4s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 70%; animation: wave 0.5s infinite 0.5s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 45%; animation: wave 0.5s infinite 0.6s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 90%; animation: wave 0.5s infinite 0.7s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 35%; animation: wave 0.5s infinite 0.8s"></div>
+                            <div class="w-1 bg-purple-500 rounded" style="height: 65%; animation: wave 0.5s infinite 0.9s"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                        <p class="text-xs text-gray-400 mb-2">分片上传进度</p>
+                        <div class="flex gap-1 flex-wrap" id="chunk_indicators"></div>
+                    </div>
+                    <style>
+                        @keyframes wave {
+                            0%, 100% { transform: scaleY(0.5); }
+                            50% { transform: scaleY(1); }
+                        }
+                        .chunk-indicator {
+                            width: 20px;
+                            height: 8px;
+                            border-radius: 4px;
+                            background-color: #374151;
+                            transition: all 0.3s ease;
+                        }
+                        .chunk-indicator.recording {
+                            background-color: #f59e0b;
+                            animation: pulse 1s infinite;
+                        }
+                        .chunk-indicator.uploading {
+                            background-color: #8b5cf6;
+                        }
+                        .chunk-indicator.processed {
+                            background-color: #10b981;
+                        }
+                    </style>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>🤖</span> 对话系统
+                    </h2>
+                    
+                    <div id="analysis_result" class="mb-4 p-4 bg-gray-700/50 rounded-xl hidden">
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <p class="text-sm text-gray-400">面部情感</p>
+                                <p id="result_face" class="font-semibold text-lg">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">文本情感</p>
+                                <p id="result_text" class="font-semibold text-lg">-</p>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gradient-to-r from-purple-600/30 to-pink-600/30 rounded-lg">
+                            <p class="text-sm text-gray-400">综合情感倾向</p>
+                            <p id="result_combined" class="font-bold text-xl">-</p>
+                        </div>
+
+                        <div id="comfort_mode_indicator" class="mt-3 p-3 bg-gradient-to-r from-pink-600/30 to-rose-600/30 rounded-lg hidden">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">💝</span>
+                                <div>
+                                    <p class="text-sm text-pink-300 font-semibold">安慰模式已激活</p>
+                                    <p class="text-xs text-pink-400">检测到持续消极情绪，我会更温柔地陪伴你</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chat_container" class="h-80 overflow-y-auto space-y-4 mb-4 p-4 bg-gray-700/30 rounded-xl">
+                        <div class="chat-message flex gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                                🤖
+                            </div>
+                            <div class="flex-1">
+                                <div class="bg-gray-700 rounded-2xl rounded-tl-none p-4">
+                                    <p>你好！我是你的情感助手。请允许我访问你的摄像头和麦克风，然后按住录音按钮和我聊天吧！</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="processing_status" class="mb-4 p-3 bg-purple-900/30 rounded-lg hidden">
+                        <p class="text-sm text-purple-300 animate-pulse" id="processing_status_text">处理中...</p>
+                    </div>
+
+                    <div id="transcribed_text" class="mb-4 p-3 bg-blue-900/30 rounded-lg hidden">
+                        <p class="text-sm text-blue-300">识别到的语音:</p>
+                        <p id="transcribed_content" class="font-medium"></p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>📊</span> 系统状态
+                    </h2>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                            <div id="socket_status" class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <span id="socket_status_text" class="text-gray-400">服务器连接中...</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div id="camera_status" class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <span id="camera_status_text" class="text-gray-400">摄像头未就绪</span>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-700 pt-4">
+                        <h3 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                            <span>💾</span> 情感记忆
+                        </h3>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="bg-gray-700/50 rounded-lg p-3">
+                                <p class="text-gray-400 text-xs">总交互次数</p>
+                                <p id="mem_total" class="text-lg font-bold text-white">0</p>
+                            </div>
+                            <div class="bg-gray-700/50 rounded-lg p-3">
+                                <p class="text-gray-400 text-xs">情感均值</p>
+                                <p id="mem_avg" class="text-lg font-bold text-white">-</p>
+                            </div>
+                            <div class="bg-gray-700/50 rounded-lg p-3">
+                                <p class="text-gray-400 text-xs">连续消极</p>
+                                <p id="mem_consec_neg" class="text-lg font-bold text-white">0</p>
+                            </div>
+                            <div class="bg-gray-700/50 rounded-lg p-3">
+                                <p class="text-gray-400 text-xs">主导情绪</p>
+                                <p id="mem_dominant" class="text-lg font-bold text-white">-</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <p class="text-gray-400 text-xs mb-2">情感趋势 (最近10次)</p>
+                            <div id="emotion_trend" class="flex gap-1 h-8">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:5000');
+        
+        let currentUserId = localStorage.getItem('emotion_user_id');
+        if (!currentUserId) {
+            currentUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('emotion_user_id', currentUserId);
+        }
+        
+        socket.on('connect', () => {
+            document.getElementById('socket_status').className = 'w-3 h-3 rounded-full bg-green-500';
+            document.getElementById('socket_status_text').textContent = '已连接到服务器';
+            socket.emit('get_user_memory', { user_id: currentUserId });
+        });
+
+        socket.on('user_memory', (data) => {
+            updateEmotionMemoryDisplay(data.summary, data.history);
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('socket_status').className = 'w-3 h-3 rounded-full bg-red-500';
+            document.getElementById('socket_status_text').textContent = '服务器已断开';
+        });
+
+        socket.on('status', (data) => {
+            console.log('服务器状态:', data.message);
+        });
+
+        socket.on('recording_started', (data) => {
+            console.log('录音会话已开始:', data.session_id);
+        });
+
+        socket.on('chunk_received', (data) => {
+            console.log(`分片 ${data.chunk_index + 1} 已接收，正在处理...`);
+            updateProcessingStatus(`正在处理第 ${data.chunk_index + 1} 个分片...`);
+        });
+
+        socket.on('partial_result', (data) => {
+            console.log('部分转写结果:', data.partial_text);
+            document.getElementById('transcribed_text').classList.remove('hidden');
+            document.getElementById('transcribed_content').textContent = data.full_text;
+            updateProcessingStatus(`已识别: ${data.full_text.substring(0, 50)}${data.full_text.length > 50 ? '...' : ''}`);
+        });
+
+        socket.on('chunk_error', (data) => {
+            console.error('分片处理错误:', data.error);
+            addMessage('system', `处理出错: ${data.error}`);
+        });
+
+        socket.on('recording_cancelled', (data) => {
+            console.log('录音已取消:', data.session_id);
+        });
+
+        socket.on('response', (data) => {
+            if (data.error) {
+                addMessage('system', data.error);
+                return;
+            }
+
+            updateProcessingStatus('');
+            document.getElementById('analysis_result').classList.remove('hidden');
+            
+            const faceEmotionMap = {
+                'happy': '😊 高兴',
+                'sad': '😢 悲伤',
+                'angry': '😠 愤怒',
+                'fearful': '😨 恐惧',
+                'disgusted': '🤢 厌恶',
+                'surprised': '😲 惊讶',
+                'neutral': '😐 中性'
+            };
+            
+            const textSentimentMap = {
+                'positive': '😊 积极',
+                'negative': '😢 消极',
+                'neutral': '😐 中性'
+            };
+            
+            const combinedMap = {
+                'positive': { text: '😊 积极', color: 'text-green-400' },
+                'negative': { text: '😢 消极', color: 'text-red-400' },
+                'neutral': { text: '😐 中性', color: 'text-yellow-400' }
+            };
+
+            document.getElementById('result_face').textContent = faceEmotionMap[data.face_emotion] || data.face_emotion;
+            document.getElementById('result_text').textContent = textSentimentMap[data.text_sentiment] || data.text_sentiment;
+            
+            const combined = combinedMap[data.combined_sentiment] || combinedMap.neutral;
+            document.getElementById('result_combined').textContent = combined.text;
+            document.getElementById('result_combined').className = `font-bold text-xl ${combined.color}`;
+
+            if (data.transcribed_text) {
+                document.getElementById('transcribed_text').classList.remove('hidden');
+                document.getElementById('transcribed_content').textContent = data.transcribed_text;
+                addMessage('user', data.transcribed_text);
+            }
+
+            if (data.response) {
+                addMessage('bot', data.response);
+                speakText(data.response);
+            }
+
+            if (data.duration) {
+                addMessage('system', `录音时长: ${data.duration.toFixed(1)}秒 | 分片数: ${data.chunk_count || 1}`);
+            }
+
+            if (data.comfort_mode) {
+                document.getElementById('comfort_mode_indicator').classList.remove('hidden');
+                addMessage('system', '💝 安慰模式已激活 - 检测到持续消极情绪');
+            } else {
+                document.getElementById('comfort_mode_indicator').classList.add('hidden');
+            }
+
+            if (data.emotion_summary) {
+                updateEmotionMemoryDisplay(data.emotion_summary, null);
+            }
+
+            recordStatus.textContent = '按住按钮开始录音';
+            chunkCounter.classList.add('hidden');
+            chunkIndicators.innerHTML = '';
+        });
+
+        function updateEmotionMemoryDisplay(summary, history) {
+            if (!summary) return;
+
+            document.getElementById('mem_total').textContent = summary.total_interactions || 0;
+            document.getElementById('mem_consec_neg').textContent = summary.consecutive_negative || 0;
+
+            const avgScore = summary.avg_score !== undefined ? summary.avg_score : 0;
+            let avgText = '中性';
+            let avgColor = 'text-yellow-400';
+            if (avgScore > 0.3) {
+                avgText = '积极';
+                avgColor = 'text-green-400';
+            } else if (avgScore < -0.3) {
+                avgText = '消极';
+                avgColor = 'text-red-400';
+            }
+            const avgEl = document.getElementById('mem_avg');
+            avgEl.textContent = `${avgText} (${avgScore.toFixed(2)})`;
+            avgEl.className = `text-lg font-bold ${avgColor}`;
+
+            const dominantMap = {
+                'positive': '😊 积极',
+                'negative': '😢 消极',
+                'neutral': '😐 中性'
+            };
+            document.getElementById('mem_dominant').textContent = dominantMap[summary.dominant_emotion] || summary.dominant_emotion || '-';
+
+            if (history && history.length > 0) {
+                const trendEl = document.getElementById('emotion_trend');
+                trendEl.innerHTML = '';
+                history.forEach(item => {
+                    const bar = document.createElement('div');
+                    bar.className = 'flex-1 rounded-sm transition-all';
+                    if (item.emotion === 'positive') {
+                        bar.className += ' bg-green-500';
+                        bar.style.height = `${40 + Math.abs(item.value) * 60}%`;
+                    } else if (item.emotion === 'negative') {
+                        bar.className += ' bg-red-500';
+                        bar.style.height = `${40 + Math.abs(item.value) * 60}%`;
+                    } else {
+                        bar.className += ' bg-yellow-500';
+                        bar.style.height = '40%';
+                    }
+                    bar.style.alignSelf = 'flex-end';
+                    trendEl.appendChild(bar);
+                });
+            }
+
+            if (summary.comfort_mode) {
+                document.getElementById('comfort_mode_indicator').classList.remove('hidden');
+            }
+        }
+
+        function updateProcessingStatus(text) {
+            const containerEl = document.getElementById('processing_status');
+            const textEl = document.getElementById('processing_status_text');
+            if (text) {
+                textEl.textContent = text;
+                containerEl.classList.remove('hidden');
+            } else {
+                containerEl.classList.add('hidden');
+            }
+        }
+
+        function addMessage(type, text) {
+            const container = document.getElementById('chat_container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message flex gap-3';
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex-1 text-right">
+                        <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl rounded-tr-none p-4 inline-block">
+                            <p>${text}</p>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                        😊
+                    </div>
+                `;
+            } else if (type === 'bot') {
+                messageDiv.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                        🤖
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-gray-700 rounded-2xl rounded-tl-none p-4">
+                            <p>${text}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex-1 text-center">
+                        <div class="bg-gray-600/50 rounded-lg p-2 inline-block">
+                            <p class="text-sm text-gray-400">${text}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 1;
+                utterance.pitch = 1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+
+        let faceMesh;
+        let isFaceMeshLoaded = false;
+        let lastEmotionTime = 0;
+        const EMOTION_SEND_INTERVAL = 500;
+
+        function initFaceMesh() {
+            faceMesh = new FaceMesh({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                }
+            });
+
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            faceMesh.onResults(onFaceResults);
+            isFaceMeshLoaded = true;
+            document.getElementById('loading_overlay').classList.add('hidden');
+            document.getElementById('camera_status').className = 'w-3 h-3 rounded-full bg-yellow-500';
+            document.getElementById('camera_status_text').textContent = '摄像头初始化中...';
+            startCamera();
+        }
+
+        function startCamera() {
+            const camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    if (isFaceMeshLoaded) {
+                        await faceMesh.send({ image: videoElement });
+                    }
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start()
+                .then(() => {
+                    document.getElementById('camera_status').className = 'w-3 h-3 rounded-full bg-green-500';
+                    document.getElementById('camera_status_text').textContent = '摄像头已就绪';
+                })
+                .catch((err) => {
+                    console.error('摄像头启动失败:', err);
+                    document.getElementById('camera_status').className = 'w-3 h-3 rounded-full bg-red-500';
+                    document.getElementById('camera_status_text').textContent = '摄像头访问失败';
+                    document.getElementById('loading_overlay').innerHTML = `
+                        <div class="text-center p-6">
+                            <p class="text-red-400 mb-2">⚠️ 无法访问摄像头</p>
+                            <p class="text-sm text-gray-400">请确保已授予摄像头权限</p>
+                        </div>
+                    `;
+                });
+        }
+
+        function detectEmotion(landmarks) {
+            const leftEyeTop = landmarks[159];
+            const leftEyeBottom = landmarks[145];
+            const rightEyeTop = landmarks[386];
+            const rightEyeBottom = landmarks[374];
+            const mouthLeft = landmarks[61];
+            const mouthRight = landmarks[291];
+            const mouthTop = landmarks[13];
+            const mouthBottom = landmarks[14];
+            const leftEyebrow = landmarks[105];
+            const rightEyebrow = landmarks[334];
+            const noseTip = landmarks[1];
+            const chin = landmarks[152];
+
+            const mouthWidth = Math.abs(mouthRight.x - mouthLeft.x);
+            const mouthHeight = Math.abs(mouthBottom.y - mouthTop.y);
+            const smileRatio = mouthHeight / mouthWidth;
+            
+            const leftEyeOpen = Math.abs(leftEyeTop.y - leftEyeBottom.y);
+            const rightEyeOpen = Math.abs(rightEyeTop.y - rightEyeBottom.y);
+            const eyeOpen = (leftEyeOpen + rightEyeOpen) / 2;
+            
+            const eyebrowHeight = ((leftEyebrow.y + rightEyebrow.y) / 2 - noseTip.y);
+            const faceHeight = chin.y - noseTip.y;
+            const eyebrowRatio = Math.abs(eyebrowHeight / faceHeight);
+
+            const scores = {
+                happy: 0,
+                sad: 0,
+                angry: 0,
+                fear: 0,
+                surprise: 0,
+                disgust: 0,
+                neutral: 0
+            };
+
+            if (smileRatio > 0.25 && mouthHeight > 0.02) {
+                scores.happy = Math.min(1, smileRatio * 3);
+            } else if (smileRatio < 0.08 && mouthHeight < 0.01) {
+                scores.sad = 0.6;
+            }
+
+            if (eyebrowRatio < 0.35) {
+                scores.angry = Math.min(1, (0.45 - eyebrowRatio) * 8);
+            }
+
+            if (eyeOpen > 0.06) {
+                scores.surprise = Math.min(1, (eyeOpen - 0.04) * 15);
+                scores.fear = Math.min(0.7, (eyeOpen - 0.04) * 10);
+            }
+
+            if (mouthHeight > 0.015 && smileRatio < 0.15) {
+                scores.disgust = 0.5;
+            }
+
+            const maxScore = Math.max(...Object.values(scores));
+            if (maxScore < 0.3) {
+                scores.neutral = 0.7;
+            }
+
+            const total = Object.values(scores).reduce((a, b) => a + b, 0);
+            Object.keys(scores).forEach(key => {
+                scores[key] = total > 0 ? scores[key] / total : 0;
+            });
+
+            return scores;
+        }
+
+        function onFaceResults(results) {
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.multiFaceLandmarks) {
+                for (const landmarks of results.multiFaceLandmarks) {
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION,
+                        { color: 'rgba(100, 200, 255, 0.3)', lineWidth: 1 });
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE,
+                        { color: '#30FF30', lineWidth: 2 });
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW,
+                        { color: '#30FF30', lineWidth: 2 });
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE,
+                        { color: '#30FF30', lineWidth: 2 });
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW,
+                        { color: '#30FF30', lineWidth: 2 });
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS,
+                        { color: '#FF3030', lineWidth: 2 });
+
+                    const emotions = detectEmotion(landmarks);
+                    
+                    document.getElementById('bar_happy').style.width = `${emotions.happy * 100}%`;
+                    document.getElementById('bar_sad').style.width = `${emotions.sad * 100}%`;
+                    document.getElementById('bar_angry').style.width = `${emotions.angry * 100}%`;
+                    document.getElementById('bar_fear').style.width = `${emotions.fear * 100}%`;
+                    document.getElementById('bar_surprise').style.width = `${emotions.surprise * 100}%`;
+                    document.getElementById('bar_disgust').style.width = `${emotions.disgust * 100}%`;
+                    document.getElementById('bar_neutral').style.width = `${emotions.neutral * 100}%`;
+
+                    const topEmotion = Object.keys(emotions).reduce((a, b) => 
+                        emotions[a] > emotions[b] ? a : b
+                    );
+                    const topConfidence = emotions[topEmotion];
+
+                    const emotionNames = {
+                        happy: '😊 高兴',
+                        sad: '😢 悲伤',
+                        angry: '😠 愤怒',
+                        fear: '😨 恐惧',
+                        surprise: '😲 惊讶',
+                        disgust: '🤢 厌恶',
+                        neutral: '😐 中性'
+                    };
+
+                    document.getElementById('current_emotion').textContent = emotionNames[topEmotion];
+                    document.getElementById('emotion_confidence').textContent = `${(topConfidence * 100).toFixed(0)}%`;
+
+                    const emotionClasses = {
+                        happy: 'bg-yellow-500',
+                        sad: 'bg-blue-500',
+                        angry: 'bg-red-500',
+                        fear: 'bg-purple-500',
+                        surprise: 'bg-orange-500',
+                        disgust: 'bg-green-500',
+                        neutral: 'bg-gray-500'
+                    };
+                    
+                    const emotionBadge = document.getElementById('current_emotion');
+                    emotionBadge.className = `px-4 py-2 ${emotionClasses[topEmotion]} rounded-full font-semibold emotion-badge`;
+
+                    const now = Date.now();
+                    if (now - lastEmotionTime > EMOTION_SEND_INTERVAL) {
+                        lastEmotionTime = now;
+                        socket.emit('face_emotion', {
+                            emotion: topEmotion,
+                            confidence: topConfidence,
+                            scores: emotions
+                        });
+                    }
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        let mediaRecorder;
+        let isRecording = false;
+        let recordStartTime = 0;
+        let recordTimerInterval;
+        let chunkTimerInterval;
+        let currentSessionId = null;
+        let currentChunkIndex = 0;
+        let chunkAudioData = [];
+        const CHUNK_DURATION = 5000;
+
+        const recordBtn = document.getElementById('record_btn');
+        const recordStatus = document.getElementById('record_status');
+        const recordTimer = document.getElementById('record_timer');
+        const audioWaveform = document.getElementById('audio_waveform');
+        const chunkCounter = document.getElementById('chunk_counter');
+        const chunkIndicators = document.getElementById('chunk_indicators');
+
+        async function initAudio() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunkAudioData.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error('录音错误:', event.error);
+                    addMessage('system', '录音出错，请重试');
+                    forceStopRecording();
+                };
+            } catch (err) {
+                console.error('麦克风访问失败:', err);
+                recordStatus.textContent = '无法访问麦克风，请检查权限设置';
+                recordBtn.disabled = true;
+            }
+        }
+
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function updateChunkIndicator(index, status) {
+            const indicators = chunkIndicators.querySelectorAll('.chunk-indicator');
+            if (indicators[index]) {
+                indicators[index].className = `chunk-indicator ${status}`;
+            }
+        }
+
+        function addChunkIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'chunk-indicator recording';
+            chunkIndicators.appendChild(indicator);
+            return indicator;
+        }
+
+        async function uploadChunk(audioBlob, chunkIndex, isFinal = false) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Audio = reader.result.split(',')[1];
+                    updateChunkIndicator(chunkIndex, 'uploading');
+                    
+                    socket.emit('audio_chunk', {
+                        session_id: currentSessionId,
+                        chunk_index: chunkIndex,
+                        audio: base64Audio,
+                        is_final: isFinal
+                    });
+                    
+                    setTimeout(() => {
+                        updateChunkIndicator(chunkIndex, 'processed');
+                    }, 500);
+                    
+                    resolve();
+                };
+                reader.readAsDataURL(audioBlob);
+            });
+        }
+
+        async function splitAndUploadChunk(isFinal = false) {
+            if (chunkAudioData.length === 0) return;
+            
+            const audioBlob = new Blob(chunkAudioData, { type: 'audio/webm' });
+            chunkAudioData = [];
+            
+            if (audioBlob.size > 0) {
+                const chunkIndex = currentChunkIndex;
+                currentChunkIndex++;
+                chunkCounter.textContent = `分片: ${currentChunkIndex}`;
+                
+                if (!isFinal) {
+                    addChunkIndicator();
+                }
+                
+                await uploadChunk(audioBlob, chunkIndex, isFinal);
+            }
+        }
+
+        function startChunkTimer() {
+            chunkTimerInterval = setInterval(() => {
+                if (isRecording) {
+                    splitAndUploadChunk(false);
+                    addChunkIndicator();
+                }
+            }, CHUNK_DURATION);
+        }
+
+        recordBtn.addEventListener('mousedown', startRecording);
+        recordBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startRecording();
+        });
+        recordBtn.addEventListener('mouseup', stopRecording);
+        recordBtn.addEventListener('mouseleave', handleMouseLeave);
+        recordBtn.addEventListener('touchend', stopRecording);
+        recordBtn.addEventListener('touchcancel', stopRecording);
+
+        let mouseLeaveTimeout = null;
+
+        function handleMouseLeave() {
+            if (isRecording) {
+                mouseLeaveTimeout = setTimeout(() => {
+                    if (isRecording) {
+                        stopRecording();
+                    }
+                }, 200);
+            }
+        }
+
+        recordBtn.addEventListener('mouseenter', () => {
+            if (mouseLeaveTimeout) {
+                clearTimeout(mouseLeaveTimeout);
+                mouseLeaveTimeout = null;
+            }
+        });
+
+        function startRecording() {
+            if (!mediaRecorder || isRecording) return;
+            
+            isRecording = true;
+            currentSessionId = generateSessionId();
+            currentChunkIndex = 0;
+            chunkAudioData = [];
+            
+            chunkIndicators.innerHTML = '';
+            document.getElementById('transcribed_text').classList.add('hidden');
+            chunkCounter.classList.remove('hidden');
+            chunkCounter.textContent = '分片: 0';
+            
+            socket.emit('start_recording', { session_id: currentSessionId, user_id: currentUserId });
+            addChunkIndicator();
+            
+            mediaRecorder.start(100);
+            recordStartTime = Date.now();
+            
+            recordBtn.classList.add('recording', 'scale-110');
+            recordBtn.style.boxShadow = '0 0 30px rgba(239, 68, 68, 0.6)';
+            recordStatus.textContent = '正在录音... 松开发送 (支持长语音)';
+            audioWaveform.classList.remove('hidden');
+            
+            startChunkTimer();
+            
+            recordTimerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                recordTimer.textContent = `${minutes}:${seconds}`;
+            }, 1000);
+        }
+
+        async function stopRecording() {
+            if (!mediaRecorder || !isRecording) return;
+            
+            isRecording = false;
+            
+            clearInterval(chunkTimerInterval);
+            clearInterval(recordTimerInterval);
+            
+            try {
+                mediaRecorder.stop();
+            } catch (e) {
+                console.log('MediaRecorder 已停止');
+            }
+            
+            recordBtn.classList.remove('recording', 'scale-110');
+            recordBtn.style.boxShadow = '';
+            recordStatus.textContent = '处理中...';
+            audioWaveform.classList.add('hidden');
+            
+            recordTimer.textContent = '00:00';
+            
+            await splitAndUploadChunk(true);
+            
+            socket.emit('stop_recording', { session_id: currentSessionId });
+            
+            addMessage('system', '正在进行最终情感分析...');
+            updateProcessingStatus('正在分析情感并生成回复...');
+            
+            currentSessionId = null;
+        }
+
+        function forceStopRecording() {
+            if (isRecording) {
+                isRecording = false;
+                clearInterval(chunkTimerInterval);
+                clearInterval(recordTimerInterval);
+                
+                try {
+                    mediaRecorder.stop();
+                } catch (e) {}
+                
+                recordBtn.classList.remove('recording', 'scale-110');
+                recordBtn.style.boxShadow = '';
+                recordStatus.textContent = '按住按钮开始录音';
+                audioWaveform.classList.add('hidden');
+                chunkCounter.classList.add('hidden');
+                recordTimer.textContent = '00:00';
+                
+                if (currentSessionId) {
+                    socket.emit('cancel_recording', { session_id: currentSessionId });
+                    currentSessionId = null;
+                }
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initFaceMesh();
+            initAudio();
+        });
+    </script>
+</body>
+</html>
