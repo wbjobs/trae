@@ -1,0 +1,23 @@
+{
+  "name": "industrial-iot-platform",
+  "version": "1.0.0",
+  "description": "工业物联网平台 - 微前端架构 + 双协议后端服务",
+  "private": true,
+  "workspaces": [
+    "frontend/*",
+    "backend/*"
+  ],
+  "scripts": {
+    "dev:all": "concurrently \"npm:dev:main\" \"npm:dev:dashboard\" \"npm:dev:logtrace\" \"npm:dev:auth\" \"npm:dev:backend\"",
+    "dev:main": "npm run dev -w @iot/main-app",
+    "dev:dashboard": "npm run dev -w @iot/dashboard",
+    "dev:logtrace": "npm run dev -w @iot/logtrace",
+    "dev:auth": "npm run dev -w @iot/auth",
+    "dev:backend": "npm run dev -w @iot/backend",
+    "build:all": "npm run build -w @iot/main-app && npm run build -w @iot/dashboard && npm run build -w @iot/logtrace && npm run build -w @iot/auth && npm run build -w @iot/backend",
+    "start:backend": "npm run start -w @iot/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

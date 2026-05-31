@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: iot-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: iot_platform
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - iot-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: iot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - iot-network
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: iot-influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: admin123
+      DOCKER_INFLUXDB_INIT_ORG: iot-org
+      DOCKER_INFLUXDB_INIT_BUCKET: iot-data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: iot-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks:
+      - iot-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iot-backend
+    ports:
+      - "3000:3000"
+      - "8888:8888"
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      INFLUXDB_HOST: influxdb
+    depends_on:
+      - mysql
+      - redis
+      - influxdb
+    networks:
+      - iot-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: iot-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/main-app/dist:/usr/share/nginx/html/main
+      - ./frontend/dashboard/dist:/usr/share/nginx/html/dashboard
+      - ./frontend/logtrace/dist:/usr/share/nginx/html/logtrace
+      - ./frontend/auth/dist:/usr/share/nginx/html/auth
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+    networks:
+      - iot-network
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+  influxdb-data:
+
+networks:
+  iot-network:
+    driver: bridge

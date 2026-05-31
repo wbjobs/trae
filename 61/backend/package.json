@@ -1,0 +1,33 @@
+{
+  "name": "@iot/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js",
+    "build": "echo 'Backend build completed'"
+  },
+  "dependencies": {
+    "koa": "^2.15.0",
+    "koa-router": "^12.0.1",
+    "koa-bodyparser": "^4.4.1",
+    "koa-cors": "^0.0.16",
+    "koa-static": "^5.0.0",
+    "socket.io": "^4.7.2",
+    "mysql2": "^3.6.5",
+    "sequelize": "^6.35.2",
+    "redis": "^4.6.12",
+    "@influxdata/influxdb-client": "^1.33.2",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "dayjs": "^1.11.10",
+    "winston": "^3.11.0",
+    "crc": "^4.3.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
