@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点云压缩可视化工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e94560;
+        }
+
+        #header h1 {
+            font-size: 20px;
+            color: #fff;
+        }
+
+        #header h1 span {
+            color: #e94560;
+        }
+
+        #main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 320px;
+            background: #16213e;
+            padding: 16px;
+            overflow-y: auto;
+            border-right: 1px solid #0f3460;
+        }
+
+        #viewport {
+            flex: 1;
+            position: relative;
+            background: #0a0a1a;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .section {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #0f3460;
+        }
+
+        .section h3 {
+            color: #e94560;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #e94560, #c0392b);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #533483, #3f2973);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(83, 52, 131, 0.4);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-item {
+            background: #0f3460;
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+
+        .select, .input-slider {
+            width: 100%;
+            padding: 8px;
+            background: #0f3460;
+            border: 1px solid #533483;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-slider {
+            flex: 1;
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: right;
+            color: #e94560;
+            font-size: 12px;
+        }
+
+        #fps-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            color: #0f0;
+            z-index: 100;
+            border: 1px solid #333;
+        }
+
+        #status {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #fff;
+            z-index: 100;
+            display: none;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            display: none;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #1a1a2e;
+            border-top: 4px solid #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        #loading span {
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper label {
+            font-size: 13px;
+            color: #ccc;
+            cursor: pointer;
+        }
+
+        #file-info {
+            font-size: 11px;
+            color: #888;
+            margin-top: 8px;
+            word-break: break-all;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.5;
+            margin-top: 8px;
+        }
+
+        .info-text strong {
+            color: #e94560;
+        }
+
+        .axis-label {
+            font-size: 10px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="header">
+            <h1>点云压缩可视化工具 <span>Draco Compressor</span></h1>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <span style="font-size: 12px; color: #888;">Babylon.js + WebGL</span>
+            </div>
+        </div>
+
+        <div id="main">
+            <div id="sidebar">
+                <div class="section">
+                    <h3>文件上传</h3>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" accept=".las,.laz" />
+                        <button class="btn" id="uploadBtn">选择 LAS/LAZ 文件</button>
+                    </div>
+                    <div id="file-info"></div>
+                    <button class="btn btn-secondary" id="sampleBtn" style="margin-top: 8px;">
+                        生成示例点云
+                    </button>
+                </div>
+
+                <div class="section">
+                    <h3>压缩参数</h3>
+                    <div class="control-group">
+                        <label>位置量化位数 <span class="axis-label">(6-16, 默认11)</span></label>
+                        <div class="slider-wrapper">
+                            <span style="font-size: 11px; color: #888;">6</span>
+                            <input type="range" class="input-slider" id="posQuant" min="6" max="16" value="11">
+                            <span class="slider-value" id="posQuantVal">11</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>颜色量化位数 <span class="axis-label">(4-10, 默认8)</span></label>
+                        <div class="slider-wrapper">
+                            <span style="font-size: 11px; color: #888;">4</span>
+                            <input type="range" class="input-slider" id="colorQuant" min="4" max="10" value="8">
+                            <span class="slider-value" id="colorQuantVal">8</span>
+                        </div>
+                    </div>
+                    <button class="btn" id="compressBtn" disabled>开始压缩</button>
+                </div>
+
+                <div class="section">
+                    <h3>压缩结果</h3>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">原始大小</div>
+                            <div class="stat-value" id="origSize">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">压缩大小</div>
+                            <div class="stat-value" id="compSize">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">压缩比</div>
+                            <div class="stat-value" id="compRatio">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">压缩耗时</div>
+                            <div class="stat-value" id="compTime">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-grid" style="margin-top: 8px;">
+                        <div class="stat-item">
+                            <div class="stat-label">总点数</div>
+                            <div class="stat-value" id="numPoints">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">RGB</div>
+                            <div class="stat-value" id="hasRGB">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-grid" style="margin-top: 8px;">
+                        <div class="stat-item">
+                            <div class="stat-label">当前 LOD</div>
+                            <div class="stat-value" id="currentLOD">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">渲染点数</div>
+                            <div class="stat-value" id="renderPoints">-</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px; font-size: 11px; color: #666; line-height: 1.4;">
+                        LOD 切换阈值 (相机距离/包围盒半径):<br>
+                        <span style="color: #e94560;">1/1</span> ≤ 1.5x |
+                        <span style="color: #f39c12;">1/4</span> ≤ 3.5x |
+                        <span style="color: #9b59b6;">1/16</span> &gt; 3.5x
+                    </div>
+                    <button class="btn btn-secondary" id="downloadBtn" disabled style="margin-top: 12px;">
+                        下载 .drc 文件
+                    </button>
+                </div>
+
+                <div class="section">
+                    <h3>渲染控制</h3>
+                    <div class="control-group">
+                        <label>着色模式</label>
+                        <select class="select" id="colorMode">
+                            <option value="rgb">RGB 颜色</option>
+                            <option value="height">高度着色</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>点大小</label>
+                        <div class="slider-wrapper">
+                            <span style="font-size: 11px; color: #888;">1</span>
+                            <input type="range" class="input-slider" id="pointSize" min="1" max="20" value="3">
+                            <span class="slider-value" id="pointSizeVal">3</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>不透明度</label>
+                        <div class="slider-wrapper">
+                            <span style="font-size: 11px; color: #888;">10%</span>
+                            <input type="range" class="input-slider" id="opacity" min="10" max="100" value="100">
+                            <span class="slider-value" id="opacityVal">100%</span>
+                        </div>
+                    </div>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="autoRotate" checked>
+                        <label for="autoRotate">自动旋转</label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="showBbox" checked>
+                        <label for="showBbox">显示包围盒</label>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>使用说明</h3>
+                    <div class="info-text">
+                        1. 选择 <strong>LAS/LAZ</strong> 文件上传<br>
+                        2. 调整压缩参数（可选）<br>
+                        3. 点击 <strong>开始压缩</strong><br>
+                        4. 鼠标 <strong>拖动旋转</strong>，<strong>滚轮缩放</strong><br>
+                        5. 切换 <strong>着色模式</strong> 查看效果
+                    </div>
+                </div>
+            </div>
+
+            <div id="viewport">
+                <canvas id="renderCanvas"></canvas>
+                <div id="fps-display">FPS: --</div>
+                <div id="status"></div>
+                <div id="loading">
+                    <div class="spinner"></div>
+                    <span id="loadingText">处理中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script type="application/json" id="vertexShader">
+        attribute vec3 position;
+        attribute vec3 color;
+
+        uniform mat4 worldViewProjection;
+        uniform float pointSize;
+        uniform int colorMode;
+        uniform vec3 minBounds;
+        uniform vec3 maxBounds;
+        uniform float opacity;
+
+        varying vec4 vColor;
+
+        void main() {
+            vec4 mvPos = worldViewProjection * vec4(position, 1.0);
+            gl_Position = mvPos;
+            gl_PointSize = pointSize;
+
+            if (colorMode == 0) {
+                vColor = vec4(color, opacity / 100.0);
+            } else {
+                float t = (position.y - minBounds.y) / max(maxBounds.y - minBounds.y, 0.001);
+                t = clamp(t, 0.0, 1.0);
+
+                vec3 lowColor = vec3(0.0, 0.4, 1.0);
+                vec3 midColor = vec3(0.0, 1.0, 0.4);
+                vec3 highColor = vec3(1.0, 0.25, 0.0);
+
+                vec3 col;
+                if (t < 0.5) {
+                    col = mix(lowColor, midColor, t * 2.0);
+                } else {
+                    col = mix(midColor, highColor, (t - 0.5) * 2.0);
+                }
+                vColor = vec4(col, opacity / 100.0);
+            }
+        }
+    </script>
+    <script type="application/json" id="fragmentShader">
+        precision highp float;
+
+        varying vec4 vColor;
+
+        void main() {
+            vec2 coord = gl_PointCoord - vec2(0.5);
+            float dist = length(coord);
+            if (dist > 0.5) {
+                discard;
+            }
+            float softness = 1.0 - smoothstep(0.3, 0.5, dist);
+            vec4 finalColor = vColor;
+            finalColor.a *= softness;
+            gl_FragColor = finalColor;
+        }
+    </script>
+    <script>
+        const API_BASE = 'http://localhost:5000';
+
+        let engine, scene, camera, pointCloud = null;
+        let currentBounds = null;
+        let currentFilename = null;
+        let bboxLines = null;
+
+        let fpsHistory = [];
+        let lastFpsUpdate = 0;
+        let autoRotate = true;
+
+        const canvas = document.getElementById('renderCanvas');
+        engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+
+        const vertexShaderSource = document.getElementById('vertexShader').textContent.trim();
+        const fragmentShaderSource = document.getElementById('fragmentShader').textContent.trim();
+
+        BABYLON.Effect.ShadersStore['pointCloudVertexShader'] = vertexShaderSource;
+        BABYLON.Effect.ShadersStore['pointCloudFragmentShader'] = fragmentShaderSource;
+
+        const LOD_LEVELS = [
+            { step: 1,  label: '1/1',  minDist: 0 },
+            { step: 4,  label: '1/4',  minDist: 1.5 },
+            { step: 16, label: '1/16', minDist: 3.5 },
+        ];
+        let fullPositions = null;
+        let fullColors = null;
+        let fullBounds = null;
+        let lodDataCache = [null, null, null];
+        let currentLOD = 0;
+        let lodSwitchCooldown = 0;
+        const LOD_COOLDOWN_MS = 300;
+
+        const wgslComputeLOD = /* wgsl */ `
+            struct Params {
+                totalPoints: u32,
+                step: u32,
+                outCount: u32,
+                strideFloats: u32,
+            };
+            @group(0) @binding(0) var<storage, read> inputBuf: array<vec4<f32>>;
+            @group(0) @binding(1) var<storage, read_write> outputBuf: array<vec4<f32>>;
+            @group(0) @binding(2) var<uniform> params: Params;
+
+            @compute @workgroup_size(256)
+            fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+                let idx = gid.x;
+                if (idx >= params.outCount) { return; }
+
+                let srcIdx = idx * params.step;
+                let srcFloats = srcIdx * params.strideFloats;
+                let dstFloats = idx * params.strideFloats;
+
+                let v0 = inputBuf[srcFloats / 4u];
+                let v1 = inputBuf[(srcFloats + 4u) / 4u];
+
+                outputBuf[dstFloats / 4u] = v0;
+                outputBuf[(dstFloats + 4u) / 4u] = v1;
+            }
+        `;
+
+        function isWebGPUAvailable() {
+            return typeof engine.isWebGPU !== 'undefined' && engine.isWebGPU;
+        }
+
+        async function buildLODWithComputeShader(level) {
+            if (!isWebGPUAvailable() || !fullPositions) return null;
+
+            const step = LOD_LEVELS[level].step;
+            const totalPts = fullPositions.length / 3;
+            const outCount = Math.ceil(totalPts / step);
+            const strideFloats = 6;
+
+            const packedInput = new Float32Array(totalPts * strideFloats);
+            for (let i = 0; i < totalPts; i++) {
+                packedInput[i * strideFloats]     = fullPositions[i * 3];
+                packedInput[i * strideFloats + 1] = fullPositions[i * 3 + 1];
+                packedInput[i * strideFloats + 2] = fullPositions[i * 3 + 2];
+                if (fullColors) {
+                    packedInput[i * strideFloats + 3] = fullColors[i * 3];
+                    packedInput[i * strideFloats + 4] = fullColors[i * 3 + 1];
+                    packedInput[i * strideFloats + 5] = fullColors[i * 3 + 2];
+                } else {
+                    packedInput[i * strideFloats + 3] = 1.0;
+                    packedInput[i * strideFloats + 4] = 1.0;
+                    packedInput[i * strideFloats + 5] = 1.0;
+                }
+            }
+
+            try {
+                const inputBuff = new BABYLON.StorageBuffer(engine, packedInput.byteLength,
+                    BABYLON.Constants.STORAGEBUFFER_ACCESS_TYPE_READ,
+                    BABYLON.Constants.STORAGEBUFFER_TYPE.STORAGE);
+                inputBuff.update(packedInput);
+
+                const outputBuff = new BABYLON.StorageBuffer(engine, outCount * strideFloats * 4,
+                    BABYLON.Constants.STORAGEBUFFER_ACCESS_TYPE_READ_WRITE,
+                    BABYLON.Constants.STORAGEBUFFER_TYPE.STORAGE);
+
+                const cs = new BABYLON.ComputeShader('lodCompute', engine,
+                    { computeSource: wgslComputeLOD },
+                    { bindingsMapping: {
+                        inputBuf:  { group: 0, binding: 0 },
+                        outputBuf: { group: 0, binding: 1 },
+                        params:    { group: 0, binding: 2 }
+                    }});
+                cs.setStorageBuffer('inputBuf', inputBuff);
+                cs.setStorageBuffer('outputBuf', outputBuff);
+                const paramsArr = new Uint32Array([totalPts, step, outCount, strideFloats]);
+                cs.setUniformBuffer('params', paramsArr);
+
+                const workgroups = Math.ceil(outCount / 256);
+                cs.dispatch(workgroups, 1, 1);
+
+                await outputBuff.read();
+                const result = new Float32Array(outputBuff.getBuffer());
+
+                const positions = new Float32Array(outCount * 3);
+                const colors = new Float32Array(outCount * 3);
+                for (let i = 0; i < outCount; i++) {
+                    positions[i * 3]     = result[i * strideFloats];
+                    positions[i * 3 + 1] = result[i * strideFloats + 1];
+                    positions[i * 3 + 2] = result[i * strideFloats + 2];
+                    colors[i * 3]        = result[i * strideFloats + 3];
+                    colors[i * 3 + 1]    = result[i * strideFloats + 4];
+                    colors[i * 3 + 2]    = result[i * strideFloats + 5];
+                }
+
+                inputBuff.dispose();
+                outputBuff.dispose();
+
+                return { positions, colors, count: outCount };
+            } catch (e) {
+                console.warn('WebGPU Compute Shader failed, falling back to CPU:', e);
+                return null;
+            }
+        }
+
+        function buildLODWithCPU(level) {
+            if (!fullPositions) return null;
+            const step = LOD_LEVELS[level].step;
+            const totalPts = fullPositions.length / 3;
+            const outCount = Math.ceil(totalPts / step);
+
+            const positions = new Float32Array(outCount * 3);
+            const colors = new Float32Array(outCount * 3);
+
+            let dst = 0;
+            for (let i = 0; i < totalPts; i += step) {
+                positions[dst]     = fullPositions[i * 3];
+                positions[dst + 1] = fullPositions[i * 3 + 1];
+                positions[dst + 2] = fullPositions[i * 3 + 2];
+                if (fullColors) {
+                    colors[dst]     = fullColors[i * 3];
+                    colors[dst + 1] = fullColors[i * 3 + 1];
+                    colors[dst + 2] = fullColors[i * 3 + 2];
+                } else {
+                    const t = (fullPositions[i * 3 + 1] - fullBounds.minY) / Math.max(fullBounds.maxY - fullBounds.minY, 0.001);
+                    colors[dst]     = t;
+                    colors[dst + 1] = 1.0 - Math.abs(t - 0.5) * 2.0;
+                    colors[dst + 2] = 1.0 - t;
+                }
+                dst += 3;
+            }
+
+            return { positions, colors, count: outCount };
+        }
+
+        async function buildAllLODs() {
+            lodDataCache = [null, null, null];
+            for (let level = 0; level < LOD_LEVELS.length; level++) {
+                let data = null;
+                if (isWebGPUAvailable()) {
+                    data = await buildLODWithComputeShader(level);
+                }
+                if (!data) {
+                    data = buildLODWithCPU(level);
+                }
+                lodDataCache[level] = data;
+            }
+        }
+
+        function createScene() {
+            scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.04, 0.04, 0.1, 1);
+
+            camera = new BABYLON.ArcRotateCamera(
+                'camera',
+                Math.PI / 4, Math.PI / 3, 10,
+                BABYLON.Vector3.Zero(),
+                scene
+            );
+            camera.attachControl(canvas, true);
+            camera.wheelDeltaPercentage = 0.01;
+            camera.lowerRadiusLimit = 0.1;
+            camera.upperRadiusLimit = 1000;
+            camera.minZ = 0.01;
+
+            const hemiLight = new BABYLON.HemisphericLight('hemiLight', new BABYLON.Vector3(0, 1, 0), scene);
+            hemiLight.intensity = 0.5;
+
+            const dirLight = new BABYLON.DirectionalLight('dirLight', new BABYLON.Vector3(-1, -1, -1), scene);
+            dirLight.intensity = 0.3;
+
+            return scene;
+        }
+
+        scene = createScene();
+
+        function showStatus(text, duration = 2000) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = text;
+            statusEl.style.display = 'block';
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, duration);
+        }
+
+        function showLoading(show, text = '处理中...') {
+            const loadingEl = document.getElementById('loading');
+            document.getElementById('loadingText').textContent = text;
+            loadingEl.style.display = show ? 'block' : 'none';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function updateCompressionStats(data) {
+            document.getElementById('origSize').textContent = formatSize(data.originalSize);
+            document.getElementById('compSize').textContent = formatSize(data.compressedSize);
+            document.getElementById('compRatio').textContent = data.ratio + 'x';
+            document.getElementById('compTime').textContent = data.compressionTime + 's';
+            document.getElementById('numPoints').textContent = data.numPoints.toLocaleString();
+            document.getElementById('hasRGB').textContent = data.hasRGB ? '是' : '否';
+
+            currentBounds = data.bounds;
+            currentFilename = data.filename;
+            document.getElementById('downloadBtn').disabled = false;
+        }
+
+        function createPointCloudMaterial(colorMode, bounds) {
+            const material = new BABYLON.ShaderMaterial(
+                'pointCloudShader',
+                scene,
+                {
+                    vertex: 'pointCloud',
+                    fragment: 'pointCloud',
+                },
+                {
+                    attributes: ['position', 'color'],
+                    uniforms: ['worldViewProjection', 'pointSize', 'colorMode', 'opacity', 'minBounds', 'maxBounds'],
+                }
+            );
+
+            material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+            material.alpha = 1.0;
+            material.disableDepthWrite = true;
+
+            material.setInt('colorMode', colorMode === 'rgb' ? 0 : 1);
+            material.setFloat('pointSize', parseFloat(document.getElementById('pointSize').value));
+            material.setFloat('opacity', parseFloat(document.getElementById('opacity').value));
+
+            if (bounds) {
+                material.setVector3('minBounds', new BABYLON.Vector3(bounds.minX, bounds.minY, bounds.minZ));
+                material.setVector3('maxBounds', new BABYLON.Vector3(bounds.maxX, bounds.maxY, bounds.maxZ));
+            }
+
+            return material;
+        }
+
+        function renderPointCloud(points, colors, bounds) {
+            fullBounds = { ...bounds };
+
+            const centerX = (bounds.minX + bounds.maxX) / 2;
+            const centerY = (bounds.minY + bounds.maxY) / 2;
+            const centerZ = (bounds.minZ + bounds.maxZ) / 2;
+
+            fullPositions = new Float32Array(points.length * 3);
+            for (let i = 0; i < points.length; i++) {
+                fullPositions[i * 3]     = points[i][0] - centerX;
+                fullPositions[i * 3 + 1] = points[i][1] - centerY;
+                fullPositions[i * 3 + 2] = points[i][2] - centerZ;
+            }
+
+            if (colors && colors.length > 0) {
+                fullColors = new Float32Array(points.length * 3);
+                for (let i = 0; i < points.length; i++) {
+                    fullColors[i * 3]     = colors[i][0] / 255.0;
+                    fullColors[i * 3 + 1] = colors[i][1] / 255.0;
+                    fullColors[i * 3 + 2] = colors[i][2] / 255.0;
+                }
+            } else {
+                fullColors = null;
+            }
+
+            fullBounds = {
+                minX: bounds.minX - centerX,
+                minY: bounds.minY - centerY,
+                minZ: bounds.minZ - centerZ,
+                maxX: bounds.maxX - centerX,
+                maxY: bounds.maxY - centerY,
+                maxZ: bounds.maxZ - centerZ,
+            };
+
+            buildAllLODs().then(() => {
+                setActiveLOD(0);
+            });
+
+            const extent = Math.max(
+                bounds.maxX - bounds.minX,
+                bounds.maxY - bounds.minY,
+                bounds.maxZ - bounds.minZ
+            );
+            camera.target = BABYLON.Vector3.Zero();
+            camera.radius = extent * 2;
+            camera.lowerRadiusLimit = extent * 0.1;
+            camera.upperRadiusLimit = extent * 10;
+
+            updateBoundingBox(fullBounds);
+        }
+
+        function setActiveLOD(level) {
+            level = Math.max(0, Math.min(level, LOD_LEVELS.length - 1));
+            if (level === currentLOD && pointCloud) return;
+            currentLOD = level;
+
+            if (pointCloud) {
+                pointCloud.dispose();
+                pointCloud = null;
+            }
+
+            const lodData = lodDataCache[level];
+            if (!lodData) return;
+
+            const mesh = new BABYLON.Mesh('pointCloud_lod' + level, scene);
+
+            const vertexData = new BABYLON.VertexData();
+            vertexData.positions = lodData.positions;
+            vertexData.colors = lodData.colors;
+            vertexData.applyToMesh(mesh);
+
+            mesh.pointsCloud = true;
+            mesh.computeWorldMatrix(true);
+
+            const material = createPointCloudMaterial(
+                document.getElementById('colorMode').value,
+                fullBounds
+            );
+            mesh.material = material;
+
+            pointCloud = mesh;
+
+            const lodEl = document.getElementById('currentLOD');
+            const renderEl = document.getElementById('renderPoints');
+            if (lodEl) lodEl.textContent = LOD_LEVELS[level].label;
+            if (renderEl) renderEl.textContent = lodData.count.toLocaleString();
+        }
+
+        function updateBoundingBox(bounds) {
+            if (bboxLines) {
+                bboxLines.dispose();
+                bboxLines = null;
+            }
+
+            if (!document.getElementById('showBbox').checked || !bounds) return;
+
+            const { minX, minY, minZ, maxX, maxY, maxZ } = bounds;
+
+            const pts = [
+                new BABYLON.Vector3(minX, minY, minZ),
+                new BABYLON.Vector3(maxX, minY, minZ),
+                new BABYLON.Vector3(maxX, minY, maxZ),
+                new BABYLON.Vector3(minX, minY, maxZ),
+                new BABYLON.Vector3(minX, minY, minZ),
+                new BABYLON.Vector3(minX, maxY, minZ),
+                new BABYLON.Vector3(maxX, maxY, minZ),
+                new BABYLON.Vector3(maxX, maxY, maxZ),
+                new BABYLON.Vector3(minX, maxY, maxZ),
+                new BABYLON.Vector3(minX, maxY, minZ),
+                new BABYLON.Vector3(minX, minY, minZ),
+                new BABYLON.Vector3(minX, minY, maxZ),
+                new BABYLON.Vector3(maxX, minY, maxZ),
+                new BABYLON.Vector3(maxX, maxY, maxZ),
+                new BABYLON.Vector3(maxX, maxY, minZ),
+                new BABYLON.Vector3(maxX, minY, minZ),
+            ];
+
+            bboxLines = BABYLON.MeshBuilder.CreateLines('bbox', { points: pts }, scene);
+            bboxLines.color = new BABYLON.Color3(1, 0.9, 0.2);
+            bboxLines.alpha = 0.6;
+        }
+
+        scene.registerBeforeRender(() => {
+            if (autoRotate && pointCloud) {
+                pointCloud.rotation.y += 0.002;
+                if (bboxLines) bboxLines.rotation.y = pointCloud.rotation.y;
+            }
+
+            if (pointCloud && pointCloud.material) {
+                const material = pointCloud.material;
+                material.setFloat('pointSize', parseFloat(document.getElementById('pointSize').value));
+                material.setInt('colorMode', document.getElementById('colorMode').value === 'rgb' ? 0 : 1);
+                material.setFloat('opacity', parseFloat(document.getElementById('opacity').value));
+            }
+
+            if (fullBounds && lodDataCache[0]) {
+                const extent = Math.max(
+                    fullBounds.maxX - fullBounds.minX,
+                    fullBounds.maxY - fullBounds.minY,
+                    fullBounds.maxZ - fullBounds.minZ
+                );
+                const normalizedDist = camera.radius / extent;
+
+                let targetLOD = 0;
+                for (let l = LOD_LEVELS.length - 1; l >= 0; l--) {
+                    if (normalizedDist >= LOD_LEVELS[l].minDist) {
+                        targetLOD = l;
+                        break;
+                    }
+                }
+
+                const now = Date.now();
+                if (targetLOD !== currentLOD && now > lodSwitchCooldown) {
+                    setActiveLOD(targetLOD);
+                    lodSwitchCooldown = now + LOD_COOLDOWN_MS;
+                }
+            }
+        });
+
+        engine.runRenderLoop(() => {
+            const now = Date.now();
+            scene.render();
+
+            const fps = engine.getFps();
+            fpsHistory.push(fps);
+
+            if (now - lastFpsUpdate > 500) {
+                const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
+                const lodLabel = LOD_LEVELS[currentLOD] ? LOD_LEVELS[currentLOD].label : '-';
+                const lodCount = lodDataCache[currentLOD] ? lodDataCache[currentLOD].count.toLocaleString() : '0';
+                document.getElementById('fps-display').textContent =
+                    `FPS: ${avgFps.toFixed(1)} | LOD: ${lodLabel} | 点数: ${lodCount}`;
+                fpsHistory = [];
+                lastFpsUpdate = now;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            engine.resize();
+        });
+
+        function parsePointsBinary(buffer) {
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            const numPoints = view.getUint32(offset, true);
+            offset += 4;
+
+            const numColors = view.getUint32(offset, true);
+            offset += 4;
+
+            const bounds = {
+                minX: view.getFloat32(offset, true),
+                minY: view.getFloat32(offset + 4, true),
+                minZ: view.getFloat32(offset + 8, true),
+                maxX: view.getFloat32(offset + 12, true),
+                maxY: view.getFloat32(offset + 16, true),
+                maxZ: view.getFloat32(offset + 20, true),
+            };
+            offset += 24;
+
+            const points = [];
+            for (let i = 0; i < numPoints; i++) {
+                points.push([
+                    view.getFloat32(offset, true),
+                    view.getFloat32(offset + 4, true),
+                    view.getFloat32(offset + 8, true),
+                ]);
+                offset += 12;
+            }
+
+            let colors = null;
+            if (numColors > 0) {
+                colors = [];
+                for (let i = 0; i < numColors; i++) {
+                    colors.push([
+                        view.getUint8(offset),
+                        view.getUint8(offset + 1),
+                        view.getUint8(offset + 2),
+                    ]);
+                    offset += 3;
+                }
+            }
+
+            return { points, colors, bounds };
+        }
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('file-info').textContent =
+                    `已选择: ${file.name} (${formatSize(file.size)})`;
+                document.getElementById('compressBtn').disabled = false;
+            }
+        });
+
+        document.getElementById('compressBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                showStatus('请先选择文件');
+                return;
+            }
+
+            showLoading(true, '正在压缩...');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/compress`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('压缩失败');
+                }
+
+                const data = await response.json();
+                updateCompressionStats(data);
+
+                showLoading(true, '加载点云数据...');
+
+                const pointsResponse = await fetch(`${API_BASE}/api/points-data/${encodeURIComponent(file.name)}?max=2000000`);
+                if (!pointsResponse.ok) {
+                    throw new Error('获取点云数据失败');
+                }
+                const pointsBuffer = await pointsResponse.arrayBuffer();
+                const parsed = parsePointsBinary(pointsBuffer);
+
+                renderPointCloud(parsed.points, parsed.colors, parsed.bounds);
+                showStatus('压缩完成！');
+
+            } catch (error) {
+                showStatus('错误: ' + error.message, 3000);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        document.getElementById('sampleBtn').addEventListener('click', async () => {
+            showLoading(true, '生成示例点云...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/sample?count=200000`);
+                const blob = await response.blob();
+                const file = new File([blob], 'sample.las', { type: 'application/octet-stream' });
+
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                document.getElementById('fileInput').files = dataTransfer.files;
+
+                document.getElementById('file-info').textContent =
+                    `已选择: sample.las (${formatSize(file.size)})`;
+                document.getElementById('compressBtn').disabled = false;
+                showStatus('示例点云已生成，可点击压缩');
+
+            } catch (error) {
+                showStatus('生成失败: ' + error.message, 3000);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (!currentFilename) return;
+            window.open(`${API_BASE}/api/download/${encodeURIComponent(currentFilename)}`, '_blank');
+        });
+
+        document.getElementById('pointSize').addEventListener('input', (e) => {
+            document.getElementById('pointSizeVal').textContent = e.target.value;
+        });
+
+        document.getElementById('opacity').addEventListener('input', (e) => {
+            document.getElementById('opacityVal').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('posQuant').addEventListener('input', (e) => {
+            document.getElementById('posQuantVal').textContent = e.target.value;
+        });
+
+        document.getElementById('colorQuant').addEventListener('input', (e) => {
+            document.getElementById('colorQuantVal').textContent = e.target.value;
+        });
+
+        document.getElementById('autoRotate').addEventListener('change', (e) => {
+            autoRotate = e.target.checked;
+        });
+
+        document.getElementById('showBbox').addEventListener('change', () => {
+            if (currentBounds) {
+                const cx = (currentBounds.minX + currentBounds.maxX) / 2;
+                const cy = (currentBounds.minY + currentBounds.maxY) / 2;
+                const cz = (currentBounds.minZ + currentBounds.maxZ) / 2;
+                updateBoundingBox({
+                    minX: currentBounds.minX - cx,
+                    minY: currentBounds.minY - cy,
+                    minZ: currentBounds.minZ - cz,
+                    maxX: currentBounds.maxX - cx,
+                    maxY: currentBounds.maxY - cy,
+                    maxZ: currentBounds.maxZ - cz,
+                });
+            }
+        });
+    </script>
+</body>
+</html>
