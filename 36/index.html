@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebGPU 体素光线追踪渲染器</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="renderCanvas"></canvas>
+    
+    <div id="topbar">
+      <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">VOXEL RT</span>
+      </div>
+      <div class="toolbar">
+        <button id="loadBtn" class="btn btn-primary">
+          <span>📂</span> 加载 .vox 文件
+        </button>
+        <button id="exportBtn" class="btn btn-secondary">
+          <span>💾</span> 导出 HDR
+        </button>
+        <button id="demoBtn" class="btn btn-accent">
+          <span>🎲</span> 演示场景
+        </button>
+      </div>
+      <div id="stats" class="stats">
+        <div class="stat-item">
+          <span class="stat-label">FPS</span>
+          <span id="fpsValue" class="stat-value">--</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">帧时间</span>
+          <span id="frameTime" class="stat-value">-- ms</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">体素</span>
+          <span id="voxelCount" class="stat-value">--</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">⚡</span>
+          <span class="panel-title">渲染参数</span>
+        </div>
+        <div class="panel-body">
+          <div class="control-group">
+            <label class="control-label">
+              <span>漫反射反弹次数</span>
+              <span id="bouncesValue" class="control-value">2</span>
+            </label>
+            <input type="range" id="bounces" min="0" max="5" value="2" step="1" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>阴影光线步数</span>
+              <span id="shadowStepsValue" class="control-value">128</span>
+            </label>
+            <input type="range" id="shadowSteps" min="16" max="512" value="128" step="16" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>环境光遮蔽强度</span>
+              <span id="aoStrengthValue" class="control-value">0.5</span>
+            </label>
+            <input type="range" id="aoStrength" min="0" max="1" value="0.5" step="0.05" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>AO 采样半径</span>
+              <span id="aoRadiusValue" class="control-value">3.0</span>
+            </label>
+            <input type="range" id="aoRadius" min="0.5" max="8" value="3" step="0.5" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>曝光值</span>
+              <span id="exposureValue" class="control-value">1.0</span>
+            </label>
+            <input type="range" id="exposure" min="0.1" max="3" value="1" step="0.1" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>渲染分辨率</span>
+              <span id="resolutionValue" class="control-value">100%</span>
+            </label>
+            <input type="range" id="resolution" min="25" max="200" value="100" step="25" />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">☀️</span>
+          <span class="panel-title">光照设置</span>
+        </div>
+        <div class="panel-body">
+          <div class="control-group">
+            <label class="control-label">
+              <span>太阳 X 方向</span>
+              <span id="sunXValue" class="control-value">0.5</span>
+            </label>
+            <input type="range" id="sunX" min="-1" max="1" value="0.5" step="0.05" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>太阳 Y 方向</span>
+              <span id="sunYValue" class="control-value">0.8</span>
+            </label>
+            <input type="range" id="sunY" min="0.1" max="1" value="0.8" step="0.05" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>太阳 Z 方向</span>
+              <span id="sunZValue" class="control-value">0.3</span>
+            </label>
+            <input type="range" id="sunZ" min="-1" max="1" value="0.3" step="0.05" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>太阳强度</span>
+              <span id="sunIntensityValue" class="control-value">3.0</span>
+            </label>
+            <input type="range" id="sunIntensity" min="0.5" max="10" value="3" step="0.5" />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-icon">🎨</span>
+          <span class="panel-title">后处理</span>
+        </div>
+        <div class="panel-body">
+          <div class="control-group">
+            <label class="control-label">
+              <span>伽马校正</span>
+              <span id="gammaValue" class="control-value">2.2</span>
+            </label>
+            <input type="range" id="gamma" min="1" max="3" value="2.2" step="0.1" />
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <span>色调映射强度</span>
+              <span id="tonemapValue" class="control-value">1.0</span>
+            </label>
+            <input type="range" id="tonemap" min="0" max="2" value="1" step="0.1" />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel info-panel">
+        <div class="panel-header">
+          <span class="panel-icon">ℹ️</span>
+          <span class="panel-title">操作说明</span>
+        </div>
+        <div class="panel-body">
+          <div class="info-text">
+            <p>🖱️ <strong>左键拖动</strong>：旋转视角</p>
+            <p>🖱️ <strong>右键拖动</strong>：平移视角</p>
+            <p>🖱️ <strong>滚轮</strong>：缩放</p>
+            <p>⌨️ <strong>WASD</strong>：移动相机</p>
+            <p>⌨️ <strong>Space/Shift</strong>：上升/下降</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingOverlay" class="overlay hidden">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p id="loadingText">正在加载...</p>
+      </div>
+    </div>
+
+    <div id="webgpuError" class="overlay hidden">
+      <div class="error-content">
+        <div class="error-icon">⚠️</div>
+        <h2>WebGPU 不受支持</h2>
+        <p>您的浏览器不支持 WebGPU。请使用以下浏览器最新版本：</p>
+        <ul>
+          <li>Chrome 113+</li>
+          <li>Edge 113+</li>
+          <li>Safari 17+</li>
+          <li>Firefox 121+</li>
+        </ul>
+      </div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".vox" style="display: none" />
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
