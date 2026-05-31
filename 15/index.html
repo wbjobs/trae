@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PCISPH Fluid Simulator</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: #0a0a0f;
+        font-family: 'Segoe UI', sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #ui {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+      #stats {
+        margin-top: 10px;
+        color: #00ffcc;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="ui">
+      <h3>PCISPH 流体模拟器</h3>
+      <div>🖱️ 左键拖拽: 添加粒子</div>
+      <div>🖱️ 右键拖拽: 创建阻挡器</div>
+      <div>🚀 WebGPU + ECS</div>
+      <div id="stats">粒子数: 0</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
