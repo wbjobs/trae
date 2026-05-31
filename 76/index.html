@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动化脚本录制工具</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-left">
+                <h1>🎬 AutoScript Recorder</h1>
+                <span class="version">v1.0.0</span>
+            </div>
+            <div class="header-right">
+                <div id="statusIndicator" class="status-indicator status-idle">
+                    <span class="status-dot"></span>
+                    <span id="statusText">空闲</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="control-panel">
+                    <h3>控制面板</h3>
+                    <div class="button-group">
+                        <button id="btnRecord" class="btn btn-record">
+                            <span class="btn-icon">⏺</span>
+                            录制 (Ctrl+Shift+R)
+                        </button>
+                        <button id="btnStop" class="btn btn-stop" disabled>
+                            <span class="btn-icon">⏹</span>
+                            停止 (Ctrl+Shift+S)
+                        </button>
+                        <button id="btnPlay" class="btn btn-play">
+                            <span class="btn-icon">▶</span>
+                            播放 (Ctrl+Shift+P)
+                        </button>
+                        <button id="btnPause" class="btn btn-pause" disabled>
+                            <span class="btn-icon">⏸</span>
+                            暂停
+                        </button>
+                    </div>
+
+                    <div class="settings-group">
+                        <h4>录制设置</h4>
+                        <label class="setting-item">
+                            <input type="checkbox" id="captureMouseMove" checked>
+                            捕获鼠标移动
+                        </label>
+                        <label class="setting-item">
+                            <input type="checkbox" id="captureWheel" checked>
+                            捕获鼠标滚轮
+                        </label>
+                        <label class="setting-item">
+                            <input type="checkbox" id="filterSensitive" checked>
+                            过滤敏感输入
+                        </label>
+                        <div class="setting-item">
+                            <label>鼠标移动阈值: <span id="thresholdValue">10</span>px</label>
+                            <input type="range" id="mouseThreshold" min="1" max="100" value="10">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h4>播放设置</h4>
+                        <div class="setting-item">
+                            <label>播放速度: <span id="speedValue">1.0</span>x</label>
+                            <input type="range" id="playSpeed" min="0.1" max="5" step="0.1" value="1">
+                        </div>
+                    </div>
+
+                    <div class="file-actions">
+                        <button id="btnSave" class="btn btn-secondary">
+                            <span class="btn-icon">💾</span>
+                            保存脚本
+                        </button>
+                        <button id="btnLoad" class="btn btn-secondary">
+                            <span class="btn-icon">📂</span>
+                            加载脚本
+                        </button>
+                        <button id="btnClear" class="btn btn-danger">
+                            <span class="btn-icon">🗑️</span>
+                            清空脚本
+                        </button>
+                    </div>
+
+                    <div class="vision-actions">
+                        <h4>图像识别</h4>
+                        <button id="btnCaptureAnchor" class="btn btn-primary">
+                            <span class="btn-icon">📷</span>
+                            捕获截图锚点
+                        </button>
+                        <button id="btnAddFindImage" class="btn btn-secondary">
+                            <span class="btn-icon">🔍</span>
+                            添加查找图像事件
+                        </button>
+                        <button id="btnAddClickImage" class="btn btn-secondary">
+                            <span class="btn-icon">🖱️</span>
+                            添加点击图像事件
+                        </button>
+                        <button id="btnAddWaitImage" class="btn btn-secondary">
+                            <span class="btn-icon">⏳</span>
+                            添加等待图像事件
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>统计信息</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">事件数量</span>
+                        <span id="eventCount" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">录制时长</span>
+                        <span id="recordDuration" class="stat-value">0s</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">当前索引</span>
+                        <span id="currentIndex" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">敏感上下文</span>
+                        <span id="sensitiveContext" class="stat-value">否</span>
+                    </div>
+                </div>
+
+                <div class="event-log">
+                    <h3>事件日志</h3>
+                    <div id="eventLog" class="log-container"></div>
+                </div>
+            </aside>
+
+            <main class="editor-container">
+                <div class="editor-tabs">
+                    <button class="tab-btn active" data-tab="editor">脚本编辑器</button>
+                    <button class="tab-btn" data-tab="visual">可视化视图</button>
+                </div>
+                
+                <div class="tab-content active" id="tab-editor">
+                    <div id="monacoEditor" class="monaco-editor"></div>
+                </div>
+                
+                <div class="tab-content" id="tab-visual">
+                    <div class="visual-view">
+                        <h3>脚本步骤</h3>
+                        <div id="stepList" class="step-list"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer class="app-footer">
+            <div class="footer-info">
+                <span>提示: 录制时会自动检测并过滤密码框等敏感输入</span>
+            </div>
+            <div class="footer-shortcuts">
+                <span class="shortcut">Ctrl+Shift+R: 开始/停止录制</span>
+                <span class="shortcut">Ctrl+Shift+P: 播放/暂停</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        window.module = { exports: {} };
+        window.require = function(path) {
+            if (path === './src/recorder/Recorder') {
+                return window.Recorder;
+            }
+            if (path === './src/player/Player') {
+                return window.Player;
+            }
+            return require(path);
+        };
+    </script>
+    <script src="node_modules/@monaco-editor/loader/lib/umd/loader.min.js"></script>
+    <script src="src/renderer/app.js"></script>
+</body>
+</html>

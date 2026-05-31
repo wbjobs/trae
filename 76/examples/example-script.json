@@ -1,0 +1,271 @@
+{
+  "version": "1.0",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "description": "示例自动化脚本 - 演示各种可用的事件类型",
+  "screenInfo": {
+    "scaleFactor": 1.0,
+    "logicalWidth": 1920,
+    "logicalHeight": 1080,
+    "physicalWidth": 1920,
+    "physicalHeight": 1080
+  },
+  "variables": {
+    "clickCount": 0,
+    "targetX": 500,
+    "targetY": 300,
+    "waitTime": 2000
+  },
+  "events": [
+    {
+      "type": "comment",
+      "text": "=== 这是一个示例脚本，展示所有支持的事件类型 ==="
+    },
+    {
+      "type": "comment",
+      "text": "1. 设置变量示例"
+    },
+    {
+      "type": "setVariable",
+      "name": "counter",
+      "value": 0,
+      "delay": 0
+    },
+    {
+      "type": "setVariable",
+      "name": "maxAttempts",
+      "value": 3,
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "2. 等待事件示例 - 固定等待时间"
+    },
+    {
+      "type": "wait",
+      "duration": 1000,
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "3. 鼠标操作示例"
+    },
+    {
+      "type": "mouseMove",
+      "x": "${targetX}",
+      "y": "${targetY}",
+      "delay": 500
+    },
+    {
+      "type": "mouseClick",
+      "action": "down",
+      "x": "${targetX}",
+      "y": "${targetY}",
+      "button": "left",
+      "clicks": 1,
+      "delay": 100
+    },
+    {
+      "type": "mouseClick",
+      "action": "up",
+      "x": "${targetX}",
+      "y": "${targetY}",
+      "button": "left",
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "4. 键盘操作示例"
+    },
+    {
+      "type": "typeText",
+      "text": "Hello, World!",
+      "hasSensitive": false,
+      "delay": 500
+    },
+    {
+      "type": "keyPress",
+      "action": "press",
+      "key": "Enter",
+      "keycode": 36,
+      "delay": 200
+    },
+    {
+      "type": "comment",
+      "text": "5. 循环示例 - 执行3次点击"
+    },
+    {
+      "type": "loop",
+      "times": 3,
+      "events": [
+        {
+          "type": "mouseClick",
+          "action": "down",
+          "x": 600,
+          "y": 400,
+          "button": "left",
+          "clicks": 1,
+          "delay": 0
+        },
+        {
+          "type": "mouseClick",
+          "action": "up",
+          "x": 600,
+          "y": 400,
+          "button": "left",
+          "delay": 500
+        }
+      ],
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "6. 条件等待示例 - 等待像素颜色变化"
+    },
+    {
+      "type": "wait",
+      "condition": {
+        "type": "pixelColor",
+        "x": 100,
+        "y": 100,
+        "color": "ff0000",
+        "tolerance": 30
+      },
+      "timeout": 10000,
+      "interval": 500,
+      "throwOnTimeout": false,
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "7. 条件判断示例 - 检查变量值"
+    },
+    {
+      "type": "if",
+      "condition": {
+        "type": "variable",
+        "name": "counter",
+        "operator": ">",
+        "value": 5
+      },
+      "then": [
+        {
+          "type": "comment",
+          "text": "counter 大于 5 时执行"
+        }
+      ],
+      "else": [
+        {
+          "type": "comment",
+          "text": "counter 小于等于 5 时执行"
+        }
+      ],
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "8. 组合条件示例"
+    },
+    {
+      "type": "if",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "variable",
+            "name": "counter",
+            "operator": ">=",
+            "value": 0
+          },
+          {
+            "type": "variable",
+            "name": "maxAttempts",
+            "operator": "<=",
+            "value": 10
+          }
+        ]
+      },
+      "then": [
+        {
+          "type": "wait",
+          "duration": 500,
+          "delay": 0
+        }
+      ],
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "9. 图像识别示例 - 查找图像并移动鼠标"
+    },
+    {
+      "type": "findImage",
+      "templatePath": "./screenshots/template_example.png",
+      "threshold": 0.85,
+      "moveTo": true,
+      "storePositionAs": "foundPosition",
+      "storeResultAs": "findResult",
+      "throwOnNotFound": false,
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "10. 图像识别示例 - 点击图像"
+    },
+    {
+      "type": "clickImage",
+      "templatePath": "./screenshots/button_example.png",
+      "threshold": 0.85,
+      "button": "left",
+      "clicks": 1,
+      "timeout": 5000,
+      "interval": 500,
+      "storeResultAs": "clickResult",
+      "throwOnNotFound": false,
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "11. 图像识别示例 - 等待图像出现"
+    },
+    {
+      "type": "waitForImage",
+      "templatePath": "./screenshots/loading_complete.png",
+      "threshold": 0.85,
+      "timeout": 10000,
+      "interval": 500,
+      "storePositionAs": "imagePosition",
+      "storeResultAs": "waitResult",
+      "throwOnTimeout": false,
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "12. 图像识别示例 - 条件判断图像是否存在"
+    },
+    {
+      "type": "if",
+      "condition": {
+        "type": "imageExists",
+        "templatePath": "./screenshots/success_icon.png",
+        "threshold": 0.85
+      },
+      "then": [
+        {
+          "type": "comment",
+          "text": "图像存在时执行"
+        }
+      ],
+      "else": [
+        {
+          "type": "comment",
+          "text": "图像不存在时执行"
+        }
+      ],
+      "delay": 0
+    },
+    {
+      "type": "comment",
+      "text": "=== 脚本结束 ==="
+    }
+  ]
+}
