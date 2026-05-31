@@ -1,0 +1,71 @@
+simulation:
+  name: "PWR_pin_coupled"
+  max_iterations: 50
+  convergence_criterion: 0.001
+  relaxation_factor: 0.5
+  mpi_procs: 4
+
+neutronics:
+  code: "openmc"
+  num_batches: 100
+  num_particles: 10000
+  inactive_batches: 20
+  energy_groups: 2
+  temperature_dependent: true
+  cross_section_library: "endfb71_hdf5"
+
+geometry:
+  type: "pin_cell"
+  pitch: 1.26
+  pin_radius: 0.45
+  clad_inner_radius: 0.47
+  clad_outer_radius: 0.55
+  height: 300.0
+  mesh_dimensions: [50, 50, 100]
+
+materials:
+  fuel:
+    name: "UO2"
+    density: 10.4
+    enrichment: 4.5
+  clad:
+    name: "Zircaloy"
+    density: 6.55
+  coolant:
+    name: "H2O"
+    density: 0.75
+    boron_ppm: 1000
+
+thermal_hydraulics:
+  code: "moose"
+  app_name: "thermal_hydraulics"
+  input_file: "thermal_hydraulics/th_input.i"
+  inlet_temperature: 565.0
+  outlet_pressure: 15.5
+  mass_flow_rate: 0.35
+  heat_transfer_coefficient: 35000.0
+
+data_transfer:
+  method: "conservative"
+  interpolation_order: 1
+  scaling_power: 1.0
+
+adaptive_mesh:
+  enabled: true
+  max_refinement_level: 4
+  refinement_threshold: 0.1
+  coarsening_threshold: 0.01
+  target_cell_count: 50000
+  min_cell_count: 10000
+
+optimization:
+  target_speedup: 2.0
+  adaptation_interval: 3
+  use_fft: true
+  early_convergence: true
+
+output:
+  directory: "output"
+  save_frequency: 1
+  format: "hdf5"
+  verbosity: 2
