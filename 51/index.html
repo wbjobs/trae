@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时人脸模糊与语音字幕系统</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>实时人脸模糊与语音字幕系统</h1>
+            <div class="status-bar">
+                <span id="camera-status" class="status-item">
+                    <span class="indicator"></span>
+                    <span>摄像头: 未连接</span>
+                </span>
+                <span id="face-detect-status" class="status-item">
+                    <span class="indicator"></span>
+                    <span>人脸检测: 未就绪</span>
+                </span>
+                <span id="ws-status" class="status-item">
+                    <span class="indicator"></span>
+                    <span>WebSocket: 未连接</span>
+                </span>
+            </div>
+        </header>
+
+        <main>
+            <div class="video-container">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="output-canvas"></canvas>
+                <div id="privacy-banner" class="privacy-banner hidden">
+                    🔒 隐私模式已启用
+                </div>
+                <div id="no-subtitle-banner" class="no-subtitle-banner hidden">
+                    ⚠️ 字幕服务已断开，当前为无字幕模式
+                </div>
+                <div id="reconnecting-banner" class="reconnecting-banner hidden">
+                    🔄 正在重连字幕服务...
+                </div>
+                <div id="loading-overlay" class="loading-overlay">
+                    <div class="spinner"></div>
+                    <p>正在加载人脸检测模型...</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="pixelation-level">像素化强度:</label>
+                    <input type="range" id="pixelation-level" min="5" max="30" value="15">
+                    <span id="pixelation-value">15</span>
+                </div>
+                <div class="control-group">
+                    <label for="confidence-threshold">检测置信度:</label>
+                    <input type="range" id="confidence-threshold" min="0.5" max="0.95" step="0.05" value="0.7">
+                    <span id="confidence-value">0.70</span>
+                </div>
+                <div class="control-group">
+                    <label for="subtitle-size">字幕大小:</label>
+                    <input type="range" id="subtitle-size" min="16" max="48" value="28">
+                    <span id="subtitle-size-value">28px</span>
+                </div>
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="enable-blur" checked>
+                    <label for="enable-blur">启用人脸模糊</label>
+                </div>
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="enable-subtitle" checked>
+                    <label for="enable-subtitle">启用字幕</label>
+                </div>
+                <div class="control-group checkbox-group privacy-group">
+                    <input type="checkbox" id="enable-privacy">
+                    <label for="enable-privacy">🔒 隐私模式</label>
+                </div>
+                <button id="start-btn" class="btn btn-primary">启动系统</button>
+                <button id="stop-btn" class="btn btn-secondary" disabled>停止</button>
+            </div>
+
+            <div class="debug-panel">
+                <h3>调试信息</h3>
+                <div id="debug-info">
+                    <p>人脸数量: <span id="face-count">0</span></p>
+                    <p>处理帧率: <span id="fps">0</span> FPS</p>
+                    <p>字幕延迟: <span id="subtitle-latency">0</span> ms</p>
+                </div>
+                <div id="subtitle-history">
+                    <h4>字幕历史</h4>
+                    <div id="subtitle-log"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.14.0/dist/tf-backend-wasm.min.js"></script>
+    <script src="js/face-detection.js"></script>
+    <script src="js/subtitle-renderer.js"></script>
+    <script src="js/websocket-client.js"></script>
+    <script src="js/fake-subtitle-generator.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
