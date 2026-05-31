@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "exported_at": "2024-01-01T00:00:00",
+  "total_count": 5,
+  "snippets": [
+    {
+      "title": "Python 带超时的 HTTP 请求",
+      "code": "import requests\n\ndef fetch_with_timeout(url: str, timeout: int = 10) -> dict:\n    \"\"\"\n    发送带超时的 HTTP GET 请求\n    \n    Args:\n        url: 请求的 URL\n        timeout: 超时时间（秒）\n    \n    Returns:\n        响应的 JSON 数据\n    \"\"\"\n    try:\n        response = requests.get(url, timeout=timeout)\n        response.raise_for_status()\n        return response.json()\n    except requests.exceptions.Timeout:\n        raise Exception(f\"请求超时（{timeout}秒）\")\n    except requests.exceptions.RequestException as e:\n        raise Exception(f\"请求失败: {str(e)}\")\n\n# 使用示例\n# data = fetch_with_timeout(\"https://api.example.com/data\", timeout=5)",
+      "language": "python",
+      "tags": ["http", "requests", "timeout", "network"],
+      "description": "使用 requests 库发送带超时控制的 HTTP GET 请求，包含完整的错误处理。"
+    },
+    {
+      "title": "JavaScript 异步请求带超时",
+      "code": "async function fetchWithTimeout(url, options = {}, timeout = 10000) {\n    const controller = new AbortController();\n    const id = setTimeout(() => controller.abort(), timeout);\n    \n    try {\n        const response = await fetch(url, {\n            ...options,\n            signal: controller.signal\n        });\n        clearTimeout(id);\n        return response;\n    } catch (error) {\n        clearTimeout(id);\n        if (error.name === 'AbortError') {\n            throw new Error(`请求超时（${timeout}ms）`);\n        }\n        throw error;\n    }\n}\n\n// 使用示例\n// const response = await fetchWithTimeout('https://api.example.com/data', {}, 5000);\n// const data = await response.json();",
+      "language": "javascript",
+      "tags": ["fetch", "async", "timeout", "abort"],
+      "description": "使用 AbortController 实现带超时的 fetch 请求。"
+    },
+    {
+      "title": "Python 连接 MySQL 数据库",
+      "code": "import mysql.connector\nfrom mysql.connector import Error\n\ndef create_mysql_connection(host, database, user, password):\n    \"\"\"\n    创建 MySQL 数据库连接\n    \"\"\"\n    connection = None\n    try:\n        connection = mysql.connector.connect(\n            host=host,\n            database=database,\n            user=user,\n            password=password\n        )\n        if connection.is_connected():\n            print(\"成功连接到 MySQL 数据库\")\n            return connection\n    except Error as e:\n        print(f\"连接错误: {e}\")\n        raise\n    return connection\n\ndef close_mysql_connection(connection):\n    if connection and connection.is_connected():\n        connection.close()\n        print(\"MySQL 连接已关闭\")\n\n# 使用示例\n# conn = create_mysql_connection('localhost', 'mydb', 'user', 'password')\n# close_mysql_connection(conn)",
+      "language": "python",
+      "tags": ["mysql", "database", "connection", "sql"],
+      "description": "使用 mysql-connector-python 库连接 MySQL 数据库。"
+    },
+    {
+      "title": "TypeScript 防抖函数实现",
+      "code": "function debounce<T extends (...args: any[]) => any>(\n    func: T,\n    wait: number,\n    immediate: boolean = false\n): (...args: Parameters<T>) => void {\n    let timeout: ReturnType<typeof setTimeout> | null = null;\n    \n    return function executedFunction(...args: Parameters<T>) {\n        const later = () => {\n            timeout = null;\n            if (!immediate) func(...args);\n        };\n        \n        const callNow = immediate && !timeout;\n        \n        if (timeout) clearTimeout(timeout);\n        timeout = setTimeout(later, wait);\n        \n        if (callNow) func(...args);\n    };\n}\n\n// 使用示例\n// const debouncedSearch = debounce((query: string) => {\n//     console.log('Searching for:', query);\n// }, 300);",
+      "language": "typescript",
+      "tags": ["debounce", "utility", "performance", "typescript"],
+      "description": "TypeScript 实现的防抖函数，支持立即执行选项。"
+    },
+    {
+      "title": "Python 读取和写入 JSON 文件",
+      "code": "import json\nfrom pathlib import Path\nfrom typing import Dict, Any\n\ndef read_json_file(file_path: str) -> Dict[str, Any]:\n    \"\"\"\n    读取 JSON 文件\n    \"\"\"\n    path = Path(file_path)\n    if not path.exists():\n        raise FileNotFoundError(f\"文件不存在: {file_path}\")\n    \n    with open(path, 'r', encoding='utf-8') as f:\n        return json.load(f)\n\ndef write_json_file(\n    data: Dict[str, Any],\n    file_path: str,\n    indent: int = 2\n) -> None:\n    \"\"\"\n    写入 JSON 文件\n    \"\"\"\n    path = Path(file_path)\n    path.parent.mkdir(parents=True, exist_ok=True)\n    \n    with open(path, 'w', encoding='utf-8') as f:\n        json.dump(data, f, ensure_ascii=False, indent=indent)\n\n# 使用示例\n# data = read_json_file('data.json')\n# write_json_file({'key': 'value'}, 'output.json')",
+      "language": "python",
+      "tags": ["json", "file", "io", "serialization"],
+      "description": "使用 json 模块读取和写入 JSON 文件，支持 UTF-8 编码。"
+    }
+  ]
+}
