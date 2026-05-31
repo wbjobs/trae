@@ -1,0 +1,66 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: device-monitor
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/device_monitor?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3000ms
+
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: your_email@qq.com
+    password: your_email_auth_code
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: true
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.iot.monitor.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+influxdb:
+  url: http://localhost:8086
+  token: your-influxdb-token
+  org: iot-org
+  bucket: device-data
+
+modbus:
+  timeout: 5000
+  reconnect-interval: 30000
+
+collect:
+  cron: "0/5 * * * * ?"
+  thread-pool-size: 10
+
+alarm:
+  offline-threshold: 60000
+  notify-interval: 300000
+
+wechat:
+  webhook-url: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=your-webhook-key
+
+logging:
+  level:
+    com.iot.monitor: debug
+    root: info
