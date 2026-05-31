@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "id": "50167d14-de32-4b6e-8b3f-e40ec34175c1",
+    "startTime": 1779178184441,
+    "gameId": "8ebeb104-27b4-43d2-bc3b-9ccb714c0ce7",
+    "map": "default",
+    "playerCount": 2,
+    "endTime": 1779178184441,
+    "duration": 0,
+    "frameCount": 0,
+    "eventCount": 0,
+    "frameInterval": 100
+  },
+  "frames": [],
+  "events": []
+}

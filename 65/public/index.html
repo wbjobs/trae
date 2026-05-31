@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空域对战 - 多人联机推演游戏</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #0a0a1a; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 20px 0; border-bottom: 2px solid #1e3a5f; margin-bottom: 20px; }
+        h1 { color: #4fc3f7; font-size: 2.5em; text-shadow: 0 0 20px rgba(79, 195, 247, 0.5); }
+        .game-area { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .sidebar { background: #1a1a2e; padding: 20px; border-radius: 10px; border: 1px solid #1e3a5f; }
+        .sidebar h2 { color: #4fc3f7; margin-bottom: 15px; font-size: 1.2em; }
+        .btn { display: block; width: 100%; padding: 12px; margin-bottom: 10px; background: linear-gradient(135deg, #1e3a5f, #0d47a1); color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn:hover { background: linear-gradient(135deg, #0d47a1, #1565c0); transform: translateY(-2px); }
+        .btn:disabled { background: #333; cursor: not-allowed; }
+        .btn-success { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
+        .btn-success:hover { background: linear-gradient(135deg, #388e3c, #2e7d32); }
+        .btn-danger { background: linear-gradient(135deg, #c62828, #b71c1c); }
+        .btn-danger:hover { background: linear-gradient(135deg, #d32f2f, #c62828); }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; background: #0a0a1a; border: 1px solid #1e3a5f; border-radius: 5px; color: #fff; }
+        .room-list, .player-list { list-style: none; }
+        .room-item, .player-item { padding: 10px; background: #0a0a1a; margin-bottom: 5px; border-radius: 5px; cursor: pointer; border: 1px solid transparent; }
+        .room-item:hover, .player-item:hover { border-color: #4fc3f7; }
+        .room-item.selected { border-color: #4fc3f7; background: #1e3a5f; }
+        .game-canvas { background: #0d1117; border-radius: 10px; border: 1px solid #1e3a5f; position: relative; overflow: hidden; }
+        canvas { display: block; }
+        .status-bar { display: flex; justify-content: space-between; padding: 10px; background: #1a1a2e; border-radius: 5px; margin-bottom: 10px; }
+        .status-item { text-align: center; }
+        .status-label { font-size: 12px; color: #888; }
+        .status-value { font-size: 18px; color: #4fc3f7; font-weight: bold; }
+        .messages { height: 150px; overflow-y: auto; background: #0a0a1a; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; }
+        .message { padding: 3px 0; border-bottom: 1px solid #1e3a5f; }
+        .message.system { color: #ffeb3b; }
+        .message.event { color: #4fc3f7; }
+        .hidden { display: none; }
+        .login-screen { text-align: center; padding: 50px; }
+        .login-screen input { max-width: 300px; margin: 0 auto 15px; display: block; }
+        .login-screen h2 { margin-bottom: 30px; color: #4fc3f7; }
+        .resource-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .resource-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+        .resource-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .fuel { background: #ff9800; }
+        .ammo { background: #f44336; }
+        .shield { background: #2196f3; }
+        .speed { background: #4caf50; }
+        .repair { background: #9c27b0; }
+        .tooltip { position: absolute; background: rgba(0,0,0,0.9); padding: 10px; border-radius: 5px; font-size: 12px; pointer-events: none; z-index: 100; border: 1px solid #4fc3f7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>✈ 空域对战</h1>
+            <p>多人联机航线规划推演游戏</p>
+        </header>
+
+        <div id="loginScreen" class="login-screen">
+            <h2>加入游戏</h2>
+            <input type="text" id="playerName" placeholder="输入你的玩家名称" maxlength="20">
+            <button class="btn btn-success" onclick="joinGame()" style="max-width: 300px; margin: 0 auto;">进入游戏</button>
+        </div>
+
+        <div id="gameScreen" class="hidden">
+            <div class="game-area">
+                <div class="sidebar">
+                    <h2>🎮 游戏控制</h2>
+                    <div id="lobbyPanel">
+                        <button class="btn" onclick="createRoom()">创建房间</button>
+                        <button class="btn" onclick="refreshRooms()">刷新房间列表</button>
+                        <h3 style="margin: 15px 0 10px; color: #888;">可用房间</h3>
+                        <ul id="roomList" class="room-list"></ul>
+                    </div>
+
+                    <div id="roomPanel" class="hidden">
+                        <button class="btn btn-danger" onclick="leaveRoom()">离开房间</button>
+                        <button id="readyBtn" class="btn btn-success" onclick="toggleReady()">准备</button>
+                        <h3 style="margin: 15px 0 10px; color: #888;">房间玩家</h3>
+                        <ul id="playerList" class="player-list"></ul>
+                    </div>
+
+                    <div id="gamePanel" class="hidden">
+                        <div class="status-bar">
+                            <div class="status-item">
+                                <div class="status-label">剩余时间</div>
+                                <div class="status-value" id="timeLeft">10:00</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">得分</div>
+                                <div class="status-value" id="myScore">0</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">生命值</div>
+                                <div class="status-value" id="myHealth">100</div>
+                            </div>
+                        </div>
+                        <div class="status-bar">
+                            <div class="status-item">
+                                <div class="status-label">燃料</div>
+                                <div class="status-value" id="myFuel">100</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">弹药</div>
+                                <div class="status-value" id="myAmmo">50</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">护盾</div>
+                                <div class="status-value" id="myShield">0</div>
+                            </div>
+                        </div>
+                        <div class="resource-legend">
+                            <div class="resource-item"><span class="resource-dot fuel"></span>燃料</div>
+                            <div class="resource-item"><span class="resource-dot ammo"></span>弹药</div>
+                            <div class="resource-item"><span class="resource-dot shield"></span>护盾</div>
+                            <div class="resource-item"><span class="resource-dot speed"></span>加速</div>
+                            <div class="resource-item"><span class="resource-dot repair"></span>修复</div>
+                        </div>
+                    </div>
+
+                    <div class="messages" id="messages"></div>
+                </div>
+
+                <div class="game-canvas">
+                    <canvas id="gameCanvas"></canvas>
+                    <div id="tooltip" class="tooltip hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let playerId = null;
+        let playerName = '';
+        let currentRoom = null;
+        let gameState = null;
+        let isReady = false;
+        let canvas, ctx;
+        let waypoints = [];
+        let isDrawing = false;
+
+        function joinGame() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                alert('请输入玩家名称');
+                return;
+            }
+            playerName = name;
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            initCanvas();
+            setupSocketEvents();
+            refreshRooms();
+            addMessage('系统', `欢迎，${playerName}！`, 'system');
+        }
+
+        function initCanvas() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            canvas.width = 1000;
+            canvas.height = 700;
+            
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                waypoints = [];
+                drawGame();
+            });
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+        }
+
+        function setupSocketEvents() {
+            socket.on('connect', () => {
+                playerId = socket.id;
+                addMessage('系统', '已连接到服务器', 'system');
+            });
+
+            socket.on('rooms_list', (rooms) => {
+                const list = document.getElementById('roomList');
+                list.innerHTML = '';
+                if (rooms.length === 0) {
+                    list.innerHTML = '<li style="color: #666;">暂无房间</li>';
+                    return;
+                }
+                rooms.forEach(room => {
+                    const li = document.createElement('li');
+                    li.className = 'room-item';
+                    li.innerHTML = `${room.name} (${room.playerCount}/${room.maxPlayers}) [${room.status}]`;
+                    li.onclick = () => joinRoom(room.id);
+                    list.appendChild(li);
+                });
+            });
+
+            socket.on('room_joined', (data) => {
+                currentRoom = data.roomId;
+                document.getElementById('lobbyPanel').classList.add('hidden');
+                document.getElementById('roomPanel').classList.remove('hidden');
+                addMessage('系统', '已加入房间', 'system');
+            });
+
+            socket.on('join_error', (data) => {
+                alert(data.error);
+            });
+
+            socket.on('player_joined', (data) => {
+                addMessage('系统', `${data.playerName} 加入了房间`, 'system');
+            });
+
+            socket.on('player_left', (data) => {
+                addMessage('系统', '有玩家离开了房间', 'system');
+            });
+
+            socket.on('player_ready_changed', (data) => {
+                if (data.playerId === playerId) {
+                    isReady = data.isReady;
+                    document.getElementById('readyBtn').textContent = isReady ? '取消准备' : '准备';
+                }
+            });
+
+            socket.on('game_state', (state) => {
+                gameState = state;
+                updateUI();
+                drawGame();
+            });
+
+            socket.on('disconnect', () => {
+                addMessage('系统', '与服务器断开连接', 'system');
+            });
+        }
+
+        function createRoom() {
+            socket.emit('create_room', { name: `${playerName}的房间`, mapId: 'default' });
+        }
+
+        function refreshRooms() {
+            socket.emit('list_rooms');
+        }
+
+        function joinRoom(roomId) {
+            socket.emit('join_room', { roomId, playerName });
+        }
+
+        function leaveRoom() {
+            socket.emit('leave_room');
+            currentRoom = null;
+            isReady = false;
+            document.getElementById('roomPanel').classList.add('hidden');
+            document.getElementById('gamePanel').classList.add('hidden');
+            document.getElementById('lobbyPanel').classList.remove('hidden');
+            refreshRooms();
+        }
+
+        function toggleReady() {
+            socket.emit('player_ready', { isReady: !isReady });
+        }
+
+        function handleCanvasClick(e) {
+            if (!gameState || gameState.status !== 'playing') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const gameX = (x / canvas.width) * 2000;
+            const gameY = (y / canvas.height) * 2000;
+            
+            const clickedResource = gameState.resources.find(r => {
+                const rx = (r.position.x / 2000) * canvas.width;
+                const ry = (r.position.y / 2000) * canvas.height;
+                return Math.sqrt((x - rx) ** 2 + (y - ry) ** 2) < 15;
+            });
+            
+            if (clickedResource) {
+                socket.emit('capture_resource', { resourceId: clickedResource.id });
+                return;
+            }
+            
+            const clickedAircraft = gameState.aircrafts.find(a => {
+                if (a.playerId === playerId) return false;
+                const ax = (a.position.x / 2000) * canvas.width;
+                const ay = (a.position.y / 2000) * canvas.height;
+                return Math.sqrt((x - ax) ** 2 + (y - ay) ** 2) < 20;
+            });
+            
+            if (clickedAircraft) {
+                socket.emit('fire_weapon', { targetId: clickedAircraft.id });
+                return;
+            }
+            
+            waypoints.push({ x: gameX, y: gameY, altitude: 3000 });
+            drawGame();
+            
+            if (waypoints.length >= 3) {
+                socket.emit('set_route', { waypoints: [...waypoints] });
+                waypoints = [];
+            }
+        }
+
+        function handleCanvasMouseMove(e) {
+            if (!gameState) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const tooltip = document.getElementById('tooltip');
+            let hovered = null;
+            
+            gameState.aircrafts.forEach(a => {
+                const ax = (a.position.x / 2000) * canvas.width;
+                const ay = (a.position.y / 2000) * canvas.height;
+                if (Math.sqrt((x - ax) ** 2 + (y - ay) ** 2) < 20) {
+                    hovered = { type: 'aircraft', data: a };
+                }
+            });
+            
+            gameState.resources.forEach(r => {
+                const rx = (r.position.x / 2000) * canvas.width;
+                const ry = (r.position.y / 2000) * canvas.height;
+                if (Math.sqrt((x - rx) ** 2 + (y - ry) ** 2) < 15) {
+                    hovered = { type: 'resource', data: r };
+                }
+            });
+            
+            if (hovered) {
+                tooltip.classList.remove('hidden');
+                tooltip.style.left = (e.clientX + 10) + 'px';
+                tooltip.style.top = (e.clientY + 10) + 'px';
+                if (hovered.type === 'aircraft') {
+                    const player = gameState.players.find(p => p.id === hovered.data.playerId);
+                    tooltip.innerHTML = `<strong>${player ? player.name : '未知'}</strong><br>生命值: ${hovered.data.health}/${hovered.data.maxHealth}<br>得分: ${hovered.data.score}`;
+                } else {
+                    tooltip.innerHTML = `<strong>${getResourceName(hovered.data.type)}</strong><br>价值: ${hovered.data.value}<br>点击占领`;
+                }
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        }
+
+        function getResourceName(type) {
+            const names = { fuel: '燃料', ammo: '弹药', shield: '护盾', speed: '加速', repair: '修复' };
+            return names[type] || type;
+        }
+
+        function getResourceColor(type) {
+            const colors = { fuel: '#ff9800', ammo: '#f44336', shield: '#2196f3', speed: '#4caf50', repair: '#9c27b0' };
+            return colors[type] || '#888';
+        }
+
+        function updateUI() {
+            if (gameState.status === 'playing' || gameState.status === 'paused') {
+                document.getElementById('roomPanel').classList.add('hidden');
+                document.getElementById('gamePanel').classList.remove('hidden');
+                
+                const timeLeft = Math.max(0, gameState.remainingTime);
+                const minutes = Math.floor(timeLeft / 60000);
+                const seconds = Math.floor((timeLeft % 60000) / 1000);
+                document.getElementById('timeLeft').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                const myAircraft = gameState.aircrafts.find(a => a.playerId === playerId);
+                if (myAircraft) {
+                    document.getElementById('myScore').textContent = myAircraft.score;
+                    document.getElementById('myHealth').textContent = myAircraft.health;
+                    document.getElementById('myFuel').textContent = Math.floor(myAircraft.fuel);
+                    document.getElementById('myAmmo').textContent = myAircraft.ammo;
+                    document.getElementById('myShield').textContent = myAircraft.shield;
+                }
+            }
+            
+            if (currentRoom && gameState.players) {
+                const list = document.getElementById('playerList');
+                list.innerHTML = '';
+                gameState.players.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'player-item';
+                    const isMe = p.id === playerId;
+                    li.innerHTML = `${isMe ? '👤 ' : ''}${p.name} ${p.isReady ? '✅' : '⏳'}`;
+                    list.appendChild(li);
+                });
+            }
+        }
+
+        function drawGame() {
+            if (!gameState) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#1e3a5f';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const pos = (i / 10) * canvas.width;
+                ctx.beginPath();
+                ctx.moveTo(pos, 0);
+                ctx.lineTo(pos, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, pos / (canvas.width / canvas.height));
+                ctx.lineTo(canvas.width, pos / (canvas.width / canvas.height));
+                ctx.stroke();
+            }
+            
+            if (gameState.map === 'default') {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                ctx.beginPath();
+                ctx.arc(500, 350, 100, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.stroke();
+            }
+            
+            gameState.resources.forEach(r => {
+                const rx = (r.position.x / 2000) * canvas.width;
+                const ry = (r.position.y / 2000) * canvas.height;
+                
+                ctx.fillStyle = getResourceColor(r.type);
+                ctx.beginPath();
+                ctx.arc(rx, ry, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = getResourceColor(r.type);
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 15, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            waypoints.forEach((wp, i) => {
+                const wx = (wp.x / 2000) * canvas.width;
+                const wy = (wp.y / 2000) * canvas.height;
+                ctx.fillStyle = '#4fc3f7';
+                ctx.beginPath();
+                ctx.arc(wx, wy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                if (i > 0) {
+                    const prev = waypoints[i - 1];
+                    const px = (prev.x / 2000) * canvas.width;
+                    const py = (prev.y / 2000) * canvas.height;
+                    ctx.strokeStyle = '#4fc3f7';
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(wx, wy);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            });
+            
+            gameState.aircrafts.forEach(a => {
+                const ax = (a.position.x / 2000) * canvas.width;
+                const ay = (a.position.y / 2000) * canvas.height;
+                const isMe = a.playerId === playerId;
+                
+                if (a.route && a.route.length > 1) {
+                    ctx.strokeStyle = isMe ? 'rgba(79, 195, 247, 0.5)' : 'rgba(255, 100, 100, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    a.route.forEach((wp, i) => {
+                        const rx = (wp.x / 2000) * canvas.width;
+                        const ry = (wp.y / 2000) * canvas.height;
+                        if (i === 0) ctx.moveTo(rx, ry);
+                        else ctx.lineTo(rx, ry);
+                    });
+                    ctx.stroke();
+                }
+                
+                ctx.fillStyle = isMe ? '#4fc3f7' : '#ef5350';
+                if (a.status === 'crashed') ctx.fillStyle = '#666';
+                
+                ctx.save();
+                ctx.translate(ax, ay);
+                
+                ctx.beginPath();
+                ctx.moveTo(15, 0);
+                ctx.lineTo(-10, -8);
+                ctx.lineTo(-5, 0);
+                ctx.lineTo(-10, 8);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+                
+                const healthWidth = 30;
+                const healthHeight = 4;
+                const healthPercent = a.health / a.maxHealth;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(ax - healthWidth / 2, ay - 25, healthWidth, healthHeight);
+                ctx.fillStyle = healthPercent > 0.5 ? '#4caf50' : healthPercent > 0.25 ? '#ff9800' : '#f44336';
+                ctx.fillRect(ax - healthWidth / 2, ay - 25, healthWidth * healthPercent, healthHeight);
+            });
+            
+            if (gameState.scores) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '14px Microsoft YaHei';
+                ctx.textAlign = 'left';
+                ctx.fillText('🏆 排行榜', 10, 25);
+                gameState.scores.slice(0, 3).forEach((score, i) => {
+                    ctx.fillText(`${i + 1}. ${score.playerName}: ${score.score}`, 10, 45 + i * 20);
+                });
+            }
+        }
+
+        function addMessage(source, text, type = 'event') {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = `[${source}] ${text}`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
