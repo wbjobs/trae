@@ -1,0 +1,15 @@
+{
+  "name": "cloth-simulation",
+  "version": "1.0.0",
+  "description": "Real-time cloth simulation with Three.js + Ammo.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "ammo.js": "^0.0.10",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

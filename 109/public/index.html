@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时布料模拟 - WebGPU 加速</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <canvas id="canvas-webgpu"></canvas>
+        <canvas id="canvas-overlay"></canvas>
+        
+        <div id="ui-panel">
+            <div class="panel-header">
+                <h2>布料模拟控制台</h2>
+                <div id="gpu-badge">GPU 加速</div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>预设选择</h3>
+                <select id="preset-select">
+                    <option value="silk">丝绸</option>
+                    <option value="cotton" selected>棉布</option>
+                    <option value="denim">牛仔布</option>
+                    <option value="rubber">橡胶</option>
+                    <option value="custom">自定义</option>
+                </select>
+                <p id="preset-desc" class="desc-text">中等刚度，适合模拟日常布料</p>
+            </div>
+            
+            <div class="panel-section">
+                <h3>物理参数</h3>
+                <div class="slider-group">
+                    <label>刚度 (Stiffness)</label>
+                    <input type="range" id="stiffness" min="0" max="1" step="0.01" value="0.6">
+                    <span id="stiffness-value">0.60</span>
+                </div>
+                <div class="slider-group">
+                    <label>阻尼 (Damping)</label>
+                    <input type="range" id="damping" min="0" max="1" step="0.01" value="0.5">
+                    <span id="damping-value">0.50</span>
+                </div>
+                <div class="slider-group">
+                    <label>质量 (Mass)</label>
+                    <input type="range" id="mass" min="0.1" max="3" step="0.1" value="1.0">
+                    <span id="mass-value">1.00</span>
+                </div>
+                <div class="slider-group">
+                    <label>重力 (Gravity)</label>
+                    <input type="range" id="gravity" min="-20" max="0" step="0.1" value="-9.8">
+                    <span id="gravity-value">-9.80</span>
+                </div>
+                <div class="slider-group">
+                    <label>风力 (Wind)</label>
+                    <input type="range" id="wind" min="0" max="2" step="0.01" value="0.5">
+                    <span id="wind-value">0.50</span>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>可视化</h3>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="show-stress" checked>
+                        显示应力热力图
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-sphere" checked>
+                        显示碰撞球体
+                    </label>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>控制</h3>
+                <div class="button-group">
+                    <button id="reset-btn">重置布料</button>
+                    <button id="wind-pulse-btn">风脉冲</button>
+                    <button id="toggle-simulation">暂停</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>应力图例</h3>
+                <div class="stress-legend">
+                    <div class="legend-gradient"></div>
+                    <div class="legend-labels">
+                        <span>低</span>
+                        <span>中</span>
+                        <span>高</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section stats">
+                <h3>统计</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">FPS</span>
+                        <span id="fps" class="stat-value">60</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">质点</span>
+                        <span id="particle-count" class="stat-value">6400</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">约束</span>
+                        <span id="constraint-count" class="stat-value">19044</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">最大应力</span>
+                        <span id="max-stress" class="stat-value">0.00</span>
+                    </div>
+                </div>
+                <div id="render-mode" class="render-mode-info">渲染模式: WebGPU Compute</div>
+            </div>
+        </div>
+        
+        <div id="info-overlay">
+            <p>🖱️ 左键拖拽布料 | 右键旋转视角 | 滚轮缩放</p>
+        </div>
+        
+        <div id="loading-overlay">
+            <div class="loading-content">
+                <div class="loader"></div>
+                <p>正在初始化 WebGPU 物理引擎...</p>
+            </div>
+        </div>
+        
+        <div id="error-overlay" style="display: none;">
+            <div class="error-content">
+                <h2>WebGPU 不支持</h2>
+                <p>您的浏览器不支持 WebGPU，请使用最新版 Chrome 或 Edge 浏览器。</p>
+                <p class="error-hint">请确保启用了 WebGPU 特性 (chrome://flags/#enable-webgpu-developer-features)</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="js/webgpu-simulator.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
