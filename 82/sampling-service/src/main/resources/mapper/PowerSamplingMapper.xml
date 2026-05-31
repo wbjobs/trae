@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.power.sampling.sampling.mapper.PowerSamplingMapper">
+
+    <select id="batchQuerySampling" parameterType="com.power.sampling.common.dto.BatchSamplingQueryDTO" resultMap="powerSamplingResultMap">
+        SELECT
+            id, device_id, device_code, voltage, `current`, power, power_factor, frequency,
+            sampling_time, edge_node_id, sampling_status, create_time
+        FROM t_power_sampling
+        <where>
+            <if test="queryDTO.deviceIds != null and queryDTO.deviceIds.size() > 0">
+                AND device_id IN
+                <foreach collection="queryDTO.deviceIds" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="queryDTO.deviceCodes != null and queryDTO.deviceCodes.size() > 0">
+                AND device_code IN
+                <foreach collection="queryDTO.deviceCodes" item="code" open="(" separator="," close=")">
+                    #{code}
+                </foreach>
+            </if>
+            <if test="queryDTO.startTime != null">
+                AND sampling_time >= #{queryDTO.startTime}
+            </if>
+            <if test="queryDTO.endTime != null">
+                AND sampling_time <= #{queryDTO.endTime}
+            </if>
+        </where>
+        ORDER BY sampling_time DESC
+        <if test="queryDTO.pageSize != null">
+            LIMIT #{queryDTO.pageSize}
+        </if>
+    </select>
+
+    <select id="selectPageByCondition" parameterType="map" resultMap="powerSamplingResultMap">
+        SELECT
+            id, device_id, device_code, voltage, `current`, power, power_factor, frequency,
+            sampling_time, edge_node_id, sampling_status, create_time
+        FROM t_power_sampling
+        <where>
+            <if test="queryDTO.deviceIds != null and queryDTO.deviceIds.size() > 0">
+                AND device_id IN
+                <foreach collection="queryDTO.deviceIds" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="queryDTO.startTime != null">
+                AND sampling_time >= #{queryDTO.startTime}
+            </if>
+            <if test="queryDTO.endTime != null">
+                AND sampling_time <= #{queryDTO.endTime}
+            </if>
+        </where>
+        ORDER BY sampling_time DESC
+    </select>
+
+    <resultMap id="powerSamplingResultMap" type="com.power.sampling.common.entity.PowerSampling">
+        <id column="id" property="id"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="device_code" property="deviceCode"/>
+        <result column="voltage" property="voltage"/>
+        <result column="current" property="current"/>
+        <result column="power" property="power"/>
+        <result column="power_factor" property="powerFactor"/>
+        <result column="frequency" property="frequency"/>
+        <result column="sampling_time" property="samplingTime"/>
+        <result column="edge_node_id" property="edgeNodeId"/>
+        <result column="sampling_status" property="samplingStatus"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+</mapper>

@@ -1,0 +1,36 @@
+server:
+  port: 8762
+
+spring:
+  application:
+    name: eureka-server
+  security:
+    user:
+      name: eureka
+      password: eureka2024
+  profiles:
+    active: dc2
+
+eureka:
+  instance:
+    hostname: eureka-dc2
+    prefer-ip-address: true
+    instance-id: ${spring.cloud.client.ip-address}:${server.port}
+    metadata-map:
+      data-center: dc2
+      zone: zone2
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://eureka:eureka2024@eureka-dc1:8761/eureka/
+  server:
+    enable-self-preservation: false
+    renewal-percent-threshold: 0.5
+    eviction-interval-timer-in-ms: 5000
+    peer-node-read-timeout-ms: 5000
+    peer-eureka-nodes-update-interval-ms: 10000
+    instance-info-replication-interval-seconds: 30
+    expected-client-renewal-interval-seconds: 15
+    response-cache-auto-expiration-in-seconds: 10
+    response-cache-update-interval-ms: 5000
