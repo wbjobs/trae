@@ -1,0 +1,17 @@
+{
+  "name": "webtransport-video-server",
+  "version": "1.0.0",
+  "description": "WebTransport-based video call server with dynamic bitrate adjustment",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "generate-certs": "node scripts/generate-certs.js"
+  },
+  "dependencies": {
+    "@fails-components/webtransport": "^1.1.2",
+    "@fails-components/webtransport-transport-http3-quiche": "^1.6.3",
+    "node-forge": "^1.4.0"
+  }
+}
