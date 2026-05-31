@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: config-drift-detector
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/config_drift_db
+      auto-index-creation: true
+
+server:
+  port: 8080
+
+config-drift:
+  baseline-branch: main
+  local-repo-dir: ./config-repos
+  rollback:
+    author-name: Config Drift Detector
+    author-email: config-drift@local
+  services:
+    service-a:
+      git-url: https://github.com/your-org/config-repo-a.git
+      branch: main
+      config-path: config/application.yml
+      username: ${GIT_USERNAME:}
+      password: ${GIT_PASSWORD:}
+    service-b:
+      git-url: https://github.com/your-org/config-repo-b.git
+      branch: main
+      config-path: config/application.yml
+      username: ${GIT_USERNAME:}
+      password: ${GIT_PASSWORD:}
+
+logging:
+  level:
+    com.config.drift: INFO
+    org.eclipse.jgit: WARN
