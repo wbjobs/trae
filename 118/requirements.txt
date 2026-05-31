@@ -1,0 +1,6 @@
+torch>=1.13.0
+torchvision>=0.14.0
+numpy>=1.23.0
+tvm>=0.10.0
+thop>=0.1.1.post2209072238
+tqdm>=4.64.0
