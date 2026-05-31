@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+import os
+import sys
+
+Import("env")
+
+# Configure the library
+library_name = "terrain_destruction"
+source_files = [
+    "src/register_types.cpp",
+    "src/terrain/terrain_data.cpp",
+    "src/terrain/terrain_mesh.cpp",
+    "src/terrain/terrain_chunk.cpp",
+    "src/terrain/terrain_world.cpp",
+    "src/explosive/explosive.cpp",
+    "src/explosive/volume_tracker.cpp",
+]
+
+# Include directories
+include_dirs = [
+    "src",
+]
+
+# Add godot-cpp includes
+godot_cpp_path = os.path.join(os.path.dirname(__file__), "godot-cpp")
+if os.path.exists(godot_cpp_path):
+    include_dirs.append(os.path.join(godot_cpp_path, "include"))
+    include_dirs.append(os.path.join(godot_cpp_path, "build"))
+    include_dirs.append(os.path.join(godot_cpp_path, "gdextension"))
+
+# Define the library
+sources = []
+for src_file in source_files:
+    sources.append(File(src_file))
+
+# Configure based on platform
+if env["platform"] == "windows":
+    suffix = ".dll"
+elif env["platform"] == "linux":
+    suffix = ".so"
+elif env["platform"] == "macos":
+    suffix = ".dylib"
+else:
+    suffix = ".so"
+
+# Build library
+lib = env.SharedLibrary(
+    target=os.path.join("bin", library_name + suffix),
+    source=sources,
+    LIBS=[],
+    LIBPATH=[],
+    CPPPATH=include_dirs,
+)
+
+env.Alias("terrain_destruction", lib)
+Default(lib)

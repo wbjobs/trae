@@ -1,0 +1,69 @@
+[gd_scene load_steps=5 format=3 uid="uid://bmain_scene001"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/terrain_manager.gd" id="2_terrain"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+background_color = Color(0.53, 0.71, 0.93, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.8, 0.8, 0.9, 1)
+ambient_light_energy = 0.5
+tonemap_mode = 0
+glow_enabled = true
+glow_intensity = 0.8
+glow_bloom = 0.6
+ssao_enabled = true
+ssao_intensity = 1.0
+ssao_radius = 1.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.01
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.3, 0.5, 0.9, 1)
+sky_horizon_color = Color(0.6, 0.7, 0.95, 1)
+sky_bottom_color = Color(0.8, 0.9, 1, 1)
+sun_angle_max = 30.0
+sun_curve = 0.5
+ground_bottom_color = Color(0.2, 0.15, 0.1, 1)
+ground_horizon_color = Color(0.5, 0.4, 0.3, 1)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="Sky" type="Sky" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0, -0.5, 0.353553, 0.707107, 0.612372, 0.353553, -0.707107, 0.612372, 0, 50, 0)
+shadow_enabled = true
+light_energy = 1.5
+
+[node name="Terrain" type="Node3D" parent="."]
+script = ExtResource("2_terrain")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 200, -300)
+current = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="UI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/UI"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 600.0
+offset_bottom = 500.0
+
+[node name="InfoLabel" type="Label" parent="CanvasLayer/UI/VBoxContainer"]
+layout_mode = 2
+text = "初始化中..."

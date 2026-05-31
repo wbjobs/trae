@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B0E0E6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="groundGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#228B22;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#006400;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="craterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#654321;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="128" height="80" fill="url(#skyGrad)"/>
+  
+  <path d="M0,80 L30,60 L50,70 L80,50 L100,65 L128,55 L128,128 L0,128 Z" fill="url(#groundGrad)"/>
+  
+  <ellipse cx="64" cy="85" rx="25" ry="10" fill="url(#craterGrad)"/>
+  <ellipse cx="64" cy="88" rx="18" ry="6" fill="#5C4033"/>
+  
+  <circle cx="100" cy="25" r="12" fill="#FFD700"/>
+  
+  <text x="64" y="115" font-family="Arial, sans-serif" font-size="10" fill="#FFFFFF" text-anchor="middle">TERRAIN DESTRUCTION</text>
+</svg>

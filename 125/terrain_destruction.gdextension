@@ -1,0 +1,13 @@
+[configuration]
+
+entry_symbol = "terrain_destruction_extension_init"
+compatibility_minimum = 4.2
+
+[libraries]
+
+windows.debug.x86_64 = "res://bin/libterrain_destruction.windows.debug.x86_64.dll"
+windows.release.x86_64 = "res://bin/libterrain_destruction.windows.release.x86_64.dll"
+linux.debug.x86_64 = "res://bin/libterrain_destruction.linux.debug.x86_64.so"
+linux.release.x86_64 = "res://bin/libterrain_destruction.linux.release.x86_64.so"
+macos.debug = "res://bin/libterrain_destruction.macos.debug.framework"
+macos.release = "res://bin/libterrain_destruction.macos.release.framework"

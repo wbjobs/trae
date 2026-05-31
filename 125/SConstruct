@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+import os
+import sys
+
+# Build configuration for terrain destruction GDExtension
+# This SConstruct builds the extension standalone
+
+# Platform detection
+platform = sys.platform
+if platform == "win32":
+    platform = "windows"
+elif platform == "darwin":
+    platform = "macos"
+else:
+    platform = "linux"
+
+# Architecture
+arch = "x86_64"
+
+# Build type
+target = "release"
+if "--debug" in sys.argv:
+    target = "debug"
+    sys.argv.remove("--debug")
+
+# Configure the environment
+env = Environment(
+    tools=["mingw", "gcc", "g++", "ar", "link", "install"],
+    ENV=os.environ,
+)
+
+# C++ standard
+env.Append(CXXFLAGS=["-std=c++17", "-fPIC"])
+
+# Include paths
+godot_cpp_path = os.path.join(os.path.dirname(__file__), "godot-cpp")
+if os.path.exists(godot_cpp_path):
+    env.Append(CPPPATH=[
+        os.path.join(godot_cpp_path, "include"),
+        os.path.join(godot_cpp_path, "build"),
+        os.path.join(godot_cpp_path, "gdextension"),
+        "src",
+    ])
+else:
+    env.Append(CPPPATH=["src"])
+    print("Warning: godot-cpp not found. Please run setup script.")
+
+# Source files
+source_files = [
+    "src/register_types.cpp",
+    "src/terrain/terrain_data.cpp",
+    "src/terrain/terrain_mesh.cpp",
+    "src/terrain/terrain_chunk.cpp",
+    "src/terrain/terrain_world.cpp",
+    "src/explosive/explosive.cpp",
+    "src/explosive/volume_tracker.cpp",
+]
+
+# Output name
+output_name = f"libterrain_destruction.{platform}.{target}.{arch}"
+
+# Output directory
+output_dir = os.path.join(os.path.dirname(__file__), "bin")
+os.makedirs(output_dir, exist_ok=True)
+
+# Build the shared library
+if platform == "windows":
+    lib = env.SharedLibrary(
+        target=os.path.join(output_dir, output_name),
+        source=source_files,
+        SHLIBSUFFIX=".dll",
+    )
+elif platform == "macos":
+    lib = env.SharedLibrary(
+        target=os.path.join(output_dir, output_name),
+        source=source_files,
+        SHLIBSUFFIX=".dylib",
+    )
+else:
+    lib = env.SharedLibrary(
+        target=os.path.join(output_dir, output_name),
+        source=source_files,
+        SHLIBSUFFIX=".so",
+    )
+
+Default(lib)
+
+# Clean target
+Clean(lib, [output_dir])

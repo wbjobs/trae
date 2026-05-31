@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://bexplosivescene001"]
+
+[ext_resource type="Script" path="res://scripts/explosive.gd" id="1_exp"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_exp"]
+radius = 0.5
+height = 1.0
+radial_segments = 16
+rings = 8
+
+[node name="Explosive" type="Node3D"]
+script = ExtResource("1_exp")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_exp")
