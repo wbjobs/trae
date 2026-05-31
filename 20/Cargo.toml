@@ -1,0 +1,17 @@
+[package]
+name = "snap-manager"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool for managing multi-version snapshots of distributed storage"
+authors = ["Snap Manager Team"]
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+sha2 = "0.10"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+walkdir = "2.4"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
