@@ -1,0 +1,99 @@
+version: "1.0"
+tasks:
+  - name: "backup-documents"
+    local_path: "/home/user/documents"
+    remote_path: "/backup/user/documents"
+    remote:
+      host: "server.example.com"
+      port: 22
+      username: "backupuser"
+      auth_method: "key_file"
+      key_file: "~/.ssh/id_rsa"
+    direction: "bidirectional"
+    conflict_resolution: "auto_merge"
+    merge_strategy: "line_by_line"
+    generate_report: true
+    report_path: ""
+    conflict_backup: true
+    text_file_extensions:
+      - ".txt"
+      - ".md"
+      - ".json"
+      - ".xml"
+      - ".yaml"
+      - ".py"
+      - ".js"
+      - ".html"
+      - ".css"
+    ignore_patterns:
+      - "*.tmp"
+      - "*.cache"
+      - ".DS_Store"
+      - "Thumbs.db"
+    exclude_hidden: false
+
+  - name: "sync-code"
+    local_path: "/home/user/projects"
+    remote_path: "/backup/user/projects"
+    remote:
+      host: "server.example.com"
+      port: 22
+      username: "backupuser"
+      auth_method: "key_file"
+      key_file: "~/.ssh/id_rsa"
+    direction: "bidirectional"
+    conflict_resolution: "newer_wins"
+    generate_report: true
+    ignore_patterns:
+      - "node_modules"
+      - "*.pyc"
+      - "__pycache__"
+      - ".git"
+      - "dist"
+      - "build"
+    exclude_hidden: false
+
+  - name: "keep-both-strategy"
+    local_path: "/home/user/data"
+    remote_path: "/backup/user/data"
+    remote:
+      host: "server.example.com"
+      port: 22
+      username: "backupuser"
+      auth_method: "key_file"
+      key_file: "~/.ssh/id_rsa"
+    direction: "bidirectional"
+    conflict_resolution: "keep_both"
+    conflict_backup: true
+    generate_report: true
+    ignore_patterns: []
+
+  - name: "local-priority"
+    local_path: "/home/user/docs"
+    remote_path: "/backup/user/docs"
+    remote:
+      host: "server.example.com"
+      port: 22
+      username: "backupuser"
+      auth_method: "key_file"
+      key_file: "~/.ssh/id_rsa"
+    direction: "bidirectional"
+    conflict_resolution: "local_wins"
+    generate_report: true
+    ignore_patterns:
+      - "*.log"
+
+  - name: "remote-priority"
+    local_path: "/home/user/downloads"
+    remote_path: "/releases"
+    remote:
+      host: "build-server.example.com"
+      port: 2222
+      username: "builder"
+      auth_method: "key_file"
+      key_file: "~/.ssh/build_key"
+    direction: "remote_to_local"
+    conflict_resolution: "remote_wins"
+    ignore_patterns:
+      - "*.sig"
+      - "checksums"

@@ -1,0 +1,17 @@
+version: "1.0"
+tasks:
+  - name: "test-local-sync"
+    local_path: "e:/temp/test_local"
+    remote_path: "/tmp/test_remote"
+    remote:
+      host: "localhost"
+      port: 22
+      username: "testuser"
+      auth_method: "key_file"
+      key_file: "~/.ssh/id_rsa"
+    direction: "bidirectional"
+    conflict_resolution: "newer_wins"
+    ignore_patterns:
+      - "*.tmp"
+      - "*.log"
+    exclude_hidden: false
