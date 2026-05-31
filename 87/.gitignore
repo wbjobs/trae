@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+.idea/
+.vscode/
+reports/*.xlsx
+reports/*.pdf
+data/cleaned/*.json
+data/export/*
+!data/.gitkeep

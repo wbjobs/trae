@@ -1,0 +1,28 @@
+{
+  "name": "hydrological-watershed-analysis-system",
+  "version": "1.0.0",
+  "description": "水文流域生态径流时序分析可视化系统",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean-data": "node scripts/clean-runoff-data.js",
+    "generate-report": "node scripts/generate-batch-reports.js",
+    "calc-coefficient": "node scripts/calculate-ecological-coefficient.js",
+    "detect-anomaly": "node scripts/detect-anomaly-periods.js",
+    "verify-fixes": "node scripts/verify-fixes.js",
+    "verify-new-features": "node scripts/verify-new-features.js"
+  },
+  "dependencies": {
+    "echarts": "^5.4.3",
+    "dayjs": "^1.11.10",
+    "mathjs": "^12.0.0",
+    "papaparse": "^5.4.1",
+    "file-saver": "^2.0.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

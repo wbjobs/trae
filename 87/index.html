@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>水文流域生态径流时序分析可视化系统</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-content">
+        <h1 class="title">水文流域生态径流时序分析可视化系统</h1>
+        <div class="header-actions">
+          <select id="zoneSelector" class="zone-selector">
+            <option value="all">全流域</option>
+            <option value="zone_a">上游流域区</option>
+            <option value="zone_b">中游干流区</option>
+            <option value="zone_c">下游平原区</option>
+            <option value="zone_d">河口三角洲</option>
+          </select>
+          <select id="regionSelector" class="region-selector">
+            <option value="northern_plains">北方平原区</option>
+            <option value="southern_hilly" selected>南方丘陵区</option>
+            <option value="southwest_mountain">西南山区</option>
+            <option value="northwest_arid">西北干旱区</option>
+            <option value="east_coastal">东部沿海区</option>
+            <option value="northeast_forest">东北森林区</option>
+            <option value="loess_plateau">黄土高原区</option>
+          </select>
+          <select id="timeRangeSelector" class="time-selector">
+            <option value="week">近7天</option>
+            <option value="month">近30天</option>
+            <option value="quarter">近90天</option>
+            <option value="year" selected>近1年</option>
+            <option value="all">全部</option>
+          </select>
+          <button id="refreshBtn" class="btn btn-primary">刷新数据</button>
+          <button id="exportBtn" class="btn btn-secondary">导出报表</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <aside class="sidebar">
+        <div class="panel">
+          <h3>流域概览</h3>
+          <div id="overview-stats" class="stats-grid"></div>
+        </div>
+
+        <div class="panel">
+          <h3>统计指标</h3>
+          <div id="stat-indicators" class="indicators-list"></div>
+        </div>
+
+        <div class="panel">
+          <h3>生态流量</h3>
+          <div id="eco-flow-info" class="eco-info"></div>
+        </div>
+
+        <div class="panel">
+          <h3>生态评估</h3>
+          <div id="eco-evaluation" class="eco-eval"></div>
+          <button id="evaluateBtn" class="btn btn-small btn-primary">执行评估</button>
+        </div>
+
+        <div class="panel">
+          <h3>区域适配</h3>
+          <div id="region-info" class="region-info"></div>
+          <button id="calibrateBtn" class="btn btn-small btn-secondary">数据校准</button>
+          <div id="calibration-results" class="calibration-results"></div>
+        </div>
+
+        <div class="panel">
+          <h3>异常告警</h3>
+          <div id="anomaly-alerts" class="alerts-list"></div>
+        </div>
+      </aside>
+
+      <section class="content-area">
+        <div class="function-panel">
+          <div class="function-group">
+            <h4>径流预测</h4>
+            <div class="function-controls">
+              <select id="climateType" class="control-select">
+                <option value="none">无气候情景</option>
+                <option value="flood">洪水</option>
+                <option value="drought">干旱</option>
+                <option value="heatwave">高温热浪</option>
+                <option value="typhoon">台风暴雨</option>
+                <option value="rainstorm">暴雨洪涝</option>
+              </select>
+              <select id="intensity" class="control-select">
+                <option value="low">轻度</option>
+                <option value="medium" selected>中度</option>
+                <option value="high">重度</option>
+                <option value="extreme">极端</option>
+              </select>
+              <button id="predictBtn" class="btn btn-primary">运行预测</button>
+            </div>
+            <div id="prediction-results" class="results-panel"></div>
+          </div>
+
+          <div class="function-group">
+            <h4>极端气候模拟</h4>
+            <div class="function-controls">
+              <select id="simClimateType" class="control-select">
+                <option value="flood">特大洪水</option>
+                <option value="drought">极端干旱</option>
+                <option value="heatwave">高温热浪</option>
+                <option value="cold_snap">寒潮低温</option>
+                <option value="typhoon">台风暴雨</option>
+                <option value="rainstorm">暴雨洪涝</option>
+              </select>
+              <select id="simIntensity" class="control-select">
+                <option value="low">轻度</option>
+                <option value="medium" selected>中度</option>
+                <option value="high">重度</option>
+                <option value="extreme">极端</option>
+              </select>
+              <input type="number" id="simDuration" class="control-input" value="7" min="1" max="60" placeholder="持续天数">
+              <button id="climateSimulateBtn" class="btn btn-secondary">开始模拟</button>
+            </div>
+            <div id="climate-results" class="results-panel"></div>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <div class="chart-header">
+            <h3>径流量分析</h3>
+            <div class="chart-controls">
+              <button class="chart-tab active" data-chart="timeseries">时序图</button>
+              <button class="chart-tab" data-chart="comparison">多流域对比</button>
+              <button class="chart-tab" data-chart="statistics">统计分布</button>
+              <button class="chart-tab" data-chart="heatmap">热力图</button>
+              <button class="chart-tab" data-chart="radar">生态评估</button>
+              <button class="chart-tab" data-chart="prediction">预测分析</button>
+            </div>
+          </div>
+          <div id="mainChart" class="chart-container"></div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-section small">
+            <div class="chart-header">
+              <h3>月度统计</h3>
+              <div id="monthlyChart" class="chart-container small"></div>
+            </div>
+          </div>
+          <div class="chart-section small">
+            <div class="chart-header">
+              <h3>生态流量满足度</h3>
+              <div id="ecoChart" class="chart-container small"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <div class="chart-header">
+            <h3>异常时段分布</h3>
+            <div id="anomalyChart" class="chart-container"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
