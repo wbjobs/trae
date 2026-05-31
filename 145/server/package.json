@@ -1,0 +1,23 @@
+{
+  "name": "jungle-chess-server",
+  "version": "1.0.0",
+  "description": "斗兽棋实时对战服务器",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "ioredis": "^5.3.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "@types/node": "^20.11.0",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}

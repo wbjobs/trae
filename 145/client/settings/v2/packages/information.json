@@ -1,0 +1,18 @@
+{
+  "engine": "cocos",
+  "packages": "packages",
+  "name": "斗兽棋",
+  "id": "c4f9c1a0-1234-5678-abcd-123456789abc",
+  "version": "3.8.0",
+  "type": "2d",
+  "platforms": [
+    "web-mobile",
+    "web-desktop"
+  ],
+  "orientation": {
+    "landscape_right": true,
+    "landscape_left": true,
+    "portrait": false,
+    "portrait_upside_down": false
+  }
+}

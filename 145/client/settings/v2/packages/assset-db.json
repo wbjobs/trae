@@ -1,0 +1,16 @@
+{
+  "asset-db": {
+    "preferredCompressTextureEncoding": {
+      "android": {
+        "formats": [
+          "etc2"
+        ]
+      },
+      "ios": {
+        "formats": [
+          "pvrtc"
+        ]
+      }
+    }
+  }
+}

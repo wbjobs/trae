@@ -1,0 +1,12 @@
+{
+  "name": "jungle-chess-client",
+  "version": "1.0.0",
+  "description": "斗兽棋 - Cocos Creator客户端",
+  "creator": {
+    "version": "3.8.0"
+  },
+  "scripts": {
+    "dev": "echo '请使用Cocos Creator打开项目'",
+    "build": "echo '请使用Cocos Creator构建项目'"
+  }
+}
