@@ -1,0 +1,24 @@
+{
+  "name": "opcua-iot-gateway",
+  "version": "1.0.0",
+  "description": "Industrial IoT OPC UA Protocol Gateway with InfluxDB and ECharts",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "server": "node src/opcua/server.js",
+    "client": "node src/opcua/client.js",
+    "dev": "concurrently \"npm run server\" \"npm run start\"",
+    "cert": "node src/scripts/generate-cert.js"
+  },
+  "dependencies": {
+    "node-opcua": "2.102.0",
+    "influx": "^5.9.3",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ws": "^8.16.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

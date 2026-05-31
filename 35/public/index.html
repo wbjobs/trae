@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工业物联网OPC UA监控平台</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #00d4ff;
+      font-weight: 600;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4caf50;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.warning {
+      background: #ff9800;
+    }
+
+    .status-dot.error {
+      background: #f44336;
+    }
+
+    .status-dot.simulating {
+      background: #9c27b0;
+      animation: pulse-sim 0.5s infinite;
+    }
+
+    @keyframes pulse-sim {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .simulation-banner {
+      background: linear-gradient(90deg, #9c27b0, #673ab7);
+      color: white;
+      padding: 8px 20px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      display: none;
+    }
+
+    .simulation-banner.active {
+      display: block;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .main-container {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar h3 {
+      color: #00d4ff;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .device-list {
+      list-style: none;
+    }
+
+    .device-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+
+    .device-item:hover {
+      background: rgba(0, 212, 255, 0.1);
+      border-color: rgba(0, 212, 255, 0.3);
+    }
+
+    .device-item.active {
+      background: rgba(0, 212, 255, 0.15);
+      border-color: #00d4ff;
+    }
+
+    .device-name {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .device-id {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .tag-values {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .tag-value {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 5px 8px;
+      border-radius: 4px;
+    }
+
+    .tag-value .label {
+      color: #888;
+    }
+
+    .tag-value .value {
+      color: #00d4ff;
+      font-weight: 600;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .chart-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #00d4ff;
+    }
+
+    .chart-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .chart-value.temperature {
+      color: #ff6b6b;
+    }
+
+    .chart-value.pressure {
+      color: #4ecdc4;
+    }
+
+    .chart-value.speed {
+      color: #ffe66d;
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 250px;
+    }
+
+    .alerts-section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .alerts-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .alerts-header h3 {
+      color: #00d4ff;
+      font-size: 18px;
+    }
+
+    .alert-count {
+      background: #f44336;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .alerts-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .alert-item {
+      background: rgba(244, 67, 54, 0.1);
+      border-left: 4px solid #f44336;
+      padding: 12px 15px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .alert-item.medium {
+      background: rgba(255, 152, 0, 0.1);
+      border-left-color: #ff9800;
+    }
+
+    .alert-item.low {
+      background: rgba(76, 175, 80, 0.1);
+      border-left-color: #4caf50;
+    }
+
+    .alert-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .alert-details {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .alert-time {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .time-range-selector {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .time-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e0e0e0;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+
+    .time-btn:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: #00d4ff;
+    }
+
+    .time-btn.active {
+      background: #00d4ff;
+      border-color: #00d4ff;
+      color: #1a1a2e;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.3);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 212, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏭 工业物联网OPC UA监控平台</h1>
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot" id="opcua-status"></div>
+        <span>OPC UA: <span id="opcua-status-text">连接中...</span></span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot" id="sim-status"></div>
+        <span>模拟: <span id="sim-status-text">就绪</span></span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot" id="db-status"></div>
+        <span>存储: <span id="db-status-text">连接中...</span></span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot" id="ws-status"></div>
+        <span>WebSocket: <span id="ws-status-text">连接中...</span></span>
+      </div>
+    </div>
+  </div>
+  <div class="simulation-banner" id="simulation-banner">
+    ⚠️  检测到真实PLC断连，当前正在使用预测数据模拟模式运行
+  </div>
+
+  <div class="main-container">
+    <div class="sidebar">
+      <h3>设备列表</h3>
+      <ul class="device-list" id="device-list"></ul>
+    </div>
+
+    <div class="content">
+      <div class="time-range-selector">
+        <span>时间范围:</span>
+        <button class="time-btn active" data-range="300">最近5分钟</button>
+        <button class="time-btn" data-range="900">最近15分钟</button>
+        <button class="time-btn" data-range="1800">最近30分钟</button>
+        <button class="time-btn" data-range="3600">最近1小时</button>
+        <button class="time-btn" data-range="7200">最近2小时</button>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">🌡️ 温度</span>
+            <span class="chart-value temperature" id="temperature-value">-- °C</span>
+          </div>
+          <div class="chart-container" id="temp-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">💨 压力</span>
+            <span class="chart-value pressure" id="pressure-value">-- MPa</span>
+          </div>
+          <div class="chart-container" id="pressure-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">⚙️ 转速</span>
+            <span class="chart-value speed" id="speed-value">-- RPM</span>
+          </div>
+          <div class="chart-container" id="speed-chart"></div>
+        </div>
+      </div>
+
+      <div class="alerts-section">
+        <div class="alerts-header">
+          <h3>🚨 告警信息</h3>
+          <span class="alert-count" id="alert-count">0</span>
+        </div>
+        <div class="alerts-list" id="alerts-list">
+          <div style="color: #666; text-align: center; padding: 20px;">暂无告警</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let devices = [];
+    let selectedDevice = null;
+    let currentTimeRange = 300;
+    let charts = {};
+    let dataBuffers = {
+      temperature: [],
+      pressure: [],
+      speed: []
+    };
+    const maxDataPoints = 100;
+    let alerts = [];
+    let ws = null;
+    let statusData = null;
+
+    function initCharts() {
+      charts.temperature = echarts.init(document.getElementById('temp-chart'));
+      charts.pressure = echarts.init(document.getElementById('pressure-chart'));
+      charts.speed = echarts.init(document.getElementById('speed-chart'));
+
+      const baseOption = {
+        backgroundColor: 'transparent',
+        grid: {
+          top: 20,
+          right: 20,
+          bottom: 30,
+          left: 50
+        },
+        xAxis: {
+          type: 'time',
+          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+          axisLabel: { color: '#888', fontSize: 10 },
+          splitLine: { show: false }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+          axisLabel: { color: '#888', fontSize: 10 },
+          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+        },
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          borderColor: '#00d4ff',
+          textStyle: { color: '#fff' },
+          formatter: function(params) {
+            if (params.length > 0) {
+              const p = params[0];
+              return `${new Date(p.value[0]).toLocaleTimeString()}<br/>值: ${p.value[1].toFixed(2)}`;
+            }
+          }
+        },
+        series: [{
+          type: 'line',
+          showSymbol: false,
+          smooth: true,
+          sampling: 'lttb',
+          lineStyle: { width: 2 },
+          areaStyle: {
+            opacity: 0.1
+          }
+        }]
+      };
+
+      charts.temperature.setOption({
+        ...baseOption,
+        series: [{
+          ...baseOption.series[0],
+          name: '温度',
+          lineStyle: { color: '#ff6b6b', width: 2 },
+          areaStyle: { color: '#ff6b6b', opacity: 0.1 }
+        }]
+      });
+
+      charts.pressure.setOption({
+        ...baseOption,
+        series: [{
+          ...baseOption.series[0],
+          name: '压力',
+          lineStyle: { color: '#4ecdc4', width: 2 },
+          areaStyle: { color: '#4ecdc4', opacity: 0.1 }
+        }]
+      });
+
+      charts.speed.setOption({
+        ...baseOption,
+        series: [{
+          ...baseOption.series[0],
+          name: '转速',
+          lineStyle: { color: '#ffe66d', width: 2 },
+          areaStyle: { color: '#ffe66d', opacity: 0.1 }
+        }]
+      });
+
+      window.addEventListener('resize', () => {
+        Object.values(charts).forEach(chart => chart.resize());
+      });
+    }
+
+    async function loadDevices() {
+      try {
+        const response = await fetch('/api/devices');
+        const data = await response.json();
+        devices = data;
+        renderDeviceList();
+        if (devices.length > 0) {
+          selectDevice(devices[0].id);
+        }
+      } catch (error) {
+        console.error('加载设备列表失败:', error);
+      }
+    }
+
+    function renderDeviceList() {
+      const list = document.getElementById('device-list');
+      list.innerHTML = devices.map(device => `
+        <li class="device-item ${device.id === selectedDevice ? 'active' : ''}" 
+            onclick="selectDevice('${device.id}')">
+          <div class="device-name">${device.name}</div>
+          <div class="device-id">${device.id}</div>
+          <div class="tag-values" id="device-values-${device.id}">
+            <div class="tag-value">
+              <span class="label">温度:</span>
+              <span class="value">--</span>
+            </div>
+            <div class="tag-value">
+              <span class="label">压力:</span>
+              <span class="value">--</span>
+            </div>
+            <div class="tag-value">
+              <span class="label">转速:</span>
+              <span class="value">--</span>
+            </div>
+          </div>
+        </li>
+      `).join('');
+    }
+
+    function selectDevice(deviceId) {
+      selectedDevice = deviceId;
+      renderDeviceList();
+      clearDataBuffers();
+      loadHistoricalData();
+    }
+
+    function clearDataBuffers() {
+      dataBuffers = {
+        temperature: [],
+        pressure: [],
+        speed: []
+      };
+    }
+
+    async function loadHistoricalData() {
+      if (!selectedDevice) return;
+
+      const endTime = new Date();
+      const startTime = new Date(endTime.getTime() - currentTimeRange * 1000);
+
+      try {
+        const [tempData, pressureData, speedData] = await Promise.all([
+          fetch(`/api/data/query?plcId=${selectedDevice}&tagName=temperature&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}&limit=500`),
+          fetch(`/api/data/query?plcId=${selectedDevice}&tagName=pressure&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}&limit=500`),
+          fetch(`/api/data/query?plcId=${selectedDevice}&tagName=speed&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}&limit=500`)
+        ]);
+
+        const [tempResult, pressureResult, speedResult] = await Promise.all([
+          tempData.json(),
+          pressureData.json(),
+          speedData.json()
+        ]);
+
+        if (tempResult.success) {
+          dataBuffers.temperature = tempResult.data.map(d => [new Date(d.timestamp).getTime(), d.value]);
+          updateChart('temperature');
+          updateCurrentValue('temperature', tempResult.data);
+        }
+        if (pressureResult.success) {
+          dataBuffers.pressure = pressureResult.data.map(d => [new Date(d.timestamp).getTime(), d.value]);
+          updateChart('pressure');
+          updateCurrentValue('pressure', pressureResult.data);
+        }
+        if (speedResult.success) {
+          dataBuffers.speed = speedResult.data.map(d => [new Date(d.timestamp).getTime(), d.value]);
+          updateChart('speed');
+          updateCurrentValue('speed', speedResult.data);
+        }
+      } catch (error) {
+        console.error('加载历史数据失败:', error);
+      }
+    }
+
+    function updateCurrentValue(tag, data) {
+      if (data.length > 0) {
+        const latest = data[data.length - 1].value;
+        const valueEl = document.getElementById(`${tag}-value`);
+        const unit = tag === 'temperature' ? '°C' : (tag === 'pressure' ? 'MPa' : 'RPM');
+        valueEl.textContent = `${latest.toFixed(2)} ${unit}`;
+      }
+    }
+
+    function updateChart(tag) {
+      const data = dataBuffers[tag];
+      if (charts[tag]) {
+        charts[tag].setOption({
+          series: [{ data: data }]
+        });
+      }
+    }
+
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        updateStatus('ws', true, '已连接');
+        console.log('WebSocket 已连接');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'plc_data' && message.data.plcId === selectedDevice) {
+            handlePlcData(message.data);
+          } else if (message.type === 'alert') {
+            handleAlert(message.data);
+          } else if (message.type === 'simulation_status') {
+            handleSimulationStatus(message.data);
+          }
+        } catch (error) {
+          console.error('WebSocket消息解析错误:', error);
+        }
+      };
+
+      ws.onclose = () => {
+        updateStatus('ws', false, '已断开');
+        console.log('WebSocket 已断开，3秒后重试...');
+        setTimeout(initWebSocket, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket 错误:', error);
+      };
+    }
+
+    function handlePlcData(data) {
+      const { tagName, value, timestamp } = data;
+      const time = new Date(timestamp).getTime();
+
+      if (dataBuffers[tagName]) {
+        dataBuffers[tagName].push([time, value]);
+        if (dataBuffers[tagName].length > maxDataPoints) {
+          dataBuffers[tagName].shift();
+        }
+        updateChart(tagName);
+        
+        const unit = tagName === 'temperature' ? '°C' : (tagName === 'pressure' ? 'MPa' : 'RPM');
+        document.getElementById(`${tagName}-value`).textContent = `${value.toFixed(2)} ${unit}`;
+      }
+
+      updateDeviceValue(data.plcId, tagName, value);
+    }
+
+    function updateDeviceValue(plcId, tagName, value) {
+      const valuesEl = document.getElementById(`device-values-${plcId}`);
+      if (valuesEl) {
+        const tagLabels = {
+          temperature: '温度',
+          pressure: '压力',
+          speed: '转速'
+        };
+        const tagUnits = {
+          temperature: '°C',
+          pressure: 'MPa',
+          speed: 'RPM'
+        };
+        
+        const valueEls = valuesEl.querySelectorAll('.tag-value');
+        valueEls.forEach(el => {
+          const label = el.querySelector('.label').textContent;
+          if (label === tagLabels[tagName] + ':') {
+            el.querySelector('.value').textContent = `${value.toFixed(1)}${tagUnits[tagName]}`;
+          }
+        });
+      }
+    }
+
+    function handleAlert(alert) {
+      alerts.unshift(alert);
+      if (alerts.length > 20) alerts.pop();
+      renderAlerts();
+    }
+
+    function renderAlerts() {
+      const list = document.getElementById('alerts-list');
+      const countEl = document.getElementById('alert-count');
+      
+      if (alerts.length === 0) {
+        list.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">暂无告警</div>';
+        countEl.textContent = '0';
+        return;
+      }
+
+      countEl.textContent = alerts.length;
+      list.innerHTML = alerts.map(alert => `
+        <div class="alert-item ${alert.severity}">
+          <div class="alert-title">${alert.description}</div>
+          <div class="alert-details">
+            ${alert.plcId} - ${alert.tagName} | 当前值: ${alert.value.toFixed(2)} | 阈值: ${alert.threshold}
+          </div>
+          <div class="alert-time">${new Date(alert.timestamp).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    async function updateSystemStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const result = await response.json();
+        if (result.success) {
+          statusData = result.data;
+          updateStatus('opcua', statusData.opcua.isConnected, 
+            statusData.opcua.isConnected ? `已连接 (${statusData.opcua.monitoredItems}个监控项)` : '未连接');
+          updateStatus('db', !statusData.influxdb.useMemoryFallback, 
+            statusData.influxdb.useMemoryFallback ? '内存模式' : '已连接');
+        }
+      } catch (error) {
+        console.error('获取状态失败:', error);
+      }
+    }
+
+    function updateStatus(type, isOk, text, isSimulating) {
+      const dot = document.getElementById(`${type}-status`);
+      const textEl = document.getElementById(`${type}-status-text`);
+      
+      let className = 'status-dot';
+      if (isSimulating) {
+        className += ' simulating';
+      } else if (!isOk) {
+        className += ' error';
+      }
+      
+      dot.className = className;
+      textEl.textContent = text;
+    }
+
+    function handleSimulationStatus(data) {
+      const banner = document.getElementById('simulation-banner');
+      
+      if (data.active) {
+        banner.classList.add('active');
+        updateStatus('sim', true, '运行中', true);
+      } else {
+        banner.classList.remove('active');
+        updateStatus('sim', true, '就绪', false);
+      }
+      
+      console.log('模拟模式状态:', data);
+    }
+
+    async function loadSimulationStatus() {
+      try {
+        const response = await fetch('/api/simulation/status');
+        const result = await response.json();
+        if (result.success && result.data) {
+          handleSimulationStatus({ active: result.data.isSimulating });
+        }
+      } catch (error) {
+        console.error('加载模拟状态失败:', error);
+      }
+    }
+
+    function setupTimeRangeButtons() {
+      document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentTimeRange = parseInt(btn.dataset.range);
+          clearDataBuffers();
+          loadHistoricalData();
+        });
+      });
+    }
+
+    async function loadActiveAlerts() {
+      try {
+        const response = await fetch('/api/alerts/active');
+        const result = await response.json();
+        if (result.success) {
+          alerts = result.data;
+          renderAlerts();
+        }
+      } catch (error) {
+        console.error('加载告警失败:', error);
+      }
+    }
+
+    async function init() {
+      initCharts();
+      setupTimeRangeButtons();
+      await loadDevices();
+      loadActiveAlerts();
+      loadSimulationStatus();
+      initWebSocket();
+      updateSystemStatus();
+      setInterval(updateSystemStatus, 5000);
+    }
+
+    window.selectDevice = selectDevice;
+    init();
+  </script>
+</body>
+</html>
