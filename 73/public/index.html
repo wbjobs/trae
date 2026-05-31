@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC 文件传输 - 加密增强版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC 点对点文件传输</h1>
+        
+        <div id="connection-section" class="section">
+            <div class="row">
+                <button id="create-room-btn" class="btn primary">创建房间</button>
+                <div class="input-group">
+                    <input type="text" id="room-id-input" placeholder="输入房间号">
+                    <button id="join-room-btn" class="btn">加入房间</button>
+                </div>
+            </div>
+            <div id="room-info" class="room-info hidden">
+                <p>房间号: <span id="room-id-display"></span></p>
+                <p id="connection-status">等待对方加入...</p>
+            </div>
+        </div>
+
+        <div id="encryption-section" class="section hidden">
+            <h3>安全设置</h3>
+            <div class="encryption-options">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="enable-encryption" checked>
+                    <span>启用 AES-GCM 加密</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="enable-fec" checked>
+                    <span>启用 Reed-Solomon 冗余编码 (可恢复丢失块)</span>
+                </label>
+            </div>
+
+            <div id="encryption-key-section" class="key-section">
+                <div class="input-group">
+                    <input type="password" id="encryption-key" placeholder="输入加密密码（或点击生成）">
+                    <button id="generate-key-btn" class="btn">生成随机</button>
+                    <button id="show-qr-btn" class="btn">显示二维码</button>
+                </div>
+                <p class="hint">密码需要通过带外方式（如二维码、即时通讯）分享给对方</p>
+            </div>
+
+            <div id="qr-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3>扫描二维码获取密码</h3>
+                    <div id="qr-code"></div>
+                    <p id="qr-key-text" class="key-text"></p>
+                    <button id="close-qr-btn" class="btn">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="transfer-section" class="section hidden">
+            <div class="file-input-wrapper">
+                <label for="file-input" class="file-label">
+                    <span id="file-name">选择文件（最大 2GB）</span>
+                </label>
+                <input type="file" id="file-input" hidden>
+            </div>
+            <button id="send-btn" class="btn primary" disabled>发送文件</button>
+            
+            <div id="progress-container" class="progress-container hidden">
+                <div class="progress-info">
+                    <span id="progress-text">0%</span>
+                    <span id="file-size"></span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <p id="transfer-status"></p>
+            </div>
+
+            <div id="download-section" class="hidden">
+                <p>文件接收完成！</p>
+                <a id="download-link" class="btn primary" download>下载文件</a>
+            </div>
+        </div>
+
+        <div id="status-message" class="status-message"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
