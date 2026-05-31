@@ -1,0 +1,40 @@
+[package]
+name = "webdav-desktop"
+version = "0.1.0"
+description = "WebDAV Desktop Client"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "webdav_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["dialog-all", "fs-all", "path-all", "shell-open"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "stream", "blocking"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+tantivy = "0.22"
+base64 = "0.22"
+urlencoding = "2"
+mime_guess = "2"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1"
+thiserror = "1"
+bytes = "1"
+futures-util = "0.3"
+tokio-util = { version = "0.7", features = ["io"] }
+quick-xml = { version = "0.31", features = ["serialize"] }
+parking_lot = "0.12"
+lazy_static = "1.4"
+dirs = "5"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
