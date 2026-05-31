@@ -1,0 +1,24 @@
+{
+  "name": "image-processing-pipeline",
+  "description": "Image processing pipeline: decode -> resize -> compress",
+  "nodes": [
+    {
+      "name": "decode",
+      "function": "image-decoder",
+      "version": "1.0.0"
+    },
+    {
+      "name": "resize",
+      "function": "image-resizer",
+      "version": "1.2.0",
+      "dependencies": ["decode"]
+    },
+    {
+      "name": "compress",
+      "function": "image-compressor",
+      "version": "1.0.0",
+      "dependencies": ["resize"]
+    }
+  ],
+  "timeout_ms": 30000
+}

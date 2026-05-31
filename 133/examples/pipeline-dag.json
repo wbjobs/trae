@@ -1,0 +1,31 @@
+{
+  "name": "data-aggregation-dag",
+  "description": "Parallel data aggregation with fan-out/fan-in",
+  "nodes": [
+    {
+      "name": "fetch-data",
+      "function": "data-fetcher",
+      "version": "latest"
+    },
+    {
+      "name": "analyze-text",
+      "function": "text-analyzer",
+      "version": "1.0.0",
+      "dependencies": ["fetch-data"]
+    },
+    {
+      "name": "analyze-numbers",
+      "function": "number-analyzer",
+      "version": "1.0.0",
+      "dependencies": ["fetch-data"]
+    },
+    {
+      "name": "aggregate",
+      "function": "result-aggregator",
+      "version": "1.0.0",
+      "dependencies": ["analyze-text", "analyze-numbers"],
+      "input_from": ["analyze-text", "analyze-numbers"]
+    }
+  ],
+  "timeout_ms": 30000
+}
