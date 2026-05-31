@@ -1,0 +1,1071 @@
+namespace App {
+
+    var currentAccount = null;
+    var currentFolderId = null;
+    var currentEmailId = null;
+    var selectedFilter = null;
+    var selectedTagId = null;
+    var searchResults = null;
+    var isSyncing = false;
+    var selectedTagColor = "#9b59b6";
+    var syncStage = null;
+
+    var DEMO_EMAIL_COUNT = 100000;
+    var BATCH_SIZE = 500;
+    var FTS_BATCH_SIZE = 2000;
+    var viewMode = "list";
+    var currentThreadId = null;
+    var expandedThreads = {};
+
+    function init() {
+        DB.init();
+        loadAccount();
+        bindEvents();
+        refreshTags();
+
+        if (currentAccount) {
+            $(#current-email).text = currentAccount.email;
+            selectFolder("INBOX");
+        }
+    }
+
+    function loadAccount() {
+        currentAccount = DB.getAccount();
+    }
+
+    function bindEvents() {
+        $(#btn-sync).on("click", function() {
+            if (isSyncing) return;
+            if (!currentAccount) {
+                showSettings();
+                return;
+            }
+            startSync();
+        });
+
+        $(#btn-settings).on("click", showSettings);
+
+        $(#btn-compose).on("click", function() {
+            view.msgbox("写邮件功能开发中...");
+        });
+
+        $(#search-input).on("input", function() {
+            var query = this.value.trim();
+            if (query.length >= 2) {
+                doQuickSearch(query);
+            } else if (query.length == 0) {
+                clearSearch();
+            }
+        });
+
+        $(#btn-adv-search).on("click", function() {
+            refreshTagOptions();
+            $(#adv-search-modal).style.display = "flex";
+        });
+
+        $(#btn-adv-search-do).on("click", doAdvancedSearch);
+        $(#btn-adv-search-reset).on("click", resetAdvancedSearch);
+
+        $$(".modal-close").on("click", function() {
+            this.parentElement.parentElement.parentElement.style.display = "none";
+        });
+
+        $$(".folder-item").on("click", function() {
+            var folder = this.attributes["data-folder"];
+            $$(".folder-item").removeClass("active");
+            this.classList.add("active");
+            selectedFilter = null;
+            selectedTagId = null;
+            searchResults = null;
+            $$(".filter-item").removeClass("active");
+            $$(".tag-item").removeClass("active");
+            selectFolder(folder);
+        });
+
+        $$(".filter-item").on("click", function() {
+            var filter = this.attributes["data-filter"];
+            if (selectedFilter == filter) {
+                selectedFilter = null;
+                this.classList.remove("active");
+            } else {
+                $$(".filter-item").removeClass("active");
+                this.classList.add("active");
+                selectedFilter = filter;
+            }
+            selectedTagId = null;
+            $$(".tag-item").removeClass("active");
+            searchResults = null;
+            loadEmailList();
+        });
+
+        $(#btn-add-tag).on("click", function() {
+            $(#new-tag-name).value = "";
+            selectedTagColor = "#9b59b6";
+            $$(".color-option").removeClass("selected");
+            $$(".color-option")[5].classList.add("selected");
+            $(#add-tag-modal).style.display = "flex";
+        });
+
+        $(#btn-add-tag-cancel).on("click", function() {
+            $(#add-tag-modal).style.display = "none";
+        });
+
+        $(#btn-add-tag-save).on("click", saveNewTag);
+
+        $$(".color-option").on("click", function() {
+            $$(".color-option").removeClass("selected");
+            this.classList.add("selected");
+            selectedTagColor = this.attributes["data-color"];
+        });
+
+        $(#btn-settings-test).on("click", testConnection);
+        $(#btn-settings-save).on("click", saveSettings);
+
+        $(#sort-select).on("change", function() {
+            loadEmailList();
+        });
+
+        $(#btn-view-list).on("click", function() {
+            setViewMode("list");
+        });
+
+        $(#btn-view-thread).on("click", function() {
+            setViewMode("thread");
+        });
+
+        $(#btn-collapse-all).on("click", function() {
+            $$("#thread-tree .thread-node.expanded").forEach(function(node) {
+                toggleThreadNode(node, false);
+            });
+        });
+
+        $(#btn-expand-all).on("click", function() {
+            $$("#thread-tree .thread-node.collapsed").forEach(function(node) {
+                toggleThreadNode(node, true);
+            });
+        });
+
+        $(#btn-reply).on("click", function() {
+            if (currentEmailId) view.msgbox("回复功能开发中...");
+        });
+
+        $(#btn-forward).on("click", function() {
+            if (currentEmailId) view.msgbox("转发功能开发中...");
+        });
+
+        $(#btn-delete).on("click", function() {
+            if (currentEmailId && view.confirm("确定要删除这封邮件吗？")) {
+                DB.deleteEmail(currentEmailId);
+                currentEmailId = null;
+                loadEmailList();
+                showEmailDetail(null);
+                updateUnreadCount();
+            }
+        });
+
+        $(#btn-toggle-read).on("click", function() {
+            if (currentEmailId) {
+                var email = DB.getEmailById(currentEmailId);
+                if (email) {
+                    var newRead = email.is_read == 1 ? 0 : 1;
+                    DB.markAsRead(currentEmailId, newRead);
+                    this.text = newRead ? "标记未读" : "标记已读";
+                    loadEmailList();
+                }
+            }
+        });
+
+        $(#btn-cancel-sync).on("click", function() {
+            DB.requestCancel();
+        });
+
+        view.on("close", function() {
+            DB.close();
+        });
+    }
+
+    function selectFolder(folderName) {
+        var folderNames = {
+            "INBOX": "收件箱",
+            "SENT": "已发送",
+            "DRAFTS": "草稿",
+            "TRASH": "垃圾箱"
+        };
+        $(#list-title).text = folderNames[folderName] || folderName;
+
+        if (currentAccount) {
+            var folder = DB.getFolder(currentAccount.id, folderName);
+            if (!folder) {
+                var folderId = DB.saveFolder(currentAccount.id, folderName, 0, 0);
+                currentFolderId = folderId;
+            } else {
+                currentFolderId = folder.id;
+            }
+        }
+
+        loadEmailList();
+        updateUnreadCount();
+    }
+
+    function loadEmailList() {
+        var sortBy = $(#sort-select).value;
+
+        if (viewMode == "thread" && !searchResults && !selectedFilter && !selectedTagId) {
+            loadThreadList(sortBy);
+            return;
+        }
+
+        var emails = [];
+
+        if (searchResults) {
+            emails = searchResults;
+        } else if (selectedFilter || selectedTagId) {
+            var options = { folderId: currentFolderId };
+
+            if (selectedFilter == "unread") {
+                options.unread = true;
+            } else if (selectedFilter == "attachments") {
+                options.hasAttachments = true;
+            } else if (selectedFilter == "today") {
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+                options.dateFrom = today.getTime() / 1000;
+            } else if (selectedFilter == "week") {
+                var weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                options.dateFrom = weekAgo.getTime() / 1000;
+            }
+
+            if (selectedTagId) {
+                options.tagId = selectedTagId;
+            }
+
+            emails = DB.searchEmails(options);
+        } else {
+            emails = DB.getEmails(currentFolderId, 100, 0, sortBy);
+        }
+
+        renderEmailList(emails);
+    }
+
+    function setViewMode(mode) {
+        viewMode = mode;
+        $$(".view-btn").removeClass("active");
+        if (mode == "list") {
+            $(#btn-view-list).classList.add("active");
+        } else {
+            $(#btn-view-thread).classList.add("active");
+        }
+        loadEmailList();
+    }
+
+    function loadThreadList(sortBy) {
+        var threads = DB.getThreads(currentFolderId, 100, 0, sortBy);
+        renderThreadList(threads);
+    }
+
+    function renderThreadList(threads) {
+        var listEl = $(#email-list);
+        listEl.clear();
+
+        if (threads.length == 0) {
+            listEl.html = '<div style="padding:40px;text-align:center;color:#999;">暂无邮件</div>';
+            return;
+        }
+
+        for (var i = 0; i < threads.length; i++) {
+            var thread = threads[i];
+            var hasUnread = thread.has_unread && thread.has_unread.length > 0;
+            var itemEl = new Element("div", {
+                "class": "thread-item" + (hasUnread ? " has-unread" : "") + (thread.thread_id == currentThreadId ? " selected" : ""),
+                "data-thread-id": thread.thread_id
+            });
+
+            var dateStr = formatDate(thread.last_date);
+            var preview = thread.preview ? thread.preview.substring(0, 100) + "..." : "";
+
+            var iconsHtml = "";
+            if (thread.has_attachments == 1) {
+                iconsHtml += '<span class="email-icon">📎</span>';
+            }
+
+            itemEl.html = '<div class="thread-header">' +
+                '<span class="thread-senders">' + escapeHtml(thread.senders) + '</span>' +
+                '<span class="email-date">' + dateStr + '</span>' +
+                '</div>' +
+                '<div class="thread-subject">' + escapeHtml(thread.subject || "(无主题)") +
+                ' <span class="thread-count-badge">' + thread.email_count + '</span></div>' +
+                '<div class="thread-preview">' + escapeHtml(preview) + '</div>' +
+                (iconsHtml ? '<div class="thread-icons">' + iconsHtml + '</div>' : '');
+
+            itemEl.on("click", function() {
+                var tid = parseInt(this.attributes["data-thread-id"]);
+                selectThread(tid);
+            });
+
+            listEl.append(itemEl);
+        }
+    }
+
+    function selectThread(threadId) {
+        currentThreadId = threadId;
+        var emails = DB.getThreadEmails(threadId);
+        if (emails.length > 0) {
+            var latestEmail = emails[emails.length - 1];
+            currentEmailId = latestEmail.id;
+            DB.markAsRead(latestEmail.id, 1);
+        }
+        loadEmailList();
+        showThreadDetail(threadId, emails);
+    }
+
+    function showThreadDetail(threadId, emails) {
+        if (!emails) {
+            emails = DB.getThreadEmails(threadId);
+        }
+
+        $(#detail-placeholder).style.display = "none";
+        $(#detail-content).style.display = "flex";
+        $(#thread-panel).style.display = "block";
+
+        var latestEmail = emails.length > 0 ? emails[emails.length - 1] : null;
+        if (latestEmail) {
+            $(#detail-subject).text = latestEmail.subject || "(无主题)";
+            $(#detail-from).text = latestEmail.sender_name ? latestEmail.sender_name + " <" + latestEmail.sender_email + ">" : latestEmail.sender_email;
+            $(#detail-to).text = latestEmail.recipients || "";
+            $(#detail-date).text = formatFullDate(latestEmail.date_received);
+            $(#btn-toggle-read).text = latestEmail.is_read ? "标记未读" : "标记已读";
+
+            renderDetailTags(latestEmail.tags);
+            renderAttachments(latestEmail.id);
+
+            var bodyHtml = latestEmail.body_html || ("<html><body><pre>" + escapeHtml(latestEmail.body_text || "") + "</pre></body></html>");
+            var frame = $(#detail-body-frame);
+            var doc = frame.document;
+            doc.open();
+            doc.write(bodyHtml);
+            doc.close();
+        }
+
+        renderThreadTree(emails);
+    }
+
+    function renderThreadTree(emails) {
+        var treeEl = $(#thread-tree);
+        treeEl.clear();
+
+        if (emails.length == 0) return;
+
+        var parentMap = {};
+        var childrenMap = {};
+        var rootNodes = [];
+
+        for (var i = 0; i < emails.length; i++) {
+            childrenMap[emails[i].id] = [];
+        }
+
+        for (var i = 0; i < emails.length; i++) {
+            var email = emails[i];
+            if (email.in_reply_to) {
+                var found = false;
+                for (var j = 0; j < emails.length; j++) {
+                    if (emails[j].msg_id == email.in_reply_to) {
+                        parentMap[email.id] = emails[j].id;
+                        childrenMap[emails[j].id].push(email.id);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    rootNodes.push(email.id);
+                }
+            } else {
+                rootNodes.push(email.id);
+            }
+        }
+
+        function getEmailById(id) {
+            for (var i = 0; i < emails.length; i++) {
+                if (emails[i].id == id) return emails[i];
+            }
+            return null;
+        }
+
+        function buildNode(id, depth) {
+            var email = getEmailById(id);
+            if (!email) return null;
+
+            var children = childrenMap[id] || [];
+            var hasChildren = children.length > 0;
+            var isExpanded = expandedThreads["t_" + id];
+            if (isExpanded === undefined) isExpanded = true;
+
+            var nodeEl = new Element("div", {
+                "class": "thread-node" + (isExpanded ? " expanded" : " collapsed") + (email.id == currentEmailId ? " selected" : ""),
+                "data-email-id": email.id
+            });
+            nodeEl.style.paddingLeft = (40 + depth * 16) + "px";
+
+            var toggleHtml = "";
+            if (hasChildren) {
+                toggleHtml = '<span class="thread-toggle' + (isExpanded ? ' expanded' : '') + '" data-toggle-id="' + email.id + '">▶</span>';
+            }
+
+            var dateStr = formatDate(email.date_received);
+            var subject = email.subject || "(无主题)";
+            if (subject.indexOf("Re:") == 0 && depth > 0) {
+                subject = subject.substring(3);
+            }
+
+            nodeEl.html = toggleHtml +
+                '<div class="thread-node-info">' +
+                '<span class="thread-node-sender">' + escapeHtml(email.sender_name || email.sender_email) + '</span>' +
+                '<span class="thread-node-date">' + dateStr + '</span>' +
+                '</div>' +
+                '<div class="thread-node-subject">' + escapeHtml(subject) + '</div>';
+
+            if (hasChildren && isExpanded) {
+                var childrenContainer = new Element("div", { "class": "thread-children" });
+                for (var i = 0; i < children.length; i++) {
+                    var childNode = buildNode(children[i], depth + 1);
+                    if (childNode) childrenContainer.append(childNode);
+                }
+                nodeEl.append(childrenContainer);
+            }
+
+            nodeEl.on("click", function(e) {
+                if (e.target && e.target.attributes && e.target.attributes["data-toggle-id"]) {
+                    var tid = parseInt(e.target.attributes["data-toggle-id"]);
+                    var key = "t_" + tid;
+                    var cur = expandedThreads[key];
+                    if (cur === undefined) cur = true;
+                    expandedThreads[key] = !cur;
+                    if (currentThreadId) {
+                        var es = DB.getThreadEmails(currentThreadId);
+                        renderThreadTree(es);
+                    }
+                    return;
+                }
+                var eid = parseInt(this.attributes["data-email-id"]);
+                selectEmailFromThread(eid);
+            });
+
+            return nodeEl;
+        }
+
+        for (var i = 0; i < rootNodes.length; i++) {
+            var node = buildNode(rootNodes[i], 0);
+            if (node) treeEl.append(node);
+        }
+    }
+
+    function toggleThreadNode(node, shouldExpand) {
+        var isExpanded = !node.classList.contains("collapsed");
+        if (shouldExpand === undefined) shouldExpand = isExpanded;
+
+        if (shouldExpand) {
+            node.classList.remove("collapsed");
+            node.classList.add("expanded");
+            var toggle = node.select(".thread-toggle");
+            if (toggle) toggle.classList.add("expanded");
+        } else {
+            node.classList.remove("expanded");
+            node.classList.add("collapsed");
+            var toggle = node.select(".thread-toggle");
+            if (toggle) toggle.classList.remove("expanded");
+        }
+    }
+
+    function selectEmailFromThread(emailId) {
+        currentEmailId = emailId;
+        DB.markAsRead(emailId, 1);
+        if (currentThreadId) {
+            var emails = DB.getThreadEmails(currentThreadId);
+            showThreadDetail(currentThreadId, emails);
+        }
+        loadEmailList();
+    }
+
+    function renderEmailList(emails) {
+        var listEl = $(#email-list);
+        listEl.clear();
+
+        if (emails.length == 0) {
+            listEl.html = '<div style="padding:40px;text-align:center;color:#999;">暂无邮件</div>';
+            return;
+        }
+
+        for (var i = 0; i < emails.length; i++) {
+            var email = emails[i];
+            var itemEl = new Element("div", {
+                "class": "email-item" + (email.is_read == 0 ? " unread" : "") + (email.id == currentEmailId ? " selected" : ""),
+                "data-id": email.id
+            });
+
+            var dateStr = formatDate(email.date_received);
+            var preview = email.body_text ? email.body_text.substring(0, 100) + "..." : "";
+
+            var tagsHtml = "";
+            if (email.tags) {
+                var tagPairs = email.tags.split(",");
+                for (var t = 0; t < tagPairs.length; t++) {
+                    var parts = tagPairs[t].split("|");
+                    if (parts.length == 2) {
+                        tagsHtml += '<span class="email-tag" style="background:' + parts[1] + '">' + parts[0] + '</span>';
+                    }
+                }
+            }
+
+            var iconsHtml = "";
+            if (email.has_attachments == 1) {
+                iconsHtml += '<span class="email-icon">📎</span>';
+            }
+            if (email.is_flagged == 1) {
+                iconsHtml += '<span class="email-icon">⭐</span>';
+            }
+
+            itemEl.html = '<div class="email-header">' +
+                '<span class="email-sender">' + escapeHtml(email.sender_name || email.sender_email) + '</span>' +
+                '<span class="email-date">' + dateStr + '</span>' +
+                '</div>' +
+                '<div class="email-subject">' + escapeHtml(email.subject || "(无主题)") + '</div>' +
+                '<div class="email-preview">' + escapeHtml(preview) + '</div>' +
+                (iconsHtml ? '<div class="email-icons">' + iconsHtml + '</div>' : '') +
+                (tagsHtml ? '<div class="email-tags">' + tagsHtml + '</div>' : '');
+
+            itemEl.on("click", function() {
+                var emailId = parseInt(this.attributes["data-id"]);
+                selectEmail(emailId);
+            });
+
+            listEl.append(itemEl);
+        }
+    }
+
+    function selectEmail(emailId) {
+        currentEmailId = emailId;
+        currentThreadId = null;
+        DB.markAsRead(emailId, 1);
+        loadEmailList();
+        showEmailDetail(emailId);
+    }
+
+    function showEmailDetail(emailId) {
+        if (!emailId) {
+            $(#detail-placeholder).style.display = "flex";
+            $(#detail-content).style.display = "none";
+            return;
+        }
+
+        var email = DB.getEmailById(emailId);
+        if (!email) return;
+
+        $(#detail-placeholder).style.display = "none";
+        $(#detail-content).style.display = "flex";
+        $(#thread-panel).style.display = "none";
+
+        $(#detail-subject).text = email.subject || "(无主题)";
+        $(#detail-from).text = email.sender_name ? email.sender_name + " <" + email.sender_email + ">" : email.sender_email;
+        $(#detail-to).text = email.recipients || "";
+        $(#detail-date).text = formatFullDate(email.date_received);
+        $(#btn-toggle-read).text = email.is_read ? "标记未读" : "标记已读";
+
+        renderDetailTags(email.tags);
+        renderAttachments(emailId);
+
+        var bodyHtml = email.body_html || ("<html><body><pre>" + escapeHtml(email.body_text || "") + "</pre></body></html>");
+
+        var frame = $(#detail-body-frame);
+        var doc = frame.document;
+        doc.open();
+        doc.write(bodyHtml);
+        doc.close();
+    }
+
+    function renderDetailTags(tagsStr) {
+        var container = $(#detail-tags);
+        container.clear();
+
+        if (!tagsStr) return;
+
+        var tagPairs = tagsStr.split(",");
+        for (var i = 0; i < tagPairs.length; i++) {
+            var parts = tagPairs[i].split("|");
+            if (parts.length == 2) {
+                var tagEl = new Element("span", { "class": "detail-tag", "style": "background:" + parts[1] });
+                tagEl.html = parts[0] + ' <span class="tag-remove" data-tag="' + parts[0] + '">×</span>';
+                tagEl.select(".tag-remove").on("click", function() {
+                    var tagName = this.attributes["data-tag"];
+                    removeEmailTag(currentEmailId, tagName);
+                });
+                container.append(tagEl);
+            }
+        }
+    }
+
+    function removeEmailTag(emailId, tagName) {
+        var tags = DB.getTags();
+        for (var i = 0; i < tags.length; i++) {
+            if (tags[i].name == tagName) {
+                DB.removeTagFromEmail(emailId, tags[i].id);
+                showEmailDetail(emailId);
+                loadEmailList();
+                break;
+            }
+        }
+    }
+
+    function renderAttachments(emailId) {
+        var container = $(#detail-attachments);
+        container.clear();
+
+        var attachments = DB.getAttachments(emailId);
+        if (attachments.length == 0) {
+            container.style.display = "none";
+            return;
+        }
+
+        container.style.display = "block";
+        for (var i = 0; i < attachments.length; i++) {
+            var att = attachments[i];
+            var icon = getAttachmentIcon(att.filename);
+            var sizeStr = formatFileSize(att.size);
+
+            var attEl = new Element("div", { "class": "attachment-item" });
+            attEl.html = '<span class="attachment-icon">' + icon + '</span>' +
+                '<div><div class="attachment-name">' + escapeHtml(att.filename) + '</div>' +
+                '<div class="attachment-size">' + sizeStr + '</div></div>';
+
+            attEl.on("click", function() {
+                view.msgbox("下载附件功能开发中...");
+            });
+
+            container.append(attEl);
+        }
+    }
+
+    function getAttachmentIcon(filename) {
+        var ext = filename.substring(filename.lastIndexOf(".")).toLowerCase();
+        if (ext == ".pdf") return "📕";
+        if (ext == ".doc" || ext == ".docx") return "📘";
+        if (ext == ".xls" || ext == ".xlsx") return "📗";
+        if (ext == ".ppt" || ext == ".pptx") return "📙";
+        if (ext == ".jpg" || ext == ".png" || ext == ".gif") return "🖼";
+        if (ext == ".zip" || ext == ".rar") return "📦";
+        return "📄";
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function formatDate(timestamp) {
+        var date = new Date(timestamp * 1000);
+        var now = new Date();
+        var diff = now - date;
+
+        if (diff < 24 * 60 * 60 * 1000 && date.getDate() == now.getDate()) {
+            return date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+        }
+        if (diff < 7 * 24 * 60 * 60 * 1000) {
+            var days = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+            return days[date.getDay()];
+        }
+        return (date.getMonth() + 1) + "/" + date.getDate();
+    }
+
+    function formatFullDate(timestamp) {
+        var date = new Date(timestamp * 1000);
+        return date.getFullYear() + "年" + (date.getMonth() + 1) + "月" + date.getDate() + "日 " +
+            date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0");
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return str.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function updateUnreadCount() {
+        var count = DB.getUnreadCount(currentFolderId);
+        $(#inbox-count).text = count;
+    }
+
+    function refreshTags() {
+        var tags = DB.getTags();
+        var listEl = $(#tags-list);
+        listEl.clear();
+
+        for (var i = 0; i < tags.length; i++) {
+            var tag = tags[i];
+            var itemEl = new Element("div", {
+                "class": "tag-item" + (tag.id == selectedTagId ? " active" : ""),
+                "data-id": tag.id
+            });
+            itemEl.html = '<span class="tag-color" style="background:' + tag.color + '"></span>' +
+                '<span class="tag-name">' + escapeHtml(tag.name) + '</span>' +
+                '<span class="tag-count">' + tag.count + '</span>';
+
+            itemEl.on("click", function() {
+                var tagId = parseInt(this.attributes["data-id"]);
+                if (selectedTagId == tagId) {
+                    selectedTagId = null;
+                    this.classList.remove("active");
+                } else {
+                    $$(".tag-item").removeClass("active");
+                    this.classList.add("active");
+                    selectedTagId = tagId;
+                }
+                selectedFilter = null;
+                $$(".filter-item").removeClass("active");
+                searchResults = null;
+                loadEmailList();
+            });
+
+            listEl.append(itemEl);
+        }
+    }
+
+    function refreshTagOptions() {
+        var tags = DB.getTags();
+        var select = $(#adv-search-tag);
+        select.html = '<option value="">全部标签</option>';
+        for (var i = 0; i < tags.length; i++) {
+            select.append(new Element("option", { value: tags[i].id }, tags[i].name));
+        }
+    }
+
+    function saveNewTag() {
+        var name = $(#new-tag-name).value.trim();
+        if (!name) {
+            view.msgbox("请输入标签名称");
+            return;
+        }
+        DB.saveTag(name, selectedTagColor);
+        $(#add-tag-modal).style.display = "none";
+        refreshTags();
+        refreshTagOptions();
+    }
+
+    function doQuickSearch(query) {
+        searchResults = DB.quickSearch(query);
+        $(#list-title).text = "搜索结果 (" + searchResults.length + ")";
+        selectedFilter = null;
+        selectedTagId = null;
+        $$(".filter-item").removeClass("active");
+        $$(".tag-item").removeClass("active");
+        loadEmailList();
+    }
+
+    function clearSearch() {
+        searchResults = null;
+        $(#list-title).text = "收件箱";
+        loadEmailList();
+    }
+
+    function doAdvancedSearch() {
+        var options = {
+            from: $(#adv-search-from).value.trim(),
+            to: $(#adv-search-to).value.trim(),
+            subject: $(#adv-search-subject).value.trim(),
+            body: $(#adv-search-body).value.trim(),
+            attachment: $(#adv-search-attachment).value.trim(),
+            tagId: $(#adv-search-tag).value || null
+        };
+
+        var dateFrom = $(#adv-search-date-from).value;
+        if (dateFrom) {
+            options.dateFrom = new Date(dateFrom).getTime() / 1000;
+        }
+
+        var dateTo = $(#adv-search-date-to).value;
+        if (dateTo) {
+            var d = new Date(dateTo);
+            d.setHours(23, 59, 59, 999);
+            options.dateTo = d.getTime() / 1000;
+        }
+
+        searchResults = DB.searchEmails(options);
+        $(#list-title).text = "搜索结果 (" + searchResults.length + ")";
+        $(#adv-search-modal).style.display = "none";
+        selectedFilter = null;
+        selectedTagId = null;
+        $$(".filter-item").removeClass("active");
+        $$(".tag-item").removeClass("active");
+        loadEmailList();
+    }
+
+    function resetAdvancedSearch() {
+        $(#adv-search-from).value = "";
+        $(#adv-search-to).value = "";
+        $(#adv-search-subject).value = "";
+        $(#adv-search-body).value = "";
+        $(#adv-search-attachment).value = "";
+        $(#adv-search-date-from).value = "";
+        $(#adv-search-date-to).value = "";
+        $(#adv-search-tag).value = "";
+    }
+
+    function showSettings() {
+        if (currentAccount) {
+            $(#settings-email).value = currentAccount.email;
+            $(#settings-password).value = currentAccount.password;
+            $(#settings-imap-server).value = currentAccount.imap_server;
+            $(#settings-imap-port).value = currentAccount.imap_port;
+            $(#settings-ssl).checked = currentAccount.use_ssl == 1;
+        }
+        $(#settings-modal).style.display = "flex";
+    }
+
+    function testConnection() {
+        view.msgbox("连接测试功能开发中...");
+    }
+
+    function saveSettings() {
+        var email = $(#settings-email).value.trim();
+        var password = $(#settings-password).value;
+        var imapServer = $(#settings-imap-server).value.trim();
+        var imapPort = parseInt($(#settings-imap-port).value);
+        var useSSL = $(#settings-ssl).checked;
+
+        if (!email || !password || !imapServer) {
+            view.msgbox("请填写完整的邮箱配置信息");
+            return;
+        }
+
+        var accountId = DB.saveAccount(email, password, imapServer, imapPort, useSSL);
+        loadAccount();
+        $(#current-email).text = email;
+        $(#settings-modal).style.display = "none";
+
+        DB.saveFolder(accountId, "INBOX", 0, 0);
+        var folder = DB.getFolder(accountId, "INBOX");
+        currentFolderId = folder.id;
+
+        refreshTags();
+        selectFolder("INBOX");
+
+        startSync();
+    }
+
+    function showProgress(stage) {
+        $(#progress-overlay).style.display = "flex";
+        $(#progress-stage).text = stage || "正在准备...";
+        $(#progress-bar).style.width = "0%";
+        $(#progress-percent).text = "0%";
+        $(#progress-detail).text = "";
+        view.update();
+    }
+
+    function updateProgress(percent, detail) {
+        $(#progress-bar).style.width = percent + "%";
+        $(#progress-percent).text = percent + "%";
+        if (detail) {
+            $(#progress-detail).text = detail;
+        }
+        view.update();
+    }
+
+    function updateProgressStage(stage) {
+        $(#progress-stage).text = stage;
+        $(#progress-bar).style.width = "0%";
+        $(#progress-percent).text = "0%";
+        $(#progress-detail).text = "";
+        view.update();
+    }
+
+    function hideProgress() {
+        $(#progress-overlay).style.display = "none";
+        view.update();
+    }
+
+    function startSync() {
+        if (isSyncing) return;
+        isSyncing = true;
+        $(#btn-sync).classList.add("syncing");
+        $(#sync-status).text = "同步中...";
+
+        DB.resetCancel();
+
+        var account = currentAccount;
+        if (!account) {
+            isSyncing = false;
+            $(#btn-sync).classList.remove("syncing");
+            return;
+        }
+
+        var folderId = currentFolderId;
+        if (!folderId) {
+            var folder = DB.getFolder(account.id, "INBOX");
+            if (folder) folderId = folder.id;
+            else folderId = DB.saveFolder(account.id, "INBOX", 0, 0);
+        }
+
+        syncStage = "init";
+
+        var totalEmails = DEMO_EMAIL_COUNT;
+        var existingCount = DB.getEmailCount();
+
+        if (existingCount > 0) {
+            showProgress("正在生成邮件数据...");
+        } else {
+            showProgress("正在初始化数据库...");
+        }
+
+        setTimeout(function() {
+            runSyncPipeline(account, folderId, totalEmails, existingCount);
+        }, 100);
+    }
+
+    function runSyncPipeline(account, folderId, totalEmails, existingCount) {
+        if (DB.isCancelled()) {
+            finishSync(true);
+            return;
+        }
+
+        if (syncStage == "init") {
+            if (existingCount > 0) {
+                updateProgressStage("正在清除旧数据...");
+                syncStage = "clearing";
+                setTimeout(function() { runSyncPipeline(account, folderId, totalEmails, existingCount); }, 50);
+                return;
+            }
+            syncStage = "generating";
+            updateProgressStage("正在生成邮件数据 (0/" + totalEmails + ")...");
+            setTimeout(function() { runSyncPipeline(account, folderId, totalEmails, existingCount); }, 50);
+            return;
+        }
+
+        if (syncStage == "clearing") {
+            try {
+                DB.beginTransaction();
+                DB.dropFTSTriggers();
+                DB.exec("DELETE FROM email_fts");
+                DB.exec("DELETE FROM attachments");
+                DB.exec("DELETE FROM email_tags");
+                DB.exec("DELETE FROM emails");
+                DB.commit();
+            } catch (e) {
+                DB.rollback();
+            }
+
+            syncStage = "generating";
+            updateProgressStage("正在生成邮件数据 (0/" + totalEmails + ")...");
+            setTimeout(function() { runSyncPipeline(account, folderId, totalEmails, existingCount); }, 50);
+            return;
+        }
+
+        if (syncStage == "generating") {
+            IMAP.generateDemoData(account.id, folderId, totalEmails,
+                { batchSize: BATCH_SIZE },
+                function(processed, total, percent) {
+                    if (DB.isCancelled()) return;
+                    updateProgress(percent, "已生成 " + processed + " / " + total + " 封邮件");
+                },
+                function(result) {
+                    if (result.cancelled || DB.isCancelled()) {
+                        finishSync(true);
+                        return;
+                    }
+                    syncStage = "tags";
+                    updateProgressStage("正在生成标签数据...");
+                    setTimeout(function() { runSyncPipeline(account, folderId, totalEmails, existingCount); }, 50);
+                }
+            );
+            return;
+        }
+
+        if (syncStage == "tags") {
+            if (DB.isCancelled()) {
+                finishSync(true);
+                return;
+            }
+
+            var tagIds = IMAP.generateDemoTags(account.id);
+            var tagEmailResult = DB.exec("SELECT id FROM emails ORDER BY id LIMIT 50000");
+            var emailIds = [];
+            for (var i = 0; i < tagEmailResult.length; i++) {
+                emailIds.push(tagEmailResult[i].id);
+            }
+
+            updateProgress(30, "正在关联邮件标签...");
+
+            DB.beginTransaction();
+            IMAP.generateDemoEmailTags(emailIds, tagIds);
+            DB.commit();
+
+            syncStage = "fts";
+            updateProgressStage("正在构建全文索引...");
+            setTimeout(function() { runSyncPipeline(account, folderId, totalEmails, existingCount); }, 100);
+            return;
+        }
+
+        if (syncStage == "fts") {
+            if (DB.isCancelled()) {
+                finishSync(true);
+                return;
+            }
+
+            DB.rebuildFTSIndexAll(FTS_BATCH_SIZE,
+                function(currentBatch, totalBatches, startId, endId) {
+                    if (DB.isCancelled()) return false;
+                    var percent = Math.floor((currentBatch / totalBatches) * 100);
+                    updateProgress(percent, "索引进度: " + currentBatch + "/" + totalBatches + " (ID: " + startId + "-" + endId + ")");
+                    return true;
+                },
+                function(success) {
+                    if (!success || DB.isCancelled()) {
+                        finishSync(true);
+                        return;
+                    }
+                    syncStage = "done";
+                    setTimeout(function() { runSyncPipeline(account, folderId, totalEmails, existingCount); }, 50);
+                }
+            );
+            return;
+        }
+
+        if (syncStage == "done") {
+            finishSync(false);
+        }
+    }
+
+    function finishSync(cancelled) {
+        isSyncing = false;
+        $(#btn-sync).classList.remove("syncing");
+
+        hideProgress();
+
+        if (cancelled) {
+            $(#sync-status).text = "已取消";
+            DB.rollback();
+        } else {
+            $(#sync-status).text = "已同步";
+            DB.updateAccountLastSync(currentAccount.id, Date.now() / 1000);
+        }
+
+        DB.resetCancel();
+
+        refreshTags();
+        loadEmailList();
+        updateUnreadCount();
+
+        if (cancelled) {
+            view.msgbox("同步已取消");
+        } else {
+            var count = DB.getEmailCount();
+            view.msgbox("同步完成！共 " + count + " 封邮件");
+        }
+    }
+
+}
+
+self.ready = function() {
+    App.init();
+};

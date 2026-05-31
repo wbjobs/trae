@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Sciter Mail Client</title>
+    <link rel="stylesheet" type="text/css" href="styles/main.css">
+    <script type="text/tiscript" src="scripts/db.tis"></script>
+    <script type="text/tiscript" src="scripts/imap.tis"></script>
+    <script type="text/tiscript" src="scripts/app.tis"></script>
+</head>
+<body>
+    <div id="app">
+        <header id="toolbar">
+            <div class="toolbar-left">
+                <button id="btn-sync" title="同步邮件">
+                    <span class="icon">⟳</span> 同步
+                </button>
+                <button id="btn-compose" title="写邮件">
+                    <span class="icon">✎</span> 写邮件
+                </button>
+            </div>
+            <div class="toolbar-center">
+                <div id="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="搜索邮件...">
+                    <button id="btn-adv-search">高级</button>
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <button id="btn-settings" title="设置">⚙</button>
+            </div>
+        </header>
+
+        <div id="main-content">
+            <aside id="sidebar">
+                <div class="account-info">
+                    <div class="avatar">📧</div>
+                    <div class="account-details">
+                        <div class="email" id="current-email">未登录</div>
+                        <div class="status" id="sync-status">未同步</div>
+                    </div>
+                </div>
+
+                <nav class="folder-list">
+                    <div class="folder-title">邮箱文件夹</div>
+                    <div class="folder-item active" data-folder="INBOX">
+                        <span class="folder-icon">📥</span>
+                        <span class="folder-name">收件箱</span>
+                        <span class="folder-count" id="inbox-count">0</span>
+                    </div>
+                    <div class="folder-item" data-folder="SENT">
+                        <span class="folder-icon">📤</span>
+                        <span class="folder-name">已发送</span>
+                    </div>
+                    <div class="folder-item" data-folder="DRAFTS">
+                        <span class="folder-icon">📝</span>
+                        <span class="folder-name">草稿</span>
+                    </div>
+                    <div class="folder-item" data-folder="TRASH">
+                        <span class="folder-icon">🗑</span>
+                        <span class="folder-name">垃圾箱</span>
+                    </div>
+                </nav>
+
+                <div class="tags-section">
+                    <div class="tags-header">
+                        <span class="tags-title">标签</span>
+                        <button id="btn-add-tag" title="添加标签">+</button>
+                    </div>
+                    <div id="tags-list" class="tags-list"></div>
+                </div>
+
+                <div class="quick-filters">
+                    <div class="filters-title">快捷过滤</div>
+                    <div class="filter-item" data-filter="unread">
+                        <span class="filter-icon">●</span> 未读
+                    </div>
+                    <div class="filter-item" data-filter="attachments">
+                        <span class="filter-icon">📎</span> 有附件
+                    </div>
+                    <div class="filter-item" data-filter="today">
+                        <span class="filter-icon">📅</span> 今天
+                    </div>
+                    <div class="filter-item" data-filter="week">
+                        <span class="filter-icon">📆</span> 本周
+                    </div>
+                </div>
+            </aside>
+
+            <section id="email-list-container">
+                <div id="email-list-header">
+                    <span id="list-title">收件箱</span>
+                    <div class="list-actions">
+                        <div class="view-toggle">
+                            <button id="btn-view-list" class="view-btn active" title="列表视图">☰</button>
+                            <button id="btn-view-thread" class="view-btn" title="线程视图">🗨</button>
+                        </div>
+                        <select id="sort-select">
+                            <option value="date_desc">按时间（新到旧）</option>
+                            <option value="date_asc">按时间（旧到新）</option>
+                            <option value="sender">按发件人</option>
+                            <option value="subject">按主题</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="email-list"></div>
+            </section>
+
+            <section id="email-detail">
+                <div id="detail-placeholder">
+                    <div class="placeholder-icon">📧</div>
+                    <div class="placeholder-text">选择一封邮件查看详情</div>
+                </div>
+                <div id="detail-content" style="display:none">
+                    <div class="detail-header">
+                        <h2 id="detail-subject"></h2>
+                        <div class="detail-meta">
+                            <div class="detail-sender">
+                                <span class="label">发件人：</span>
+                                <span id="detail-from"></span>
+                            </div>
+                            <div class="detail-date">
+                                <span class="label">时间：</span>
+                                <span id="detail-date"></span>
+                            </div>
+                            <div class="detail-to">
+                                <span class="label">收件人：</span>
+                                <span id="detail-to"></span>
+                            </div>
+                        </div>
+                        <div class="detail-tags" id="detail-tags"></div>
+                        <div class="detail-actions">
+                            <button id="btn-reply">回复</button>
+                            <button id="btn-forward">转发</button>
+                            <button id="btn-delete">删除</button>
+                            <button id="btn-toggle-read">标记未读</button>
+                        </div>
+                    </div>
+                    <div id="thread-panel" style="display:none">
+                        <div class="thread-panel-header">
+                            <span class="thread-panel-title">会话线程</span>
+                            <button id="btn-collapse-all" class="thread-mini-btn">全部折叠</button>
+                            <button id="btn-expand-all" class="thread-mini-btn">全部展开</button>
+                        </div>
+                        <div id="thread-tree"></div>
+                    </div>
+                    <div id="detail-attachments"></div>
+                    <div class="detail-body">
+                        <iframe id="detail-body-frame"></iframe>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="adv-search-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>高级搜索</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>发件人</label>
+                    <input type="text" id="adv-search-from" placeholder="输入发件人邮箱或姓名">
+                </div>
+                <div class="form-group">
+                    <label>收件人</label>
+                    <input type="text" id="adv-search-to" placeholder="输入收件人邮箱">
+                </div>
+                <div class="form-group">
+                    <label>主题</label>
+                    <input type="text" id="adv-search-subject" placeholder="输入主题关键词">
+                </div>
+                <div class="form-group">
+                    <label>正文内容</label>
+                    <input type="text" id="adv-search-body" placeholder="输入正文关键词">
+                </div>
+                <div class="form-group">
+                    <label>附件名</label>
+                    <input type="text" id="adv-search-attachment" placeholder="输入附件文件名">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>开始日期</label>
+                        <input type="date" id="adv-search-date-from">
+                    </div>
+                    <div class="form-group">
+                        <label>结束日期</label>
+                        <input type="date" id="adv-search-date-to">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>标签</label>
+                    <select id="adv-search-tag">
+                        <option value="">全部标签</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-adv-search-reset" class="btn-secondary">重置</button>
+                <button id="btn-adv-search-do" class="btn-primary">搜索</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>邮箱设置</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>邮箱地址</label>
+                    <input type="email" id="settings-email" placeholder="example@domain.com">
+                </div>
+                <div class="form-group">
+                    <label>密码/授权码</label>
+                    <input type="password" id="settings-password" placeholder="输入密码或授权码">
+                </div>
+                <div class="form-group">
+                    <label>IMAP服务器</label>
+                    <input type="text" id="settings-imap-server" placeholder="imap.domain.com">
+                </div>
+                <div class="form-group">
+                    <label>IMAP端口</label>
+                    <input type="number" id="settings-imap-port" value="993">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="settings-ssl" checked> 使用SSL/TLS
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-settings-test" class="btn-secondary">测试连接</button>
+                <button id="btn-settings-save" class="btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="progress-overlay" class="progress-overlay" style="display:none">
+        <div class="progress-content">
+            <div class="progress-icon">⟳</div>
+            <div class="progress-stage" id="progress-stage">正在准备...</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-info">
+                <span id="progress-percent">0%</span>
+                <span id="progress-detail"></span>
+            </div>
+            <button id="btn-cancel-sync" class="btn-secondary">取消</button>
+        </div>
+    </div>
+
+    <div id="add-tag-modal" class="modal" style="display:none">
+        <div class="modal-content small">
+            <div class="modal-header">
+                <h3>添加标签</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>标签名称</label>
+                    <input type="text" id="new-tag-name" placeholder="输入标签名称">
+                </div>
+                <div class="form-group">
+                    <label>标签颜色</label>
+                    <div class="color-picker">
+                        <div class="color-option" style="background:#e74c3c" data-color="#e74c3c"></div>
+                        <div class="color-option" style="background:#e67e22" data-color="#e67e22"></div>
+                        <div class="color-option" style="background:#f1c40f" data-color="#f1c40f"></div>
+                        <div class="color-option" style="background:#2ecc71" data-color="#2ecc71"></div>
+                        <div class="color-option" style="background:#3498db" data-color="#3498db"></div>
+                        <div class="color-option selected" style="background:#9b59b6" data-color="#9b59b6"></div>
+                        <div class="color-option" style="background:#1abc9c" data-color="#1abc9c"></div>
+                        <div class="color-option" style="background:#95a5a6" data-color="#95a5a6"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-add-tag-cancel" class="btn-secondary">取消</button>
+                <button id="btn-add-tag-save" class="btn-primary">添加</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

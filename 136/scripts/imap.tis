@@ -1,0 +1,645 @@
+namespace IMAP {
+
+    var isConnected = false;
+    var connection = null;
+    var currentTag = 0;
+    var responseBuffer = "";
+
+    function getNextTag() {
+        currentTag++;
+        return "A" + currentTag;
+    }
+
+    function connect(account) {
+        return new Promise(function(resolve, reject) {
+            try {
+                var socket = new Net.Socket();
+                
+                socket.on("connect", function() {
+                    isConnected = true;
+                    responseBuffer = "";
+                });
+
+                socket.on("data", function(data) {
+                    responseBuffer += data.toString();
+                    processResponse();
+                });
+
+                socket.on("error", function(err) {
+                    isConnected = false;
+                    reject(err);
+                });
+
+                socket.on("close", function() {
+                    isConnected = false;
+                });
+
+                socket.connect(account.imap_port, account.imap_server, function() {
+                    if (account.use_ssl) {
+                        socket.startTLS();
+                    }
+                    connection = socket;
+                    waitForGreeting().then(function() {
+                        login(account.email, account.password).then(function() {
+                            resolve(true);
+                        }, function(err) {
+                            reject(err);
+                        });
+                    }, function(err) {
+                        reject(err);
+                    });
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    function waitForGreeting() {
+        return new Promise(function(resolve, reject) {
+            var checkGreeting = function() {
+                if (responseBuffer.indexOf("* OK") != -1) {
+                    responseBuffer = "";
+                    resolve(true);
+                } else if (responseBuffer.indexOf("* NO") != -1 || responseBuffer.indexOf("* BAD") != -1) {
+                    reject("Server greeting error");
+                } else {
+                    setTimeout(checkGreeting, 100);
+                }
+            };
+            setTimeout(checkGreeting, 100);
+        });
+    }
+
+    function sendCommand(tag, command) {
+        if (!isConnected || !connection) {
+            return Promise.reject("Not connected");
+        }
+        return new Promise(function(resolve, reject) {
+            var fullCommand = tag + " " + command + "\r\n";
+            connection.send(fullCommand);
+            
+            var checkResponse = function() {
+                var lines = responseBuffer.split("\r\n");
+                for (var i = 0; i < lines.length; i++) {
+                    if (lines[i].indexOf(tag + " OK") == 0) {
+                        var response = responseBuffer;
+                        responseBuffer = "";
+                        resolve(response);
+                        return;
+                    } else if (lines[i].indexOf(tag + " NO") == 0 || lines[i].indexOf(tag + " BAD") == 0) {
+                        responseBuffer = "";
+                        reject(lines[i]);
+                        return;
+                    }
+                }
+                setTimeout(checkResponse, 100);
+            };
+            setTimeout(checkResponse, 100);
+        });
+    }
+
+    function login(username, password) {
+        var tag = getNextTag();
+        return sendCommand(tag, 'LOGIN "' + username + '" "' + password + '"');
+    }
+
+    function selectFolder(folderName) {
+        var tag = getNextTag();
+        return sendCommand(tag, 'SELECT "' + folderName + '"');
+    }
+
+    function fetchEmailHeaders(startUid, endUid) {
+        var tag = getNextTag();
+        var sequence = startUid + ":" + (endUid || "*");
+        return sendCommand(tag, 'UID FETCH ' + sequence + ' (UID FLAGS INTERNALDATE BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)])');
+    }
+
+    function fetchEmailBody(uid) {
+        var tag = getNextTag();
+        return sendCommand(tag, 'UID FETCH ' + uid + ' (BODY.PEEK[])');
+    }
+
+    function parseHeaders(headerText) {
+        var headers = {
+            from: "",
+            to: "",
+            subject: "",
+            date: "",
+            "message-id": ""
+        };
+        
+        var lines = headerText.split("\n");
+        var currentKey = null;
+        
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line.length == 0) continue;
+            
+            var colonIndex = line.indexOf(":");
+            if (colonIndex > 0) {
+                var key = line.substring(0, colonIndex).toLowerCase();
+                var value = line.substring(colonIndex + 1).trim();
+                if (headers.hasOwnProperty(key)) {
+                    headers[key] = value;
+                    currentKey = key;
+                } else {
+                    currentKey = null;
+                }
+            } else if (currentKey && (line.indexOf(" ") == 0 || line.indexOf("\t") == 0)) {
+                headers[currentKey] += " " + line.trim();
+            }
+        }
+        
+        return headers;
+    }
+
+    function parseEmailAddress(addressStr) {
+        var result = { name: "", email: "" };
+        var angleIndex = addressStr.indexOf("<");
+        if (angleIndex >= 0) {
+            result.name = addressStr.substring(0, angleIndex).trim().replace(/"/g, "");
+            var closeIndex = addressStr.indexOf(">", angleIndex);
+            if (closeIndex >= 0) {
+                result.email = addressStr.substring(angleIndex + 1, closeIndex).trim();
+            }
+        } else {
+            result.email = addressStr.trim();
+        }
+        return result;
+    }
+
+    function parseDate(dateStr) {
+        try {
+            return new Date(dateStr).getTime() / 1000;
+        } catch (e) {
+            return Date.now() / 1000;
+        }
+    }
+
+    function syncFolder(accountId, folderName, onProgress) {
+        return new Promise(function(resolve, reject) {
+            var folder = DB.getFolder(accountId, folderName);
+            var highestUid = folder ? folder.highest_uid : 0;
+            
+            selectFolder(folderName).then(function(response) {
+                var match = response.match(/UIDVALIDITY (\d+)/);
+                var uidValidity = match ? parseInt(match[1]) : 0;
+                
+                match = response.match(/HIGHESTMODSEQ (\d+)/);
+                var newHighestUid = match ? parseInt(match[1]) : highestUid + 100;
+                
+                var folderId = DB.saveFolder(accountId, folderName, uidValidity, newHighestUid);
+                
+                if (onProgress) onProgress("Fetching email list...");
+                
+                var startUid = highestUid > 0 ? highestUid + 1 : 1;
+                fetchEmailHeaders(startUid, "*").then(function(response) {
+                    var emails = parseFetchResponse(response);
+                    var count = 0;
+                    var total = emails.length;
+                    
+                    function processNextEmail() {
+                        if (count >= total) {
+                            DB.updateAccountLastSync(accountId, Date.now() / 1000);
+                            resolve({ folderId: folderId, count: total });
+                            return;
+                        }
+                        
+                        var email = emails[count];
+                        if (onProgress) onProgress("Processing email " + (count + 1) + "/" + total);
+                        
+                        fetchEmailBody(email.uid).then(function(bodyResponse) {
+                            var body = parseBodyResponse(bodyResponse);
+                            
+                            var emailData = {
+                                account_id: accountId,
+                                folder_id: folderId,
+                                uid: email.uid,
+                                msg_id: email.messageId,
+                                subject: email.subject,
+                                sender_name: email.from.name,
+                                sender_email: email.from.email,
+                                recipients: email.to,
+                                date_received: email.date,
+                                date_sent: email.date,
+                                is_read: email.isRead ? 1 : 0,
+                                is_flagged: email.isFlagged ? 1 : 0,
+                                has_attachments: body.hasAttachments ? 1 : 0,
+                                body_text: body.text,
+                                body_html: body.html,
+                                size: body.size
+                            };
+                            
+                            var emailId = DB.saveEmail(emailData);
+                            
+                            for (var i = 0; i < body.attachments.length; i++) {
+                                var att = body.attachments[i];
+                                DB.saveAttachment(emailId, att.filename, att.contentType, att.size, "");
+                            }
+                            
+                            count++;
+                            setTimeout(processNextEmail, 10);
+                        }, function(err) {
+                            count++;
+                            setTimeout(processNextEmail, 10);
+                        });
+                    }
+                    
+                    if (total > 0) {
+                        processNextEmail();
+                    } else {
+                        resolve({ folderId: folderId, count: 0 });
+                    }
+                }, reject);
+            }, reject);
+        });
+    }
+
+    function parseFetchResponse(response) {
+        var emails = [];
+        var sections = response.split(/^\* \d+ FETCH /m);
+        
+        for (var i = 1; i < sections.length; i++) {
+            var section = sections[i];
+            var email = {
+                uid: 0,
+                isRead: false,
+                isFlagged: false,
+                from: { name: "", email: "" },
+                to: "",
+                subject: "",
+                date: 0,
+                messageId: ""
+            };
+            
+            var uidMatch = section.match(/UID (\d+)/);
+            if (uidMatch) email.uid = parseInt(uidMatch[1]);
+            
+            var flagsMatch = section.match(/FLAGS \(([^)]*)\)/);
+            if (flagsMatch) {
+                var flags = flagsMatch[1];
+                email.isRead = flags.indexOf("\\Seen") != -1;
+                email.isFlagged = flags.indexOf("\\Flagged") != -1;
+            }
+            
+            var dateMatch = section.match(/INTERNALDATE "([^"]*)"/);
+            if (dateMatch) email.date = parseDate(dateMatch[1]);
+            
+            var headerMatch = section.match(/BODY\[HEADER\.FIELDS.*?\]\s*\{(\d+)\}\s*([\s\S]*?)\)/);
+            if (headerMatch) {
+                var headers = parseHeaders(headerMatch[2]);
+                email.from = parseEmailAddress(headers.from);
+                email.to = headers.to;
+                email.subject = headers.subject;
+                email.messageId = headers["message-id"];
+                if (headers.date) email.date = parseDate(headers.date);
+            }
+            
+            if (email.uid > 0) {
+                emails.push(email);
+            }
+        }
+        
+        return emails;
+    }
+
+    function parseBodyResponse(response) {
+        var result = {
+            text: "",
+            html: "",
+            size: 0,
+            hasAttachments: false,
+            attachments: []
+        };
+        
+        var bodyMatch = response.match(/BODY\[\]\s*\{(\d+)\}\s*([\s\S]*?)\)A\d+ OK/);
+        if (bodyMatch) {
+            result.size = parseInt(bodyMatch[1]);
+            var content = bodyMatch[2];
+            
+            if (content.indexOf("Content-Type: multipart/") != -1) {
+                var boundaryMatch = content.match(/boundary="?([^";\n]+)"?/i);
+                if (boundaryMatch) {
+                    var boundary = boundaryMatch[1];
+                    var parts = content.split("--" + boundary);
+                    
+                    for (var i = 1; i < parts.length; i++) {
+                        var part = parts[i];
+                        if (part.indexOf("--") == 0) continue;
+                        
+                        var contentTypeMatch = part.match(/Content-Type: ([^;\n]+)/i);
+                        var contentType = contentTypeMatch ? contentTypeMatch[1].trim().toLowerCase() : "";
+                        
+                        var filenameMatch = part.match(/filename="?([^";\n]+)"?/i);
+                        var isAttachment = part.indexOf("Content-Disposition: attachment") != -1 || !!filenameMatch;
+                        
+                        if (isAttachment && filenameMatch) {
+                            result.hasAttachments = true;
+                            result.attachments.push({
+                                filename: filenameMatch[1],
+                                contentType: contentType,
+                                size: part.length
+                            });
+                        } else if (contentType == "text/plain") {
+                            var textStart = part.indexOf("\n\n");
+                            if (textStart != -1) {
+                                result.text = decodeQuotedPrintable(part.substring(textStart + 2));
+                            }
+                        } else if (contentType == "text/html") {
+                            var htmlStart = part.indexOf("\n\n");
+                            if (htmlStart != -1) {
+                                result.html = decodeQuotedPrintable(part.substring(htmlStart + 2));
+                            }
+                        }
+                    }
+                }
+            } else {
+                var textStart = content.indexOf("\n\n");
+                if (textStart != -1) {
+                    result.text = decodeQuotedPrintable(content.substring(textStart + 2));
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    function decodeQuotedPrintable(str) {
+        return str.replace(/=([0-9A-F]{2})/g, function(match, hex) {
+            return String.fromCharCode(parseInt(hex, 16));
+        }).replace(/=\n/g, "");
+    }
+
+    function disconnect() {
+        if (connection) {
+            var tag = getNextTag();
+            sendCommand(tag, "LOGOUT").then(function() {
+                connection.close();
+                connection = null;
+                isConnected = false;
+            });
+        }
+    }
+
+    function syncAll(account, onProgress, onComplete, onError) {
+        var folders = ["INBOX", "Sent", "Drafts", "Trash"];
+        var currentFolder = 0;
+        var totalEmails = 0;
+        
+        connect(account).then(function() {
+            function syncNext() {
+                if (currentFolder >= folders.length) {
+                    disconnect();
+                    if (onComplete) onComplete(totalEmails);
+                    return;
+                }
+                
+                var folder = folders[currentFolder];
+                if (onProgress) onProgress("Syncing " + folder + "...");
+                
+                syncFolder(account.id, folder, onProgress).then(function(result) {
+                    totalEmails += result.count;
+                    currentFolder++;
+                    setTimeout(syncNext, 500);
+                }, function(err) {
+                    currentFolder++;
+                    setTimeout(syncNext, 500);
+                });
+            }
+            syncNext();
+        }, function(err) {
+            if (onError) onError(err);
+        });
+    }
+
+    var demoSubjects = [
+        "项目进度周报 - 第{week}周",
+        "会议通知 - {topic}",
+        "您的订单#{order}已发货",
+        "技术分享邀请函",
+        "假期申请审批结果",
+        "系统维护通知 - {date}",
+        "新功能上线公告",
+        "客户反馈汇总报告",
+        "月度业绩报告 - {month}月",
+        "团队周会纪要",
+        "产品需求评审邀请",
+        "架构设计文档更新",
+        "代码审查通知 - PR#{pr}",
+        "部署完成通知",
+        "性能测试报告",
+        "安全审计结果",
+        "预算审批结果",
+        "培训课程通知",
+        "季度总结会议",
+        "年度规划讨论"
+    ];
+
+    var demoTopics = [
+        "产品评审", "技术方案", "客户需求", "架构设计", "性能优化",
+        "安全加固", "用户反馈", "市场调研", "竞品分析", "战略规划"
+    ];
+
+    var demoSenders = [
+        { name: "张伟", email: "zhangwei@company.com" },
+        { name: "李娜", email: "lina@company.com" },
+        { name: "王强", email: "wangqiang@company.com" },
+        { name: "刘芳", email: "liufang@company.com" },
+        { name: "陈明", email: "chenming@company.com" },
+        { name: "杨洋", email: "yangyang@company.com" },
+        { name: "赵磊", email: "zhaolei@company.com" },
+        { name: "周静", email: "zhoujing@company.com" },
+        { name: "吴鹏", email: "wupeng@company.com" },
+        { name: "郑雪", email: "zhengxue@company.com" }
+    ];
+
+    var demoBodies = [
+        "本周项目进展顺利，已完成以下工作内容：\n\n1. 完成用户界面模块优化，提升加载速度30%\n2. 修复了数据库连接池资源泄漏问题\n3. 新增邮件标签过滤功能\n4. 优化了全文检索性能，10万条数据检索响应时间<50ms\n\n下周计划：\n- 完成邮件同步增量机制\n- 优化附件下载体验\n- 进行压力测试",
+
+        "兹定于本周五下午2点在会议室A召开产品评审会议，请相关人员准时参加。\n\n会议议程：\n1. 产品功能演示（30分钟）\n2. 需求变更讨论（20分钟）\n3. 时间进度评估（20分钟）\n4. 风险分析与应对（10分钟）\n\n参会人员：产品组、研发组、测试组、UI组\n\n请提前准备好相关材料。",
+
+        "您的订单#12345已发货，预计3-5个工作日送达。\n\n物流信息：\n快递公司：顺丰速运\n快递单号：SF1234567890\n发货仓库：华东仓储中心\n\n如有问题请联系客服热线：400-123-4567",
+
+        "诚邀您参加本周四的技术分享会。\n\n主题：《现代前端架构实践与性能优化》\n时间：14:00-16:00\n地点：培训室B\n主讲人：技术部架构师 李明\n\n内容概要：\n1. 微前端架构设计模式\n2. 性能监控与优化策略\n3. 工程化实践案例分享\n\n请准时参加，欢迎带上您的问题！",
+
+        "您的假期申请已审批通过。\n\n假期类型：年假\n假期时间：2024年2月1日至2月7日（共7天）\n审批人：部门经理 王总\n\n请在休假前完成以下工作交接：\n1. 项目进度文档更新\n2. 待办事项转交\n3. 紧急联系方式告知\n\n祝您假期愉快！",
+
+        "系统将于本周六凌晨2:00-4:00进行例行维护，届时以下服务可能无法正常使用：\n\n- 邮件收发服务\n- 附件存储服务\n- 搜索索引服务\n\n维护内容：\n1. 数据库版本升级\n2. 安全补丁安装\n3. 磁盘空间清理\n\n给您带来的不便，敬请谅解。如有紧急事项请联系IT支持。",
+
+        "经过开发团队的努力，新版本功能已正式上线！\n\n本次更新内容：\n1. ✅ 全文搜索支持（基于FTS5引擎）\n2. ✅ 邮件标签系统\n3. ✅ 快捷过滤栏\n4. ✅ 批量邮件操作\n5. ✅ 性能大幅提升\n\n更新方式：自动后台更新，无需手动操作\n\n如遇到问题请提交反馈，我们会尽快处理。",
+
+        "本月收到客户反馈共156条，分类统计如下：\n\n1. 功能建议：58条（37%）\n   - 希望增加邮件定时发送\n   - 希望支持多邮箱账户\n   - 希望增加邮件模板功能\n\n2. Bug报告：34条（22%）\n   - 附件下载偶发失败\n   - 搜索结果排序问题\n   - 标签颜色显示异常\n\n3. 使用咨询：42条（27%）\n4. 其他：22条（14%）\n\n详细报告请查看附件。",
+
+        "本月业绩报告如下：\n\n销售指标完成情况：\n- 总销售额：￥1,234,567\n- 目标完成率：123%\n- 同比增长：45%\n- 环比增长：18%\n\n客户数据：\n- 新增客户：156人\n- 活跃客户：2,345人\n- 客户满意度：96%\n\n下月目标：\n- 销售额：￥1,500,000\n- 新增客户：200人\n\n详细数据请参考附件Excel报表。",
+
+        "团队周会于今日上午10:00在会议室B召开，会议纪要如下：\n\n一、上周工作回顾\n1. 邮件同步功能开发完成80%\n2. 全文搜索性能优化已完成\n3. UI设计稿已评审通过\n\n二、本周工作计划\n1. 完成IMAP协议对接（负责人：张伟）\n2. 标签系统联调（负责人：李娜）\n3. 搜索模块测试（负责人：王强）\n\n三、风险与问题\n1. IMAP服务器兼容性需进一步验证\n2. 测试资源紧张\n\n下次会议：下周一上午10:00"
+    ];
+
+    function generateDemoData(accountId, folderId, totalCount, options, onProgress, onComplete) {
+        if (!options) options = {};
+        var batchSize = options.batchSize || 500;
+        var startIndex = options.startIndex || 0;
+        var useThreading = options.useThreading !== false;
+
+        DB.dropFTSTriggers();
+        DB.prepareBatchInsert();
+        DB.beginTransaction();
+
+        var now = Math.floor(Date.now() / 1000);
+        var count = 0;
+        var processed = startIndex;
+        var batchStart = 0;
+        var batchEnd = Math.min(batchSize, totalCount);
+        var msgIdMap = {};
+        var idMap = {};
+        var THREAD_INTERVAL = 10;
+        var REPLY_DEPTH = 4;
+
+        function processBatch() {
+            if (DB.isCancelled()) {
+                DB.rollback();
+                DB.finalizeBatchInsert();
+                DB.createFTSTriggers();
+                if (onComplete) onComplete({ cancelled: true, count: count });
+                return;
+            }
+
+            for (var i = batchStart; i < batchEnd && i < totalCount; i++) {
+                var subjectIdx = i % demoSubjects.length;
+                var senderIdx = i % demoSenders.length;
+                var bodyIdx = i % demoBodies.length;
+                var hasAttachment = (i % 7 == 0);
+                var isUnread = (i % 3 == 0);
+                var isFlagged = (i % 13 == 0);
+
+                var subject = demoSubjects[subjectIdx]
+                    .replace("{week}", Math.floor(i / 20) + 1)
+                    .replace("{topic}", demoTopics[i % demoTopics.length])
+                    .replace("{order}", 10000 + i)
+                    .replace("{date}", (i % 28 + 1) + "日")
+                    .replace("{month}", (i % 12 + 1))
+                    .replace("{pr}", 1000 + i);
+
+                var msgId = "<demo-" + i + "-" + now + "@example.com>";
+                var inReplyTo = "";
+                var threadId = 0;
+
+                if (useThreading) {
+                    var positionInThread = i % THREAD_INTERVAL;
+                    if (positionInThread > 0 && positionInThread <= REPLY_DEPTH && msgIdMap[i - positionInThread]) {
+                        inReplyTo = msgIdMap[i - positionInThread];
+                        var rootIdx = i - positionInThread;
+                        while (rootIdx > 0 && idMap[rootIdx - (rootIdx % THREAD_INTERVAL)]) {
+                            rootIdx = rootIdx - (rootIdx % THREAD_INTERVAL);
+                        }
+                        threadId = idMap[rootIdx] || 0;
+                        subject = "Re: " + subject;
+                    }
+                }
+
+                var emailData = {
+                    account_id: accountId,
+                    folder_id: folderId,
+                    uid: i + 1,
+                    msg_id: msgId,
+                    in_reply_to: inReplyTo,
+                    thread_id: threadId,
+                    subject: subject,
+                    sender_name: demoSenders[senderIdx].name,
+                    sender_email: demoSenders[senderIdx].email,
+                    recipients: "user@example.com",
+                    date_received: now - (i * 3600),
+                    date_sent: now - (i * 3600) - 300,
+                    is_read: isUnread ? 0 : 1,
+                    is_flagged: isFlagged ? 1 : 0,
+                    has_attachments: hasAttachment ? 1 : 0,
+                    body_text: demoBodies[bodyIdx],
+                    body_html: "<html><body style='font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6;'>" +
+                        demoBodies[bodyIdx].replace(/\n/g, "<br>") + "</body></html>",
+                    size: demoBodies[bodyIdx].length
+                };
+
+                var emailId = DB.saveEmailBatch(emailData);
+                msgIdMap[i] = msgId;
+                idMap[i] = emailId;
+
+                if (hasAttachment) {
+                    var filenames = [
+                        "项目报告_" + i + ".pdf",
+                        "数据分析_" + i + ".xlsx",
+                        "设计方案_" + i + ".docx",
+                        "产品截图_" + i + ".png",
+                        "会议纪要_" + i + ".pdf"
+                    ];
+                    var types = [
+                        "application/pdf",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "image/png",
+                        "application/pdf"
+                    ];
+                    var attIdx = i % filenames.length;
+                    DB.saveAttachment(emailId, filenames[attIdx], types[attIdx], 10240 + i * 37, "");
+                }
+
+                count++;
+                processed++;
+            }
+
+            DB.commit();
+            DB.beginTransaction();
+
+            var progress = Math.floor((processed / totalCount) * 100);
+            if (onProgress) {
+                onProgress(processed, totalCount, progress);
+            }
+
+            batchStart = batchEnd;
+            batchEnd = Math.min(batchStart + batchSize, totalCount);
+
+            if (processed < totalCount) {
+                setTimeout(processBatch, 0);
+            } else {
+                DB.commit();
+                DB.finalizeBatchInsert();
+
+                if (useThreading) {
+                    DB.rebuildThreadIds();
+                }
+
+                DB.createFTSTriggers();
+
+                if (onComplete) {
+                    onComplete({ cancelled: false, count: count });
+                }
+            }
+        }
+
+        processBatch();
+    }
+
+    function generateDemoTags(accountId) {
+        var tagNames = ["重要", "工作", "个人", "待办", "紧急", "已归档", "待回复", "参考"];
+        var tagColors = ["#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#f39c12", "#1abc9c", "#e67e22", "#34495e"];
+        var tagIds = [];
+
+        for (var t = 0; t < tagNames.length; t++) {
+            var tid = DB.saveTag(tagNames[t], tagColors[t]);
+            tagIds.push(tid);
+        }
+
+        return tagIds;
+    }
+
+    function generateDemoEmailTags(emailIds, tagIds) {
+        for (var i = 0; i < emailIds.length; i++) {
+            var numTags = (i % 3) + 1;
+            for (var t = 0; t < numTags; t++) {
+                var tagIdx = (i + t) % tagIds.length;
+                DB.addTagToEmail(emailIds[i], tagIds[tagIdx]);
+            }
+        }
+    }
+
+}

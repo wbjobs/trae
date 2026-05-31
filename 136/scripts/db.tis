@@ -1,0 +1,713 @@
+namespace DB {
+
+    var db = null;
+    var dbPath = null;
+    var inTransaction = false;
+    var cancelRequested = false;
+
+    function init() {
+        var appData = System.path(#USER_APPDATA) + "/SciterMail";
+        if (!System.isDirectory(appData)) {
+            System.mkdir(appData);
+        }
+        dbPath = appData + "/mail.db";
+        db = SQLite.open(dbPath);
+        db.exec("PRAGMA journal_mode=WAL");
+        db.exec("PRAGMA synchronous=NORMAL");
+        db.exec("PRAGMA cache_size=-20000");
+        db.exec("PRAGMA temp_store=MEMORY");
+        db.exec("PRAGMA mmap_size=268435456");
+        createTables();
+        migrateSchema();
+    }
+
+    function requestCancel() {
+        cancelRequested = true;
+    }
+
+    function resetCancel() {
+        cancelRequested = false;
+    }
+
+    function isCancelled() {
+        return cancelRequested;
+    }
+
+    function beginTransaction() {
+        if (!inTransaction) {
+            db.exec("BEGIN TRANSACTION");
+            inTransaction = true;
+        }
+    }
+
+    function commit() {
+        if (inTransaction) {
+            db.exec("COMMIT");
+            inTransaction = false;
+        }
+    }
+
+    function rollback() {
+        if (inTransaction) {
+            db.exec("ROLLBACK");
+            inTransaction = false;
+        }
+    }
+
+    function createTables() {
+        db.exec("CREATE TABLE IF NOT EXISTS accounts ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "email TEXT UNIQUE NOT NULL,"
+            + "password TEXT NOT NULL,"
+            + "imap_server TEXT NOT NULL,"
+            + "imap_port INTEGER DEFAULT 993,"
+            + "use_ssl INTEGER DEFAULT 1,"
+            + "last_sync INTEGER DEFAULT 0"
+            + ")");
+
+        db.exec("CREATE TABLE IF NOT EXISTS folders ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "account_id INTEGER NOT NULL,"
+            + "name TEXT NOT NULL,"
+            + "uid_validity INTEGER DEFAULT 0,"
+            + "highest_uid INTEGER DEFAULT 0,"
+            + "FOREIGN KEY(account_id) REFERENCES accounts(id)"
+            + ")");
+
+        db.exec("CREATE TABLE IF NOT EXISTS emails ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "account_id INTEGER NOT NULL,"
+            + "folder_id INTEGER NOT NULL,"
+            + "uid INTEGER NOT NULL,"
+            + "msg_id TEXT,"
+            + "in_reply_to TEXT,"
+            + "thread_id INTEGER DEFAULT 0,"
+            + "subject TEXT,"
+            + "sender_name TEXT,"
+            + "sender_email TEXT,"
+            + "recipients TEXT,"
+            + "date_received INTEGER,"
+            + "date_sent INTEGER,"
+            + "is_read INTEGER DEFAULT 0,"
+            + "is_flagged INTEGER DEFAULT 0,"
+            + "has_attachments INTEGER DEFAULT 0,"
+            + "body_text TEXT,"
+            + "body_html TEXT,"
+            + "size INTEGER DEFAULT 0,"
+            + "FOREIGN KEY(account_id) REFERENCES accounts(id),"
+            + "FOREIGN KEY(folder_id) REFERENCES folders(id)"
+            + ")");
+
+        db.exec("CREATE INDEX IF NOT EXISTS idx_emails_folder ON emails(folder_id, date_received DESC)");
+        db.exec("CREATE INDEX IF NOT EXISTS idx_emails_sender ON emails(sender_email)");
+        db.exec("CREATE INDEX IF NOT EXISTS idx_emails_date ON emails(date_received)");
+        db.exec("CREATE INDEX IF NOT EXISTS idx_emails_msgid ON emails(msg_id)");
+        db.exec("CREATE INDEX IF NOT EXISTS idx_emails_thread ON emails(thread_id, date_received ASC)");
+        db.exec("CREATE INDEX IF NOT EXISTS idx_emails_replyto ON emails(in_reply_to)");
+
+        db.exec("CREATE TABLE IF NOT EXISTS attachments ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "email_id INTEGER NOT NULL,"
+            + "filename TEXT,"
+            + "content_type TEXT,"
+            + "size INTEGER DEFAULT 0,"
+            + "content_path TEXT,"
+            + "FOREIGN KEY(email_id) REFERENCES emails(id)"
+            + ")");
+
+        db.exec("CREATE TABLE IF NOT EXISTS tags ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "name TEXT UNIQUE NOT NULL,"
+            + "color TEXT DEFAULT '#9b59b6'"
+            + ")");
+
+        db.exec("CREATE TABLE IF NOT EXISTS email_tags ("
+            + "email_id INTEGER NOT NULL,"
+            + "tag_id INTEGER NOT NULL,"
+            + "PRIMARY KEY(email_id, tag_id),"
+            + "FOREIGN KEY(email_id) REFERENCES emails(id),"
+            + "FOREIGN KEY(tag_id) REFERENCES tags(id)"
+            + ")");
+
+        db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS email_fts USING fts5("
+            + "subject,"
+            + "sender_name,"
+            + "sender_email,"
+            + "body_text,"
+            + "attachment_names,"
+            + "content='emails',"
+            + "content_rowid='id'"
+            + ")");
+    }
+
+    function migrateSchema() {
+        try {
+            var cols = db.exec("PRAGMA table_info(emails)");
+            var hasInReplyTo = false;
+            var hasThreadId = false;
+            for (var i = 0; i < cols.length; i++) {
+                if (cols[i].name == "in_reply_to") hasInReplyTo = true;
+                if (cols[i].name == "thread_id") hasThreadId = true;
+            }
+            if (!hasInReplyTo) {
+                db.exec("ALTER TABLE emails ADD COLUMN in_reply_to TEXT DEFAULT ''");
+            }
+            if (!hasThreadId) {
+                db.exec("ALTER TABLE emails ADD COLUMN thread_id INTEGER DEFAULT 0");
+            }
+            db.exec("CREATE INDEX IF NOT EXISTS idx_emails_msgid ON emails(msg_id)");
+            db.exec("CREATE INDEX IF NOT EXISTS idx_emails_thread ON emails(thread_id, date_received ASC)");
+            db.exec("CREATE INDEX IF NOT EXISTS idx_emails_replyto ON emails(in_reply_to)");
+        } catch (e) {
+        }
+    }
+
+    function createFTSTriggers() {
+        db.exec("CREATE TRIGGER IF NOT EXISTS emails_ai AFTER INSERT ON emails BEGIN "
+            + "INSERT INTO email_fts(rowid, subject, sender_name, sender_email, body_text, attachment_names) "
+            + "VALUES (new.id, new.subject, new.sender_name, new.sender_email, new.body_text, ''); "
+            + "END");
+
+        db.exec("CREATE TRIGGER IF NOT EXISTS emails_ad AFTER DELETE ON emails BEGIN "
+            + "INSERT INTO email_fts(email_fts, rowid, subject, sender_name, sender_email, body_text, attachment_names) "
+            + "VALUES('delete', old.id, old.subject, old.sender_name, old.sender_email, old.body_text, ''); "
+            + "END");
+
+        db.exec("CREATE TRIGGER IF NOT EXISTS emails_au AFTER UPDATE ON emails BEGIN "
+            + "INSERT INTO email_fts(email_fts, rowid, subject, sender_name, sender_email, body_text, attachment_names) "
+            + "VALUES('delete', old.id, old.subject, old.sender_name, old.sender_email, old.body_text, ''); "
+            + "INSERT INTO email_fts(rowid, subject, sender_name, sender_email, body_text, attachment_names) "
+            + "VALUES (new.id, new.subject, new.sender_name, new.sender_email, new.body_text, ''); "
+            + "END");
+    }
+
+    function dropFTSTriggers() {
+        db.exec("DROP TRIGGER IF EXISTS emails_ai");
+        db.exec("DROP TRIGGER IF EXISTS emails_ad");
+        db.exec("DROP TRIGGER IF EXISTS emails_au");
+    }
+
+    function saveAccount(email, password, imapServer, imapPort, useSSL) {
+        var stmt = db.prepare("INSERT OR REPLACE INTO accounts "
+            + "(email, password, imap_server, imap_port, use_ssl) "
+            + "VALUES (?, ?, ?, ?, ?)");
+        stmt.bind(1, email);
+        stmt.bind(2, password);
+        stmt.bind(3, imapServer);
+        stmt.bind(4, imapPort);
+        stmt.bind(5, useSSL ? 1 : 0);
+        stmt.exec();
+        return db.lastInsertRowId();
+    }
+
+    function getAccount() {
+        var stmt = db.prepare("SELECT * FROM accounts LIMIT 1");
+        var result = stmt.exec();
+        return result.length > 0 ? result[0] : null;
+    }
+
+    function updateAccountLastSync(accountId, timestamp) {
+        db.exec("UPDATE accounts SET last_sync = " + timestamp + " WHERE id = " + accountId);
+    }
+
+    function saveFolder(accountId, folderName, uidValidity, highestUid) {
+        var stmt = db.prepare("SELECT id FROM folders WHERE account_id = ? AND name = ?");
+        stmt.bind(1, accountId);
+        stmt.bind(2, folderName);
+        var result = stmt.exec();
+        
+        if (result.length > 0) {
+            var folderId = result[0].id;
+            db.exec("UPDATE folders SET uid_validity = " + uidValidity 
+                + ", highest_uid = " + highestUid + " WHERE id = " + folderId);
+            return folderId;
+        } else {
+            var stmt2 = db.prepare("INSERT INTO folders (account_id, name, uid_validity, highest_uid) "
+                + "VALUES (?, ?, ?, ?)");
+            stmt2.bind(1, accountId);
+            stmt2.bind(2, folderName);
+            stmt2.bind(3, uidValidity);
+            stmt2.bind(4, highestUid);
+            stmt2.exec();
+            return db.lastInsertRowId();
+        }
+    }
+
+    function getFolder(accountId, folderName) {
+        var stmt = db.prepare("SELECT * FROM folders WHERE account_id = ? AND name = ?");
+        stmt.bind(1, accountId);
+        stmt.bind(2, folderName);
+        var result = stmt.exec();
+        return result.length > 0 ? result[0] : null;
+    }
+
+    function saveEmail(emailData) {
+        var stmt = db.prepare("SELECT id FROM emails WHERE account_id = ? AND folder_id = ? AND uid = ?");
+        stmt.bind(1, emailData.account_id);
+        stmt.bind(2, emailData.folder_id);
+        stmt.bind(3, emailData.uid);
+        var result = stmt.exec();
+        
+        var emailId;
+        if (result.length > 0) {
+            emailId = result[0].id;
+            var updateStmt = db.prepare("UPDATE emails SET "
+                + "msg_id = ?, in_reply_to = ?, thread_id = ?, subject = ?, sender_name = ?, sender_email = ?, "
+                + "recipients = ?, date_received = ?, date_sent = ?, "
+                + "is_read = ?, is_flagged = ?, has_attachments = ?, "
+                + "body_text = ?, body_html = ?, size = ? "
+                + "WHERE id = ?");
+            updateStmt.bind(1, emailData.msg_id);
+            updateStmt.bind(2, emailData.in_reply_to || "");
+            updateStmt.bind(3, emailData.thread_id || 0);
+            updateStmt.bind(4, emailData.subject);
+            updateStmt.bind(5, emailData.sender_name);
+            updateStmt.bind(6, emailData.sender_email);
+            updateStmt.bind(7, emailData.recipients);
+            updateStmt.bind(8, emailData.date_received);
+            updateStmt.bind(9, emailData.date_sent);
+            updateStmt.bind(10, emailData.is_read);
+            updateStmt.bind(11, emailData.is_flagged);
+            updateStmt.bind(12, emailData.has_attachments);
+            updateStmt.bind(13, emailData.body_text);
+            updateStmt.bind(14, emailData.body_html);
+            updateStmt.bind(15, emailData.size);
+            updateStmt.bind(16, emailId);
+            updateStmt.exec();
+        } else {
+            var insertStmt = db.prepare("INSERT INTO emails "
+                + "(account_id, folder_id, uid, msg_id, in_reply_to, thread_id, subject, sender_name, sender_email, "
+                + "recipients, date_received, date_sent, is_read, is_flagged, has_attachments, "
+                + "body_text, body_html, size) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            insertStmt.bind(1, emailData.account_id);
+            insertStmt.bind(2, emailData.folder_id);
+            insertStmt.bind(3, emailData.uid);
+            insertStmt.bind(4, emailData.msg_id);
+            insertStmt.bind(5, emailData.in_reply_to || "");
+            insertStmt.bind(6, emailData.thread_id || 0);
+            insertStmt.bind(7, emailData.subject);
+            insertStmt.bind(8, emailData.sender_name);
+            insertStmt.bind(9, emailData.sender_email);
+            insertStmt.bind(10, emailData.recipients);
+            insertStmt.bind(11, emailData.date_received);
+            insertStmt.bind(12, emailData.date_sent);
+            insertStmt.bind(13, emailData.is_read);
+            insertStmt.bind(14, emailData.is_flagged);
+            insertStmt.bind(15, emailData.has_attachments);
+            insertStmt.bind(16, emailData.body_text);
+            insertStmt.bind(17, emailData.body_html);
+            insertStmt.bind(18, emailData.size);
+            insertStmt.exec();
+            emailId = db.lastInsertRowId();
+        }
+        return emailId;
+    }
+
+    var batchInsertStmt = null;
+
+    function prepareBatchInsert() {
+        if (batchInsertStmt) {
+            batchInsertStmt.finalize();
+        }
+        batchInsertStmt = db.prepare("INSERT INTO emails "
+            + "(account_id, folder_id, uid, msg_id, in_reply_to, thread_id, subject, sender_name, sender_email, "
+            + "recipients, date_received, date_sent, is_read, is_flagged, has_attachments, "
+            + "body_text, body_html, size) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    }
+
+    function finalizeBatchInsert() {
+        if (batchInsertStmt) {
+            batchInsertStmt.finalize();
+            batchInsertStmt = null;
+        }
+    }
+
+    function saveEmailBatch(emailData) {
+        if (!batchInsertStmt) return 0;
+        batchInsertStmt.bind(1, emailData.account_id);
+        batchInsertStmt.bind(2, emailData.folder_id);
+        batchInsertStmt.bind(3, emailData.uid);
+        batchInsertStmt.bind(4, emailData.msg_id);
+        batchInsertStmt.bind(5, emailData.in_reply_to || "");
+        batchInsertStmt.bind(6, emailData.thread_id || 0);
+        batchInsertStmt.bind(7, emailData.subject);
+        batchInsertStmt.bind(8, emailData.sender_name);
+        batchInsertStmt.bind(9, emailData.sender_email);
+        batchInsertStmt.bind(10, emailData.recipients);
+        batchInsertStmt.bind(11, emailData.date_received);
+        batchInsertStmt.bind(12, emailData.date_sent);
+        batchInsertStmt.bind(13, emailData.is_read);
+        batchInsertStmt.bind(14, emailData.is_flagged);
+        batchInsertStmt.bind(15, emailData.has_attachments);
+        batchInsertStmt.bind(16, emailData.body_text);
+        batchInsertStmt.bind(17, emailData.body_html);
+        batchInsertStmt.bind(18, emailData.size);
+        batchInsertStmt.exec();
+        batchInsertStmt.reset();
+        return db.lastInsertRowId();
+    }
+
+    function getEmailCount() {
+        var result = db.exec("SELECT COUNT(*) as cnt FROM emails");
+        return result.length > 0 ? result[0].cnt : 0;
+    }
+
+    function getEmailMinId() {
+        var result = db.exec("SELECT MIN(id) as min_id FROM emails");
+        return result.length > 0 ? (result[0].min_id || 0) : 0;
+    }
+
+    function getEmailMaxId() {
+        var result = db.exec("SELECT MAX(id) as max_id FROM emails");
+        return result.length > 0 ? (result[0].max_id || 0) : 0;
+    }
+
+    function rebuildFTSIndexBatch(startId, endId) {
+        db.exec("INSERT INTO email_fts(rowid, subject, sender_name, sender_email, body_text, attachment_names) "
+            + "SELECT id, subject, sender_name, sender_email, body_text, '' "
+            + "FROM emails WHERE id >= " + startId + " AND id <= " + endId);
+    }
+
+    function rebuildFTSIndexByRange(minId, maxId, batchSize, onProgress, onComplete) {
+        var totalBatches = Math.ceil((maxId - minId + 1) / batchSize);
+        var currentBatch = 0;
+        var startId = minId;
+
+        function processNextBatch() {
+            if (cancelRequested) {
+                if (onComplete) onComplete(false);
+                return;
+            }
+
+            var endId = Math.min(startId + batchSize - 1, maxId);
+            rebuildFTSIndexBatch(startId, endId);
+            currentBatch++;
+
+            if (onProgress) {
+                var shouldContinue = onProgress(currentBatch, totalBatches, startId, endId);
+                if (shouldContinue === false) {
+                    if (onComplete) onComplete(false);
+                    return;
+                }
+            }
+
+            startId = endId + 1;
+
+            if (startId <= maxId) {
+                setTimeout(processNextBatch, 0);
+            } else {
+                if (onComplete) onComplete(true);
+            }
+        }
+
+        processNextBatch();
+    }
+
+    function rebuildFTSIndexAll(batchSize, onProgress, onComplete) {
+        dropFTSTriggers();
+        db.exec("DELETE FROM email_fts");
+        
+        var result = db.exec("SELECT MIN(id) as min_id, MAX(id) as max_id FROM emails");
+        if (result.length == 0 || !result[0].min_id) {
+            createFTSTriggers();
+            if (onComplete) onComplete(true);
+            return;
+        }
+        
+        var minId = result[0].min_id;
+        var maxId = result[0].max_id;
+        
+        rebuildFTSIndexByRange(minId, maxId, batchSize, onProgress, function(success) {
+            createFTSTriggers();
+            if (onComplete) onComplete(success);
+        });
+    }
+
+    function rebuildThreadIds() {
+        var emails = db.exec("SELECT id, msg_id, in_reply_to FROM emails ORDER BY id");
+        if (emails.length == 0) return;
+
+        var msgIdToId = {};
+        for (var i = 0; i < emails.length; i++) {
+            if (emails[i].msg_id) {
+                msgIdToId[emails[i].msg_id] = emails[i].id;
+            }
+        }
+
+        var parentMap = {};
+        for (var i = 0; i < emails.length; i++) {
+            var e = emails[i];
+            if (e.in_reply_to && msgIdToId[e.in_reply_to]) {
+                parentMap[e.id] = msgIdToId[e.in_reply_to];
+            }
+        }
+
+        function findRoot(id, visited) {
+            if (!visited) visited = {};
+            if (visited[id]) return id;
+            visited[id] = true;
+            if (parentMap[id]) {
+                return findRoot(parentMap[id], visited);
+            }
+            return id;
+        }
+
+        db.exec("CREATE TEMP TABLE IF NOT EXISTS tmp_thread (id INTEGER PRIMARY KEY, thread_id INTEGER)");
+        var batch = db.prepare("INSERT INTO tmp_thread (id, thread_id) VALUES (?, ?)");
+        db.exec("BEGIN TRANSACTION");
+        for (var i = 0; i < emails.length; i++) {
+            var rootId = findRoot(emails[i].id);
+            batch.bind(1, emails[i].id);
+            batch.bind(2, rootId);
+            batch.exec();
+            batch.reset();
+        }
+        db.exec("COMMIT");
+        batch.finalize();
+
+        db.exec("UPDATE emails SET thread_id = (SELECT thread_id FROM tmp_thread WHERE tmp_thread.id = emails.id)");
+        db.exec("DROP TABLE IF EXISTS tmp_thread");
+    }
+
+    function getThreads(folderId, limit, offset, sortBy) {
+        var orderBy = "last_date DESC";
+        if (sortBy == "date_asc") orderBy = "last_date ASC";
+        else if (sortBy == "sender") orderBy = "senders ASC";
+        else if (sortBy == "subject") orderBy = "subject ASC";
+
+        var sql = "SELECT "
+            + "e.thread_id, "
+            + "COUNT(*) as email_count, "
+            + "MAX(e.date_received) as last_date, "
+            + "MIN(e.date_received) as first_date, "
+            + "GROUP_CONCAT(DISTINCT e.sender_name, ', ') as senders, "
+            + "GROUP_CONCAT(DISTINCT CASE WHEN e.is_read = 0 THEN 1 END) as has_unread, "
+            + "MAX(e.has_attachments) as has_attachments, "
+            + "(SELECT subject FROM emails WHERE thread_id = e.thread_id ORDER BY date_received ASC LIMIT 1) as subject, "
+            + "(SELECT id FROM emails WHERE thread_id = e.thread_id ORDER BY date_received DESC LIMIT 1) as latest_id, "
+            + "(SELECT body_text FROM emails WHERE thread_id = e.thread_id ORDER BY date_received DESC LIMIT 1) as preview "
+            + "FROM emails e "
+            + "WHERE e.folder_id = ? "
+            + "GROUP BY e.thread_id "
+            + "ORDER BY " + orderBy + " LIMIT ? OFFSET ?";
+
+        var stmt = db.prepare(sql);
+        stmt.bind(1, folderId);
+        stmt.bind(2, limit);
+        stmt.bind(3, offset);
+        return stmt.exec();
+    }
+
+    function getThreadEmails(threadId) {
+        var stmt = db.prepare("SELECT e.*, "
+            + "(SELECT GROUP_CONCAT(t.name || '|' || t.color, ',') FROM tags t "
+            + "JOIN email_tags et ON t.id = et.tag_id WHERE et.email_id = e.id) as tags "
+            + "FROM emails e WHERE e.thread_id = ? ORDER BY e.date_received ASC");
+        stmt.bind(1, threadId);
+        return stmt.exec();
+    }
+
+    function getEmails(folderId, limit, offset, sortBy) {
+        var orderBy = "date_received DESC";
+        if (sortBy == "date_asc") orderBy = "date_received ASC";
+        else if (sortBy == "sender") orderBy = "sender_name ASC";
+        else if (sortBy == "subject") orderBy = "subject ASC";
+        
+        var stmt = db.prepare("SELECT e.*, "
+            + "(SELECT GROUP_CONCAT(t.name || '|' || t.color, ',') FROM tags t "
+            + "JOIN email_tags et ON t.id = et.tag_id WHERE et.email_id = e.id) as tags "
+            + "FROM emails e WHERE e.folder_id = ? ORDER BY " + orderBy + " LIMIT ? OFFSET ?");
+        stmt.bind(1, folderId);
+        stmt.bind(2, limit);
+        stmt.bind(3, offset);
+        return stmt.exec();
+    }
+
+    function getEmailById(emailId) {
+        var stmt = db.prepare("SELECT e.*, "
+            + "(SELECT GROUP_CONCAT(t.name || '|' || t.color, ',') FROM tags t "
+            + "JOIN email_tags et ON t.id = et.tag_id WHERE et.email_id = e.id) as tags "
+            + "FROM emails e WHERE e.id = ?");
+        stmt.bind(1, emailId);
+        var result = stmt.exec();
+        return result.length > 0 ? result[0] : null;
+    }
+
+    function markAsRead(emailId, isRead) {
+        db.exec("UPDATE emails SET is_read = " + (isRead ? 1 : 0) + " WHERE id = " + emailId);
+    }
+
+    function deleteEmail(emailId) {
+        db.exec("DELETE FROM attachments WHERE email_id = " + emailId);
+        db.exec("DELETE FROM email_tags WHERE email_id = " + emailId);
+        db.exec("DELETE FROM emails WHERE id = " + emailId);
+    }
+
+    function getUnreadCount(folderId) {
+        var stmt = db.prepare("SELECT COUNT(*) as cnt FROM emails WHERE folder_id = ? AND is_read = 0");
+        stmt.bind(1, folderId);
+        var result = stmt.exec();
+        return result.length > 0 ? result[0].cnt : 0;
+    }
+
+    function saveAttachment(emailId, filename, contentType, size, contentPath) {
+        var stmt = db.prepare("INSERT INTO attachments (email_id, filename, content_type, size, content_path) "
+            + "VALUES (?, ?, ?, ?, ?)");
+        stmt.bind(1, emailId);
+        stmt.bind(2, filename);
+        stmt.bind(3, contentType);
+        stmt.bind(4, size);
+        stmt.bind(5, contentPath);
+        stmt.exec();
+        return db.lastInsertRowId();
+    }
+
+    function getAttachments(emailId) {
+        var stmt = db.prepare("SELECT * FROM attachments WHERE email_id = ?");
+        stmt.bind(1, emailId);
+        return stmt.exec();
+    }
+
+    function saveTag(name, color) {
+        var stmt = db.prepare("INSERT OR REPLACE INTO tags (name, color) VALUES (?, ?)");
+        stmt.bind(1, name);
+        stmt.bind(2, color);
+        stmt.exec();
+        return db.lastInsertRowId();
+    }
+
+    function deleteTag(tagId) {
+        db.exec("DELETE FROM email_tags WHERE tag_id = " + tagId);
+        db.exec("DELETE FROM tags WHERE id = " + tagId);
+    }
+
+    function getTags() {
+        return db.exec("SELECT t.*, (SELECT COUNT(*) FROM email_tags et WHERE et.tag_id = t.id) as count "
+            + "FROM tags t ORDER BY name");
+    }
+
+    function addTagToEmail(emailId, tagId) {
+        db.exec("INSERT OR IGNORE INTO email_tags (email_id, tag_id) VALUES (" + emailId + ", " + tagId + ")");
+    }
+
+    function removeTagFromEmail(emailId, tagId) {
+        db.exec("DELETE FROM email_tags WHERE email_id = " + emailId + " AND tag_id = " + tagId);
+    }
+
+    function searchEmails(options) {
+        var conditions = [];
+        var params = [];
+        var paramIndex = 1;
+
+        if (options.query && options.query.length > 0) {
+            var ftsQuery = options.query.replace(/"/g, '""');
+            conditions.push("e.id IN (SELECT rowid FROM email_fts WHERE email_fts MATCH ?)");
+            params.push('"' + ftsQuery + '"');
+            paramIndex++;
+        }
+
+        if (options.from && options.from.length > 0) {
+            conditions.push("(e.sender_name LIKE ? OR e.sender_email LIKE ?)");
+            params.push("%" + options.from + "%");
+            params.push("%" + options.from + "%");
+            paramIndex += 2;
+        }
+
+        if (options.to && options.to.length > 0) {
+            conditions.push("e.recipients LIKE ?");
+            params.push("%" + options.to + "%");
+            paramIndex++;
+        }
+
+        if (options.subject && options.subject.length > 0) {
+            conditions.push("e.subject LIKE ?");
+            params.push("%" + options.subject + "%");
+            paramIndex++;
+        }
+
+        if (options.body && options.body.length > 0) {
+            conditions.push("e.body_text LIKE ?");
+            params.push("%" + options.body + "%");
+            paramIndex++;
+        }
+
+        if (options.attachment && options.attachment.length > 0) {
+            conditions.push("e.id IN (SELECT email_id FROM attachments WHERE filename LIKE ?)");
+            params.push("%" + options.attachment + "%");
+            paramIndex++;
+        }
+
+        if (options.dateFrom) {
+            conditions.push("e.date_received >= ?");
+            params.push(options.dateFrom);
+            paramIndex++;
+        }
+
+        if (options.dateTo) {
+            conditions.push("e.date_received <= ?");
+            params.push(options.dateTo);
+            paramIndex++;
+        }
+
+        if (options.tagId) {
+            conditions.push("e.id IN (SELECT email_id FROM email_tags WHERE tag_id = ?)");
+            params.push(options.tagId);
+            paramIndex++;
+        }
+
+        if (options.unread) {
+            conditions.push("e.is_read = 0");
+        }
+
+        if (options.hasAttachments) {
+            conditions.push("e.has_attachments = 1");
+        }
+
+        if (options.folderId) {
+            conditions.push("e.folder_id = ?");
+            params.push(options.folderId);
+            paramIndex++;
+        }
+
+        var whereClause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+        var sql = "SELECT e.*, "
+            + "(SELECT GROUP_CONCAT(t.name || '|' || t.color, ',') FROM tags t "
+            + "JOIN email_tags et ON t.id = et.tag_id WHERE et.email_id = e.id) as tags "
+            + "FROM emails e " + whereClause + " ORDER BY e.date_received DESC";
+
+        var stmt = db.prepare(sql);
+        for (var i = 0; i < params.length; i++) {
+            stmt.bind(i + 1, params[i]);
+        }
+        return stmt.exec();
+    }
+
+    function quickSearch(query) {
+        if (!query || query.length == 0) {
+            return [];
+        }
+        var ftsQuery = query.replace(/"/g, '""');
+        var stmt = db.prepare("SELECT e.*, "
+            + "(SELECT GROUP_CONCAT(t.name || '|' || t.color, ',') FROM tags t "
+            + "JOIN email_tags et ON t.id = et.tag_id WHERE et.email_id = e.id) as tags "
+            + "FROM emails e JOIN email_fts fts ON e.id = fts.rowid "
+            + "WHERE email_fts MATCH ? ORDER BY e.date_received DESC LIMIT 100");
+        stmt.bind(1, ftsQuery);
+        return stmt.exec();
+    }
+
+    function close() {
+        if (batchInsertStmt) {
+            batchInsertStmt.finalize();
+            batchInsertStmt = null;
+        }
+        if (db) {
+            db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+            db.close();
+            db = null;
+        }
+    }
+
+}
