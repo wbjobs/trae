@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工业管道流体3D交互可视化平台</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div id="app-container">
+        <div id="canvas-container"></div>
+
+        <header class="top-bar">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <rect x="2" y="12" width="28" height="8" rx="4" fill="#00d4ff"/>
+                    <circle cx="8" cy="16" r="4" fill="#00ff88"/>
+                    <circle cx="24" cy="16" r="4" fill="#ff6b6b"/>
+                </svg>
+                <h1>工业管道流体3D交互可视化平台</h1>
+            </div>
+            <div class="status-indicators">
+                <div class="status-item">
+                    <span class="status-dot connected"></span>
+                    <span>数据连接</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot running"></span>
+                    <span>系统运行</span>
+                </div>
+                <div class="time-display" id="current-time"></div>
+            </div>
+        </header>
+
+        <aside class="control-panel">
+            <div class="panel-section">
+                <h3>视角控制</h3>
+                <div class="control-group">
+                    <button class="control-btn" onclick="app.setView('front')">
+                        <span class="btn-icon">⤴</span>
+                        正视图
+                    </button>
+                    <button class="control-btn" onclick="app.setView('top')">
+                        <span class="btn-icon">⬆</span>
+                        俯视图
+                    </button>
+                    <button class="control-btn" onclick="app.setView('side')">
+                        <span class="btn-icon">➡</span>
+                        侧视图
+                    </button>
+                </div>
+                <div class="control-group">
+                    <button class="control-btn toggle-btn" onclick="app.toggleControlMode()">
+                        <span class="btn-icon">🔄</span>
+                        切换漫游模式
+                    </button>
+                    <button class="control-btn" onclick="app.orbitControls.reset()">
+                        <span class="btn-icon">↺</span>
+                        重置视角
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>显示控制</h3>
+                <div class="toggle-group">
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-particles" checked onchange="app.toggleParticles(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">流体粒子</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-pressure" checked onchange="app.togglePressureLabels(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">压力标签</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-flow" checked onchange="app.toggleFlowArrows(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">流向箭头</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-faults" checked onchange="app.toggleFaultMarkers(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">故障标记</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-splitters" checked onchange="app.toggleSplitters(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">分流器</span>
+                    </label>
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-paths" checked onchange="app.toggleInspectionPaths(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">巡检路径</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>剖切观测</h3>
+                <div class="toggle-group">
+                    <label class="toggle-item">
+                        <input type="checkbox" id="toggle-clipping" onchange="app.toggleSectionClipping(this.checked)">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">启用剖切</span>
+                    </label>
+                </div>
+                <div class="slider-group">
+                    <label>+X 剖切位置</label>
+                    <input type="range" id="clip-x-plus" min="-100" max="100" step="1" value="100" disabled
+                           oninput="app.setSectionPlanePosition(0, parseFloat(this.value))">
+                </div>
+                <div class="slider-group">
+                    <label>-X 剖切位置</label>
+                    <input type="range" id="clip-x-minus" min="-100" max="100" step="1" value="-100" disabled
+                           oninput="app.setSectionPlanePosition(1, parseFloat(this.value))">
+                </div>
+                <div class="slider-group">
+                    <label>+Y 剖切位置</label>
+                    <input type="range" id="clip-y-plus" min="-100" max="100" step="1" value="100" disabled
+                           oninput="app.setSectionPlanePosition(2, parseFloat(this.value))">
+                </div>
+                <div class="slider-group">
+                    <label>-Y 剖切位置</label>
+                    <input type="range" id="clip-y-minus" min="-100" max="100" step="1" value="-100" disabled
+                           oninput="app.setSectionPlanePosition(3, parseFloat(this.value))">
+                </div>
+                <div class="slider-group">
+                    <label>+Z 剖切位置</label>
+                    <input type="range" id="clip-z-plus" min="-100" max="100" step="1" value="100" disabled
+                           oninput="app.setSectionPlanePosition(4, parseFloat(this.value))">
+                </div>
+                <div class="slider-group">
+                    <label>-Z 剖切位置</label>
+                    <input type="range" id="clip-z-minus" min="-100" max="100" step="1" value="-100" disabled
+                           oninput="app.setSectionPlanePosition(5, parseFloat(this.value))">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>流速控制</h3>
+                <div class="slider-group">
+                    <label>流速倍率</label>
+                    <input type="range" id="flow-speed" min="0" max="3" step="0.1" value="1" 
+                           oninput="app.setFlowSpeed(parseFloat(this.value))">
+                    <span id="flow-speed-value">1.0x</span>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>巡检路径</h3>
+                <div class="control-group">
+                    <button class="control-btn" onclick="app.playInspectionPath(0)">
+                        <span class="btn-icon">▶</span>
+                        开始巡检
+                    </button>
+                    <button class="control-btn" onclick="app.pauseInspectionPath()">
+                        <span class="btn-icon">⏸</span>
+                        暂停
+                    </button>
+                    <button class="control-btn" onclick="app.stopInspectionPath()">
+                        <span class="btn-icon">⏹</span>
+                        停止
+                    </button>
+                </div>
+                <div class="slider-group">
+                    <label>巡检速度</label>
+                    <input type="range" id="inspection-speed" min="0.1" max="5" step="0.1" value="1"
+                           oninput="app.setInspectionSpeed(parseFloat(this.value))">
+                    <span id="inspection-speed-value">1.0x</span>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>分流控制</h3>
+                <div class="slider-group">
+                    <label>分支1比例</label>
+                    <input type="range" id="splitter-ratio" min="0" max="1" step="0.05" value="0.6"
+                           oninput="updateSplitterRatio(this.value)">
+                    <span id="splitter-ratio-value">60%</span>
+                </div>
+                <div class="slider-group">
+                    <label>分支2比例</label>
+                    <span id="splitter-ratio2-value">40%</span>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>系统操作</h3>
+                <div class="control-group">
+                    <button class="control-btn primary" onclick="app.takeSnapshot()">
+                        <span class="btn-icon">📷</span>
+                        保存快照
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-section legend-section">
+                <h3>图例说明</h3>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4a90d9;"></div>
+                        <span>正常管道</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffff00;"></div>
+                        <span>压力警告</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff0000;"></div>
+                        <span>故障报警</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ffff;"></div>
+                        <span>流体流向</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="info-panel">
+            <div class="info-tabs">
+                <button class="tab-btn active" data-tab="overview">概览</button>
+                <button class="tab-btn" data-tab="details">详情</button>
+                <button class="tab-btn" data-tab="alarms">告警</button>
+            </div>
+            
+            <div class="tab-content active" id="tab-overview">
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon pressure">⚡</div>
+                        <div class="stat-info">
+                            <div class="stat-label">平均压力</div>
+                            <div class="stat-value" id="avg-pressure">-- MPa</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon flow">💧</div>
+                        <div class="stat-info">
+                            <div class="stat-label">平均流速</div>
+                            <div class="stat-value" id="avg-flow">-- m/s</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon temp">🌡️</div>
+                        <div class="stat-info">
+                            <div class="stat-label">平均温度</div>
+                            <div class="stat-value" id="avg-temp">-- °C</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon alarm">⚠️</div>
+                        <div class="stat-info">
+                            <div class="stat-label">活跃告警</div>
+                            <div class="stat-value" id="active-alarms">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-details">
+                <div id="component-details" class="component-details">
+                    <p class="placeholder">点击管道组件查看详细信息</p>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-alarms">
+                <div id="alarm-list" class="alarm-list">
+                    <p class="placeholder">暂无告警信息</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="help-overlay" id="help-overlay">
+            <div class="help-content">
+                <h3>操作指南</h3>
+                <div class="help-items">
+                    <div class="help-item"><kbd>左键拖动</kbd> 旋转视角</div>
+                    <div class="help-item"><kbd>右键拖动</kbd> 平移视角</div>
+                    <div class="help-item"><kbd>滚轮</kbd> 缩放</div>
+                    <div class="help-item"><kbd>点击</kbd> 选择组件</div>
+                    <div class="help-item"><kbd>双击</kbd> 聚焦组件</div>
+                    <div class="help-item"><kbd>V</kbd> 切换漫游模式</div>
+                    <div class="help-item"><kbd>P</kbd> 保存快照</div>
+                    <div class="help-item"><kbd>F</kbd> 聚焦选中组件</div>
+                    <div class="help-item"><kbd>R</kbd> 重置视角</div>
+                    <div class="help-item"><kbd>1/2/3</kbd> 快速切换视角</div>
+                </div>
+                <button class="close-btn" onclick="document.getElementById('help-overlay').style.display='none'">知道了</button>
+            </div>
+        </div>
+
+        <button class="help-btn" onclick="document.getElementById('help-overlay').style.display='flex'">?</button>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+    <script type="module">
+        import PipelineVisualizationApp from './src/main.js';
+        
+        const container = document.getElementById('canvas-container');
+        window.app = new PipelineVisualizationApp(container);
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleString('zh-CN');
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+            });
+        });
+
+        document.getElementById('flow-speed').addEventListener('input', (e) => {
+            document.getElementById('flow-speed-value').textContent = `${e.target.value}x`;
+        });
+
+        document.getElementById('inspection-speed').addEventListener('input', (e) => {
+            document.getElementById('inspection-speed-value').textContent = `${e.target.value}x`;
+        });
+
+        document.getElementById('toggle-clipping').addEventListener('change', (e) => {
+            const sliders = document.querySelectorAll('[id^="clip-"]');
+            sliders.forEach(slider => {
+                slider.disabled = !e.target.checked;
+            });
+        });
+
+        function updateSplitterRatio(ratio) {
+            const ratio1 = parseFloat(ratio);
+            const ratio2 = 1 - ratio1;
+            document.getElementById('splitter-ratio-value').textContent = `${(ratio1 * 100).toFixed(0)}%`;
+            document.getElementById('splitter-ratio2-value').textContent = `${(ratio2 * 100).toFixed(0)}%`;
+            if (app && app.setSplitterRatio) {
+                app.setSplitterRatio(0, 0, ratio1);
+                app.setSplitterRatio(0, 1, ratio2);
+            }
+        }
+
+        app.dataSimulator.onData((data) => {
+            const pressures = Object.values(data.pressure);
+            const flows = Object.values(data.flow);
+            const temps = Object.values(data.temperature);
+            const activeAlarms = data.alarms.filter(a => a.active).length;
+
+            if (pressures.length > 0) {
+                const avgPressure = pressures.reduce((a, b) => a + b, 0) / pressures.length;
+                document.getElementById('avg-pressure').textContent = `${avgPressure.toFixed(2)} MPa`;
+            }
+            if (flows.length > 0) {
+                const avgFlow = flows.reduce((a, b) => a + b, 0) / flows.length;
+                document.getElementById('avg-flow').textContent = `${avgFlow.toFixed(2)} m/s`;
+            }
+            if (temps.length > 0) {
+                const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
+                document.getElementById('avg-temp').textContent = `${avgTemp.toFixed(1)} °C`;
+            }
+            document.getElementById('active-alarms').textContent = activeAlarms;
+
+            const alarmList = document.getElementById('alarm-list');
+            if (data.alarms.length > 0) {
+                alarmList.innerHTML = data.alarms
+                    .filter(a => a.active)
+                    .sort((a, b) => b.timestamp - a.timestamp)
+                    .map(alarm => `
+                        <div class="alarm-item ${alarm.severity}">
+                            <div class="alarm-header">
+                                <span class="alarm-type">${alarm.type}</span>
+                                <span class="alarm-time">${new Date(alarm.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="alarm-message">${alarm.message}</div>
+                            <div class="alarm-component">组件: ${alarm.componentId}</div>
+                        </div>
+                    `).join('');
+            } else {
+                alarmList.innerHTML = '<p class="placeholder">暂无告警信息</p>';
+            }
+        });
+
+        app.pickInteractor.onSelect((object) => {
+            const detailsEl = document.getElementById('component-details');
+            const userData = object.userData;
+            if (userData) {
+                detailsEl.innerHTML = `
+                    <div class="detail-header">
+                        <h4>${userData.name || userData.type}</h4>
+                        <span class="detail-id">${userData.id}</span>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">类型</span>
+                            <span class="detail-value">${userData.type}</span>
+                        </div>
+                        ${userData.pressure !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">压力</span>
+                            <span class="detail-value">${userData.pressure.toFixed(2)} MPa</span>
+                        </div>
+                        ` : ''}
+                        ${userData.flowRate !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">流速</span>
+                            <span class="detail-value">${userData.flowRate.toFixed(2)} m/s</span>
+                        </div>
+                        ` : ''}
+                        ${userData.temperature !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">温度</span>
+                            <span class="detail-value">${userData.temperature.toFixed(1)} °C</span>
+                        </div>
+                        ` : ''}
+                        ${userData.length !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">长度</span>
+                            <span class="detail-value">${userData.length.toFixed(1)} m</span>
+                        </div>
+                        ` : ''}
+                        ${userData.radius !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">半径</span>
+                            <span class="detail-value">${userData.radius.toFixed(1)} m</span>
+                        </div>
+                        ` : ''}
+                        ${userData.isOpen !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">状态</span>
+                            <span class="detail-value ${userData.isOpen ? 'open' : 'closed'}">${userData.isOpen ? '开启' : '关闭'}</span>
+                        </div>
+                        ` : ''}
+                        ${userData.isRunning !== undefined ? `
+                        <div class="detail-item">
+                            <span class="detail-label">运行状态</span>
+                            <span class="detail-value ${userData.isRunning ? 'running' : 'stopped'}">${userData.isRunning ? '运行中' : '已停止'}</span>
+                        </div>
+                        ` : ''}
+                        ${userData.isFault ? `
+                        <div class="detail-item full">
+                            <span class="status-badge fault">故障</span>
+                        </div>
+                        ` : userData.isWarning ? `
+                        <div class="detail-item full">
+                            <span class="status-badge warning">警告</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

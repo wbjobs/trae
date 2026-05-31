@@ -1,0 +1,22 @@
+{
+  "name": "industrial-pipeline-3d-visualization",
+  "version": "1.0.0",
+  "description": "工业管道流体3D交互可视化平台",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "dev": "python -m http.server 8080"
+  },
+  "keywords": [
+    "3d",
+    "pipeline",
+    "visualization",
+    "three.js",
+    "industrial"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.160.0"
+  }
+}
