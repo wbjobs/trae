@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+
+thanos:
+  endpoints:
+    - "http://thanos-receiver-1:10902"
+    - "http://thanos-receiver-2:10902"
+  query_timeout: 300
+  max_retries: 3
+
+downsampling:
+  auto_threshold_days: 30
+  granularities:
+    - "5m"
+    - "1h"
+    - "1d"
+  default_granularity: "1h"
+  lttb_threshold: 10000
+
+cache:
+  enabled: true
+  default_ttl_seconds: 3600
+  max_items: 10000
+
+log:
+  level: "info"
+  format: "json"
