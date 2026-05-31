@@ -1,0 +1,199 @@
+{
+  "weather_types": {
+    "clear": {
+      "name": "晴朗",
+      "visibility_modifier": 1.0,
+      "stealth_modifier": 0,
+      "enemy_detection_modifier": 1.0,
+      "movement_noise_modifier": 1.0,
+      "footprint_visibility": 1.0,
+      "sound_propagation": 1.0
+    },
+    "cloudy": {
+      "name": "多云",
+      "visibility_modifier": 0.9,
+      "stealth_modifier": 5,
+      "enemy_detection_modifier": 0.9,
+      "movement_noise_modifier": 1.0,
+      "footprint_visibility": 0.8,
+      "sound_propagation": 1.0
+    },
+    "overcast": {
+      "name": "阴天",
+      "visibility_modifier": 0.75,
+      "stealth_modifier": 10,
+      "enemy_detection_modifier": 0.8,
+      "movement_noise_modifier": 0.95,
+      "footprint_visibility": 0.6,
+      "sound_propagation": 0.95
+    },
+    "light_rain": {
+      "name": "小雨",
+      "visibility_modifier": 0.7,
+      "stealth_modifier": 15,
+      "enemy_detection_modifier": 0.75,
+      "movement_noise_modifier": 0.7,
+      "footprint_visibility": 0.3,
+      "sound_propagation": 0.7,
+      "environmental_damage": 0
+    },
+    "heavy_rain": {
+      "name": "大雨",
+      "visibility_modifier": 0.55,
+      "stealth_modifier": 25,
+      "enemy_detection_modifier": 0.6,
+      "movement_noise_modifier": 0.4,
+      "footprint_visibility": 0.1,
+      "sound_propagation": 0.5,
+      "environmental_damage": 0,
+      "slippery_chance": 0.2
+    },
+    "thunderstorm": {
+      "name": "雷雨",
+      "visibility_modifier": 0.4,
+      "stealth_modifier": 35,
+      "enemy_detection_modifier": 0.45,
+      "movement_noise_modifier": 0.3,
+      "footprint_visibility": 0.05,
+      "sound_propagation": 0.35,
+      "environmental_damage": 0,
+      "lightning_flash_chance": 0.15,
+      "lightning_reveal_radius": 15
+    },
+    "fog": {
+      "name": "浓雾",
+      "visibility_modifier": 0.35,
+      "stealth_modifier": 30,
+      "enemy_detection_modifier": 0.4,
+      "movement_noise_modifier": 0.85,
+      "footprint_visibility": 0.4,
+      "sound_propagation": 0.6,
+      "view_radius_penalty": 3
+    },
+    "light_snow": {
+      "name": "小雪",
+      "visibility_modifier": 0.65,
+      "stealth_modifier": 12,
+      "enemy_detection_modifier": 0.7,
+      "movement_noise_modifier": 0.8,
+      "footprint_visibility": 1.0,
+      "sound_propagation": 0.75,
+      "footprint_duration": 30000,
+      "cold_damage": 0.5
+    },
+    "heavy_snow": {
+      "name": "大雪",
+      "visibility_modifier": 0.45,
+      "stealth_modifier": 22,
+      "enemy_detection_modifier": 0.55,
+      "movement_noise_modifier": 0.6,
+      "footprint_visibility": 1.0,
+      "sound_propagation": 0.55,
+      "footprint_duration": 60000,
+      "cold_damage": 1,
+      "movement_speed_penalty": 0.2
+    },
+    "sandstorm": {
+      "name": "沙尘暴",
+      "visibility_modifier": 0.25,
+      "stealth_modifier": 40,
+      "enemy_detection_modifier": 0.35,
+      "movement_noise_modifier": 0.5,
+      "footprint_visibility": 0.0,
+      "sound_propagation": 0.4,
+      "environmental_damage": 1,
+      "view_radius_penalty": 5,
+      "movement_speed_penalty": 0.3
+    },
+    "radiation_storm": {
+      "name": "辐射风暴",
+      "visibility_modifier": 0.6,
+      "stealth_modifier": 5,
+      "enemy_detection_modifier": 0.85,
+      "movement_noise_modifier": 1.0,
+      "footprint_visibility": 1.0,
+      "sound_propagation": 1.0,
+      "radiation_damage": 3,
+      "geiger_counter_active": true
+    },
+    "toxic_fog": {
+      "name": "毒雾",
+      "visibility_modifier": 0.3,
+      "stealth_modifier": 25,
+      "enemy_detection_modifier": 0.5,
+      "movement_noise_modifier": 0.9,
+      "footprint_visibility": 0.2,
+      "sound_propagation": 0.7,
+      "toxic_damage": 2,
+      "requires_gas_mask": true
+    }
+  },
+  "weather_transitions": {
+    "clear": ["cloudy", "overcast"],
+    "cloudy": ["clear", "overcast", "light_rain", "fog"],
+    "overcast": ["cloudy", "light_rain", "heavy_rain", "fog", "light_snow"],
+    "light_rain": ["overcast", "heavy_rain", "thunderstorm", "cloudy"],
+    "heavy_rain": ["light_rain", "thunderstorm", "overcast"],
+    "thunderstorm": ["heavy_rain", "overcast"],
+    "fog": ["cloudy", "overcast", "clear"],
+    "light_snow": ["overcast", "heavy_snow", "cloudy"],
+    "heavy_snow": ["light_snow", "overcast"],
+    "sandstorm": ["clear", "cloudy"],
+    "radiation_storm": ["clear", "overcast"],
+    "toxic_fog": ["fog", "clear"]
+  },
+  "weather_effects": {
+    "lightning_flash": {
+      "duration": 500,
+      "reveal_enemies": true,
+      "stealth_penalty": 50
+    },
+    "slippery_ground": {
+      "fall_chance": 0.1,
+      "noise_increase": 20
+    },
+    "footprint_tracking": {
+      "enabled": true,
+      "max_tracks": 50
+    }
+  },
+  "time_of_day_effects": {
+    "dawn": {
+      "name": "黎明",
+      "visibility_modifier": 0.7,
+      "stealth_modifier": 10,
+      "enemy_detection_modifier": 0.8,
+      "shadow_length": 2.0
+    },
+    "day": {
+      "name": "白天",
+      "visibility_modifier": 1.0,
+      "stealth_modifier": 0,
+      "enemy_detection_modifier": 1.0,
+      "shadow_length": 1.0
+    },
+    "dusk": {
+      "name": "黄昏",
+      "visibility_modifier": 0.7,
+      "stealth_modifier": 15,
+      "enemy_detection_modifier": 0.75,
+      "shadow_length": 2.5
+    },
+    "night": {
+      "name": "夜晚",
+      "visibility_modifier": 0.4,
+      "stealth_modifier": 25,
+      "enemy_detection_modifier": 0.5,
+      "shadow_length": 0,
+      "requires_flashlight": true
+    },
+    "midnight": {
+      "name": "午夜",
+      "visibility_modifier": 0.25,
+      "stealth_modifier": 35,
+      "enemy_detection_modifier": 0.35,
+      "shadow_length": 0,
+      "requires_flashlight": true
+    }
+  }
+}

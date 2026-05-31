@@ -1,0 +1,30 @@
+{
+  "stealth_mechanics": {
+    "base_stealth": 50,
+    "crouch_bonus": 30,
+    "prone_bonus": 50,
+    "movement_penalty_per_tile": 5,
+    "noise_penalty": {
+      "walk": 5,
+      "run": 25,
+      "crawl": 0
+    },
+    "cover_effectiveness": {
+      "full": 80,
+      "partial": 40,
+      "none": 0
+    },
+    "detection_formula": "base = (enemy_awareness + distance_factor + noise_factor) * cover_factor"
+  },
+  "player_actions": {
+    "stand": {"stealth_modifier": 0, "movement_speed": 1.0},
+    "crouch": {"stealth_modifier": 30, "movement_speed": 0.6},
+    "prone": {"stealth_modifier": 50, "movement_speed": 0.3}
+  },
+  "enemy_awareness_levels": {
+    "unaware": 0,
+    "suspicious": 30,
+    "alert": 60,
+    "combat": 100
+  }
+}

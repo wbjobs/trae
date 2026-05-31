@@ -1,0 +1,170 @@
+{
+  "clue_types": {
+    "document": {
+      "name": "文献残页",
+      "weight": 35,
+      "rarity_weights": {
+        "common": 60,
+        "uncommon": 30,
+        "rare": 8,
+        "legendary": 2
+      },
+      "base_reward": {
+        "exp": 10,
+        "reputation": 5
+      },
+      "decay_rate": 0.01
+    },
+    "artifact": {
+      "name": "古代器物",
+      "weight": 25,
+      "rarity_weights": {
+        "common": 40,
+        "uncommon": 35,
+        "rare": 20,
+        "legendary": 5
+      },
+      "base_reward": {
+        "exp": 25,
+        "reputation": 15
+      },
+      "decay_rate": 0.005
+    },
+    "inscription": {
+      "name": "铭文刻痕",
+      "weight": 20,
+      "rarity_weights": {
+        "common": 50,
+        "uncommon": 35,
+        "rare": 12,
+        "legendary": 3
+      },
+      "base_reward": {
+        "exp": 15,
+        "reputation": 10
+      },
+      "decay_rate": 0.008
+    },
+    "map_fragment": {
+      "name": "地图残片",
+      "weight": 15,
+      "rarity_weights": {
+        "common": 70,
+        "uncommon": 20,
+        "rare": 8,
+        "legendary": 2
+      },
+      "base_reward": {
+        "exp": 20,
+        "reputation": 8
+      },
+      "decay_rate": 0.015
+    },
+    "trace": {
+      "name": "探索痕迹",
+      "weight": 5,
+      "rarity_weights": {
+        "common": 80,
+        "uncommon": 15,
+        "rare": 4,
+        "legendary": 1
+      },
+      "base_reward": {
+        "exp": 5,
+        "reputation": 2
+      },
+      "decay_rate": 0.02
+    }
+  },
+  "rarity_levels": {
+    "common": {
+      "name": "普通",
+      "color": "#9CA3AF",
+      "multiplier": 1.0,
+      "min_fragments": 1,
+      "max_fragments": 3
+    },
+    "uncommon": {
+      "name": "稀有",
+      "color": "#10B981",
+      "multiplier": 1.5,
+      "min_fragments": 2,
+      "max_fragments": 5
+    },
+    "rare": {
+      "name": "珍贵",
+      "color": "#3B82F6",
+      "multiplier": 2.5,
+      "min_fragments": 4,
+      "max_fragments": 8
+    },
+    "legendary": {
+      "name": "传说",
+      "color": "#F59E0B",
+      "multiplier": 5.0,
+      "min_fragments": 8,
+      "max_fragments": 15
+    }
+  },
+  "deduction_rules": {
+    "same_type_bonus": 0.15,
+    "same_rarity_bonus": 0.10,
+    "location_cluster_bonus": 0.20,
+    "time_sequence_bonus": 0.25,
+    "max_deduction_level": 5,
+    "base_success_rate": 0.6,
+    "skill_modifier": 0.05
+  },
+  "spawn_config": {
+    "base_count": 8,
+    "count_per_player": 2,
+    "min_distance": 3,
+    "max_spawn_attempts": 50,
+    "spawn_on_tiles": ["ground", "building", "rubble"],
+    "respawn_enabled": true,
+    "respawn_interval": 120000,
+    "max_clues_on_map": 20
+  },
+  "relics": {
+    "ancient_amulet": {
+      "name": "远古护身符",
+      "description": "刻有神秘符文的金属护身符，似乎与古代祭祀有关",
+      "required_clues": {
+        "inscription": 3,
+        "artifact": 2
+      },
+      "reward": {
+        "exp": 200,
+        "reputation": 100,
+        "items": ["ancient_amulet"]
+      }
+    },
+    "temple_map": {
+      "name": "神庙地图",
+      "description": "标注了隐藏神庙位置的完整地图",
+      "required_clues": {
+        "map_fragment": 5,
+        "document": 2
+      },
+      "reward": {
+        "exp": 300,
+        "reputation": 150,
+        "unlock_area": "hidden_temple"
+      }
+    },
+    "royal_seal": {
+      "name": "王室印玺",
+      "description": "古代王国的王室印玺，证明了遗迹的身份",
+      "required_clues": {
+        "artifact": 4,
+        "inscription": 3,
+        "document": 2
+      },
+      "reward": {
+        "exp": 500,
+        "reputation": 250,
+        "title": "遗迹探索者"
+      }
+    }
+  }
+}

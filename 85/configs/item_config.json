@@ -1,0 +1,71 @@
+{
+  "item_types": {
+    "medkit": {
+      "name": "医疗包",
+      "type": "consumable",
+      "rarity": "common",
+      "weight": 1.0,
+      "effect": {"heal": 30},
+      "spawn_chance": 0.15,
+      "hidden_detection_required": 0
+    },
+    "ammo": {
+      "name": "弹药",
+      "type": "resource",
+      "rarity": "common",
+      "weight": 0.5,
+      "effect": {"ammo": 10},
+      "spawn_chance": 0.2,
+      "hidden_detection_required": 0
+    },
+    "key": {
+      "name": "钥匙",
+      "type": "key",
+      "rarity": "rare",
+      "weight": 0.1,
+      "effect": {"unlock": true},
+      "spawn_chance": 0.03,
+      "hidden_detection_required": 50
+    },
+    "stealth_gear": {
+      "name": "潜行装备",
+      "type": "equipment",
+      "rarity": "rare",
+      "weight": 2.0,
+      "effect": {"stealth_bonus": 20},
+      "spawn_chance": 0.05,
+      "hidden_detection_required": 30
+    },
+    "gas_mask": {
+      "name": "防毒面具",
+      "type": "equipment",
+      "rarity": "uncommon",
+      "weight": 1.5,
+      "effect": {"radiation_resist": 50},
+      "spawn_chance": 0.08,
+      "hidden_detection_required": 20
+    },
+    "map_fragment": {
+      "name": "地图碎片",
+      "type": "collectible",
+      "rarity": "epic",
+      "weight": 0.2,
+      "effect": {"reveal_area": 5},
+      "spawn_chance": 0.02,
+      "hidden_detection_required": 40
+    },
+    "rare_artifact": {
+      "name": "稀有文物",
+      "type": "collectible",
+      "rarity": "legendary",
+      "weight": 0.5,
+      "effect": {"score": 1000},
+      "spawn_chance": 0.01,
+      "hidden_detection_required": 70
+    }
+  },
+  "spawn_rules": {
+    "max_items_per_tile": 3,
+    "hidden_chance": 0.4
+  }
+}

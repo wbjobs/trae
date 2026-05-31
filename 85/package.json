@@ -1,0 +1,26 @@
+{
+  "name": "ruins-mystery-stealth",
+  "version": "1.0.0",
+  "description": "废墟秘境 - 多文件架构潜行推演游戏框架",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "server": "node server.js",
+    "client": "node client.js",
+    "client:name": "set PLAYER_NAME=玩家1 && node client.js"
+  },
+  "keywords": [
+    "game",
+    "stealth",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

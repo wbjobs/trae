@@ -1,0 +1,32 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3000,
+    "max_connections": 8,
+    "ping_interval": 5000,
+    "timeout": 30000
+  },
+  "client": {
+    "reconnect_attempts": 3,
+    "reconnect_delay": 1000
+  },
+  "compression": {
+    "enabled": true,
+    "threshold": 1024,
+    "level": 6,
+    "use_dictionary": true
+  },
+  "protocol": {
+    "message_types": {
+      "PLAYER_JOIN": "player_join",
+      "PLAYER_LEAVE": "player_leave",
+      "PLAYER_MOVE": "player_move",
+      "PLAYER_ACTION": "player_action",
+      "STATE_SYNC": "state_sync",
+      "ITEM_PICKUP": "item_pickup",
+      "DANGER_ALERT": "danger_alert",
+      "ENVIRONMENT_CHANGE": "environment_change",
+      "CHAT": "chat"
+    }
+  }
+}

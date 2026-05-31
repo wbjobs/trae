@@ -1,0 +1,62 @@
+{
+  "tile_types": {
+    "ground": {
+      "name": "平地",
+      "passable": true,
+      "cover": 0,
+      "stealth_bonus": 0,
+      "danger_level": 0
+    },
+    "rubble": {
+      "name": "瓦砾",
+      "passable": true,
+      "cover": 30,
+      "stealth_bonus": 20,
+      "danger_level": 5
+    },
+    "wall": {
+      "name": "残墙",
+      "passable": false,
+      "cover": 100,
+      "stealth_bonus": 0,
+      "danger_level": 0
+    },
+    "fog_zone": {
+      "name": "迷雾区",
+      "passable": true,
+      "cover": 20,
+      "stealth_bonus": 30,
+      "danger_level": 10
+    },
+    "trap": {
+      "name": "陷阱区",
+      "passable": true,
+      "cover": 0,
+      "stealth_bonus": 0,
+      "danger_level": 50
+    },
+    "abandoned_building": {
+      "name": "废弃建筑",
+      "passable": true,
+      "cover": 70,
+      "stealth_bonus": 50,
+      "danger_level": 15
+    },
+    "radiation_zone": {
+      "name": "辐射区",
+      "passable": true,
+      "cover": 0,
+      "stealth_bonus": 0,
+      "danger_level": 30
+    }
+  },
+  "generation": {
+    "width": 50,
+    "height": 50,
+    "wall_density": 0.15,
+    "rubble_density": 0.2,
+    "building_density": 0.08,
+    "trap_density": 0.05,
+    "radiation_density": 0.03
+  }
+}

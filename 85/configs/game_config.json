@@ -1,0 +1,12 @@
+{
+  "game_name": "废墟秘境",
+  "version": "1.0.0",
+  "max_players": 4,
+  "tick_rate": 30,
+  "game_duration": 1800,
+  "map_size": 50,
+  "fog_of_war_radius": 8,
+  "stealth_detection_range": 6,
+  "dynamic_event_interval": 30,
+  "respawn_items_interval": 60
+}

@@ -1,0 +1,43 @@
+{
+  "danger_sources": {
+    "trap": {
+      "name": "陷阱",
+      "base_damage": 20,
+      "trigger_chance": 0.6,
+      "detection_difficulty": 40
+    },
+    "radiation": {
+      "name": "辐射",
+      "damage_per_tick": 2,
+      "tick_interval": 2
+    },
+    "patrol": {
+      "name": "巡逻单位",
+      "detection_range": 5,
+      "detection_speed": 0.5
+    },
+    "collapse": {
+      "name": "建筑坍塌",
+      "base_damage": 40,
+      "warning_time": 3,
+      "area_radius": 2
+    },
+    "toxic_gas": {
+      "name": "毒气",
+      "damage_per_tick": 3,
+      "spread_speed": 0.3
+    }
+  },
+  "danger_levels": {
+    "safe": {"min": 0, "max": 20, "description": "安全区域"},
+    "caution": {"min": 21, "max": 50, "description": "警戒区域"},
+    "dangerous": {"min": 51, "max": 80, "description": "危险区域"},
+    "lethal": {"min": 81, "max": 100, "description": "致命区域"}
+  },
+  "environmental_modifiers": {
+    "night_vision": 0.7,
+    "rain": 1.2,
+    "fog": 1.5,
+    "wind": 0.8
+  }
+}

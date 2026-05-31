@@ -1,0 +1,478 @@
+{
+  "default_profile": "auto",
+  "profiles": {
+    "auto": {
+      "name": "自动检测",
+      "description": "根据设备性能自动选择最佳配置"
+    },
+    "low_end_mobile": {
+      "name": "低端移动设备",
+      "description": "适用于旧款智能手机和平板",
+      "resolution": {
+        "target_width": 720,
+        "target_height": 1280,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 24,
+        "anti_aliasing": false,
+        "shadows": false,
+        "particles": false,
+        "post_processing": false,
+        "fog_quality": "low",
+        "max_fps": 30
+      },
+      "ui": {
+        "scale": 0.8,
+        "font_size": "small",
+        "simplified_ui": true,
+        "hide_effects": true,
+        "touch_target_size": 48
+      },
+      "performance": {
+        "reduce_draw_calls": true,
+        "texture_compression": true,
+        "limit_animations": true,
+        "disable_background_effects": true
+      }
+    },
+    "mid_range_mobile": {
+      "name": "中端移动设备",
+      "description": "适用于主流智能手机和平板",
+      "resolution": {
+        "target_width": 1080,
+        "target_height": 1920,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 32,
+        "anti_aliasing": true,
+        "shadows": true,
+        "shadow_quality": "low",
+        "particles": true,
+        "particle_limit": 50,
+        "post_processing": false,
+        "fog_quality": "medium",
+        "max_fps": 60
+      },
+      "ui": {
+        "scale": 1.0,
+        "font_size": "medium",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 44
+      },
+      "performance": {
+        "reduce_draw_calls": false,
+        "texture_compression": true,
+        "limit_animations": false,
+        "disable_background_effects": false
+      }
+    },
+    "high_end_mobile": {
+      "name": "高端移动设备",
+      "description": "适用于旗舰级智能手机和平板",
+      "resolution": {
+        "target_width": 1440,
+        "target_height": 2560,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 40,
+        "anti_aliasing": true,
+        "shadows": true,
+        "shadow_quality": "medium",
+        "particles": true,
+        "particle_limit": 150,
+        "post_processing": true,
+        "post_processing_effects": ["bloom", "vignette"],
+        "fog_quality": "high",
+        "max_fps": 60
+      },
+      "ui": {
+        "scale": 1.1,
+        "font_size": "medium",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 44
+      },
+      "performance": {
+        "reduce_draw_calls": false,
+        "texture_compression": false,
+        "limit_animations": false,
+        "disable_background_effects": false
+      }
+    },
+    "desktop_low": {
+      "name": "低配置电脑",
+      "description": "适用于集成显卡或旧款独立显卡",
+      "resolution": {
+        "target_width": 1280,
+        "target_height": 720,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 32,
+        "anti_aliasing": false,
+        "shadows": false,
+        "particles": true,
+        "particle_limit": 100,
+        "post_processing": false,
+        "fog_quality": "medium",
+        "max_fps": 60
+      },
+      "ui": {
+        "scale": 1.0,
+        "font_size": "medium",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 32
+      },
+      "performance": {
+        "reduce_draw_calls": true,
+        "texture_compression": false,
+        "limit_animations": false,
+        "disable_background_effects": false
+      }
+    },
+    "desktop_medium": {
+      "name": "中配置电脑",
+      "description": "适用于主流独立显卡",
+      "resolution": {
+        "target_width": 1920,
+        "target_height": 1080,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 40,
+        "anti_aliasing": true,
+        "shadows": true,
+        "shadow_quality": "medium",
+        "particles": true,
+        "particle_limit": 300,
+        "post_processing": true,
+        "post_processing_effects": ["bloom", "vignette", "color_grading"],
+        "fog_quality": "high",
+        "max_fps": 144
+      },
+      "ui": {
+        "scale": 1.0,
+        "font_size": "medium",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 32
+      },
+      "performance": {
+        "reduce_draw_calls": false,
+        "texture_compression": false,
+        "limit_animations": false,
+        "disable_background_effects": false
+      }
+    },
+    "desktop_high": {
+      "name": "高配置电脑",
+      "description": "适用于高端独立显卡",
+      "resolution": {
+        "target_width": 2560,
+        "target_height": 1440,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 48,
+        "anti_aliasing": true,
+        "aa_quality": "high",
+        "shadows": true,
+        "shadow_quality": "high",
+        "particles": true,
+        "particle_limit": 500,
+        "post_processing": true,
+        "post_processing_effects": ["bloom", "vignette", "color_grading", "ambient_occlusion"],
+        "fog_quality": "ultra",
+        "max_fps": 240
+      },
+      "ui": {
+        "scale": 1.1,
+        "font_size": "large",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 32
+      },
+      "performance": {
+        "reduce_draw_calls": false,
+        "texture_compression": false,
+        "limit_animations": false,
+        "disable_background_effects": false
+      }
+    },
+    "ultrawide": {
+      "name": "超宽屏显示器",
+      "description": "适用于21:9超宽屏显示器",
+      "resolution": {
+        "target_width": 3440,
+        "target_height": 1440,
+        "aspect_ratio": "21:9",
+        "scale_mode": "contain",
+        "extra_wide_support": true
+      },
+      "rendering": {
+        "tile_size": 40,
+        "anti_aliasing": true,
+        "shadows": true,
+        "shadow_quality": "high",
+        "particles": true,
+        "particle_limit": 400,
+        "post_processing": true,
+        "fog_quality": "high",
+        "max_fps": 144,
+        "field_of_view": 90
+      },
+      "ui": {
+        "scale": 1.0,
+        "font_size": "medium",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "center_ui": true,
+        "touch_target_size": 32
+      }
+    },
+    "tablet": {
+      "name": "平板电脑",
+      "description": "适用于iPad和Android平板",
+      "resolution": {
+        "target_width": 2048,
+        "target_height": 2732,
+        "aspect_ratio": "4:3",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 36,
+        "anti_aliasing": true,
+        "shadows": true,
+        "shadow_quality": "low",
+        "particles": true,
+        "particle_limit": 100,
+        "post_processing": false,
+        "fog_quality": "medium",
+        "max_fps": 60
+      },
+      "ui": {
+        "scale": 1.15,
+        "font_size": "large",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 50,
+        "tablet_optimized_layout": true
+      }
+    },
+    "tv": {
+      "name": "智能电视",
+      "description": "适用于智能电视和游戏主机",
+      "resolution": {
+        "target_width": 3840,
+        "target_height": 2160,
+        "aspect_ratio": "16:9",
+        "scale_mode": "contain"
+      },
+      "rendering": {
+        "tile_size": 48,
+        "anti_aliasing": true,
+        "shadows": true,
+        "shadow_quality": "high",
+        "particles": true,
+        "particle_limit": 300,
+        "post_processing": true,
+        "fog_quality": "high",
+        "max_fps": 60,
+        "hdr_support": true
+      },
+      "ui": {
+        "scale": 1.3,
+        "font_size": "xlarge",
+        "simplified_ui": false,
+        "hide_effects": false,
+        "touch_target_size": 64,
+        "tv_optimized_layout": true,
+        "safe_area_margin": 5
+      }
+    }
+  },
+  "adaptive_settings": {
+    "enabled": true,
+    "fps_target": 60,
+    "quality_step_down_threshold": 45,
+    "quality_step_up_threshold": 55,
+    "min_quality": "low_end_mobile",
+    "max_quality": "desktop_high",
+    "stabilization_frames": 30
+  },
+  "aspect_ratios": {
+    "16:9": { "width": 16, "height": 9, "safe": true },
+    "16:10": { "width": 16, "height": 10, "safe": true },
+    "4:3": { "width": 4, "height": 3, "safe": true },
+    "21:9": { "width": 21, "height": 9, "safe": true, "ultrawide": true },
+    "3:2": { "width": 3, "height": 2, "safe": true },
+    "9:16": { "width": 9, "height": 16, "safe": true, "portrait": true },
+    "10:16": { "width": 10, "height": 16, "safe": true, "portrait": true }
+  },
+  "font_sizes": {
+    "small": { "base": 12, "title": 18, "hint": 10 },
+    "medium": { "base": 14, "title": 22, "hint": 11 },
+    "large": { "base": 16, "title": 26, "hint": 12 },
+    "xlarge": { "base": 20, "title": 32, "hint": 14 }
+  },
+  "color_schemes": {
+    "default": {
+      "name": "默认",
+      "primary": "#3B82F6",
+      "secondary": "#10B981",
+      "accent": "#F59E0B",
+      "danger": "#EF4444",
+      "background": "#1F2937",
+      "surface": "#374151",
+      "text": "#F9FAFB",
+      "text_secondary": "#9CA3AF"
+    },
+    "dark": {
+      "name": "深邃黑暗",
+      "primary": "#60A5FA",
+      "secondary": "#34D399",
+      "accent": "#FBBF24",
+      "danger": "#F87171",
+      "background": "#111827",
+      "surface": "#1F2937",
+      "text": "#F3F4F6",
+      "text_secondary": "#9CA3AF"
+    },
+    "light": {
+      "name": "明亮清新",
+      "primary": "#2563EB",
+      "secondary": "#059669",
+      "accent": "#D97706",
+      "danger": "#DC2626",
+      "background": "#F9FAFB",
+      "surface": "#FFFFFF",
+      "text": "#111827",
+      "text_secondary": "#6B7280"
+    },
+    "sepia": {
+      "name": "怀旧复古",
+      "primary": "#92400E",
+      "secondary": "#78350F",
+      "accent": "#B45309",
+      "danger": "#991B1B",
+      "background": "#FEF3C7",
+      "surface": "#FFFBEB",
+      "text": "#451A03",
+      "text_secondary": "#78350F"
+    },
+    "protanopia": {
+      "name": "红色盲友好",
+      "primary": "#0066CC",
+      "secondary": "#009988",
+      "accent": "#FFAA00",
+      "danger": "#CC3300",
+      "background": "#1F2937",
+      "surface": "#374151",
+      "text": "#F9FAFB",
+      "text_secondary": "#9CA3AF"
+    },
+    "deuteranopia": {
+      "name": "绿色盲友好",
+      "primary": "#0077BB",
+      "secondary": "#00AABB",
+      "accent": "#EE7733",
+      "danger": "#CC3311",
+      "background": "#1F2937",
+      "surface": "#374151",
+      "text": "#F9FAFB",
+      "text_secondary": "#9CA3AF"
+    },
+    "tritanopia": {
+      "name": "蓝色盲友好",
+      "primary": "#DD3322",
+      "secondary": "#228833",
+      "accent": "#CCBB44",
+      "danger": "#AA3377",
+      "background": "#1F2937",
+      "surface": "#374151",
+      "text": "#F9FAFB",
+      "text_secondary": "#9CA3AF"
+    }
+  },
+  "accessibility": {
+    "high_contrast": false,
+    "reduce_motion": false,
+    "large_cursor": false,
+    "screen_reader_support": false,
+    "text_to_speech": false,
+    "closed_captions": false,
+    "color_blind_mode": null
+  },
+  "controls": {
+    "keyboard_mouse": {
+      "enabled": true,
+      "sensitivity": 1.0,
+      "invert_y": false,
+      "key_bindings": {
+        "move_forward": "KeyW",
+        "move_backward": "KeyS",
+        "move_left": "KeyA",
+        "move_right": "KeyD",
+        "crouch": "ControlLeft",
+        "prone": "KeyC",
+        "interact": "KeyE",
+        "inventory": "KeyI",
+        "clue_book": "KeyJ",
+        "map": "KeyM",
+        "pause": "Escape"
+      }
+    },
+    "gamepad": {
+      "enabled": true,
+      "sensitivity": 1.0,
+      "invert_y": false,
+      "deadzone": 0.2,
+      "button_bindings": {
+        "interact": "A",
+        "crouch": "B",
+        "prone": "X",
+        "inventory": "Y",
+        "map": "LeftBumper",
+        "clue_book": "RightBumper",
+        "pause": "Start"
+      }
+    },
+    "touch": {
+      "enabled": true,
+      "virtual_joystick": true,
+      "swipe_gestures": true,
+      "tap_interact": true,
+      "double_tap_run": true,
+      "haptic_feedback": true,
+      "haptic_strength": 0.5
+    }
+  },
+  "audio": {
+    "master_volume": 1.0,
+    "music_volume": 0.7,
+    "sfx_volume": 0.8,
+    "ambient_volume": 0.6,
+    "voice_volume": 1.0,
+    "mute_on_focus_lost": true,
+    "spatial_audio": true,
+    "dynamic_range_compression": false
+  },
+  "notification": {
+    "show_clue_notifications": true,
+    "show_danger_alerts": true,
+    "show_achievement_notifications": true,
+    "notification_duration": 3000,
+    "notification_position": "top_right"
+  }
+}
