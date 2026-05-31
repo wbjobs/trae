@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">文档矫正 SDK 演示</string>
+    <string name="action_single">单张矫正</string>
+    <string name="action_batch">批量矫正</string>
+    <string name="btn_select_image">选择图片</string>
+    <string name="btn_correct">开始矫正</string>
+    <string name="btn_save">保存图片</string>
+    <string name="btn_select_album">从相册选择</string>
+    <string name="btn_start_batch">开始批量处理</string>
+    <string name="btn_cancel">取消</string>
+    <string name="title_correction">文档矫正</string>
+    <string name="title_batch_result">批量处理结果</string>
+    <string name="hint_select_image">请选择一张文档图片</string>
+    <string name="hint_select_multiple">选择多张图片进行批量矫正</string>
+    <string name="progress_processing">正在处理 %1$d/%2$d</string>
+    <string name="success_saved">图片已保存</string>
+    <string name="success_batch_completed">批量处理完成</string>
+    <string name="error_sdk_init">SDK 初始化失败</string>
+    <string name="error_correction">矫正失败: %1$s</string>
+    <string name="error_permission">请授予存储权限</string>
+    <string name="error_no_image">请先选择图片</string>
+    <string name="text_original">原图</string>
+    <string name="text_corrected">矫正后</string>
+    <string name="text_corners">检测到的角点</string>
+    <string name="text_success_count">成功: %1$d</string>
+    <string name="text_failed_count">失败: %1$d</string>
+</resources>
