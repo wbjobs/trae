@@ -1,0 +1,8 @@
+name: wordcount
+mapper: word_count_mapper
+reducer: word_count_reducer
+input_dir: ./examples/wordcount/input
+output_dir: ./examples/wordcount/output
+num_mappers: 2
+num_reducers: 2
+max_retries: 3

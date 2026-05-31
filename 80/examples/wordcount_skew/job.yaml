@@ -1,0 +1,8 @@
+name: wordcount_skew
+mapper: word_count_mapper
+reducer: word_count_reducer
+input_dir: ./examples/wordcount_skew/input
+output_dir: ./examples/wordcount_skew/output
+num_mappers: 2
+num_reducers: 3
+max_retries: 3
