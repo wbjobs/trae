@@ -1,0 +1,28 @@
+listen_addr: ":1883"
+api_addr: ":8080"
+metrics_addr: ":9090"
+default_strategy: "round_robin"
+queue_size: 10000
+worker_pool_size: 10
+
+retry:
+  enabled: true
+  max_retries: 3
+  retry_interval: 1s
+  dead_letter_queue_size: 1000
+  auto_remove_failed: true
+  max_fail_per_subscriber: 5
+
+deduplication:
+  enabled: true
+  ttl: 30s
+
+mosquitto_plugin:
+  enabled: false
+  endpoint: ":8081"
+  username: ""
+  password: ""
+
+monitor:
+  enabled: true
+  retention_days: 7
