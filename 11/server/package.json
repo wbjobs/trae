@@ -1,0 +1,30 @@
+{
+  "name": "video-stream-server",
+  "version": "1.0.0",
+  "description": "WebTransport video streaming server with CEA-608 subtitles",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/fluent-ffmpeg": "^2.1.26",
+    "@types/node": "^22.7.5",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}

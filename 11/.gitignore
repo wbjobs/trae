@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.db
+*.db-journal
+.env
+.DS_Store
+*.log
+server/videos/*
+!server/videos/.gitkeep
+!server/videos/*.srt
