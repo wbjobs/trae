@@ -1,0 +1,57 @@
+{
+  "name": "shop-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "debezium",
+    "database.password": "dbz",
+    "database.dbname": "shop",
+    "database.server.name": "shop",
+    "plugin.name": "pgoutput",
+    "publication.name": "dbz_shop_pub",
+    "slot.name": "dbz_shop_slot",
+    "slot.drop.on.stop": "false",
+    "table.include.list": "shop.users,shop.products,shop.orders,shop.order_items,shop.hvac_zones,shop.indoor_temp_readings,shop.outdoor_temp_measurements",
+
+    "topic.creation.default.replication.factor": 1,
+    "topic.creation.default.partitions": 1,
+
+    "time.precision.mode": "connect",
+    "decimal.handling.mode": "string",
+    "tombstones.on.delete": "true",
+
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "key.converter.enhanced.avro.schema.support": "true",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter.enhanced.avro.schema.support": "true",
+
+    "transforms": "unwrap",
+
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite",
+    "transforms.unwrap.add.fields": "op,source.ts_ms,source.db,source.table",
+
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "dlq.shop.connector.errors",
+    "errors.deadletterqueue.topic.replication.factor": 1,
+    "errors.deadletterqueue.topic.cleanup.policy": "compact,delete",
+    "errors.deadletterqueue.context.headers.enable": "true",
+    "errors.deadletterqueue.context.header.prefix": "__connect.errors.",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true",
+    "errors.log.level": "WARN",
+    "errors.retry.delay.max.ms": 30000,
+    "errors.retry.timeout": 60000,
+
+    "topic.creation.dlq.include": "dlq.*",
+    "topic.creation.dlq.default.replication.factor": 1,
+    "topic.creation.dlq.default.partitions": 1,
+    "topic.creation.dlq.default.cleanup.policy": "compact,delete",
+    "topic.creation.dlq.default.retention.ms": 604800000,
+    "topic.creation.dlq.default.retention.bytes": -1
+  }
+}

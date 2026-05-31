@@ -1,0 +1,176 @@
+version: "3.8"
+
+x-environment: &db-env
+  POSTGRES_USER: debezium
+  POSTGRES_PASSWORD: dbz
+  POSTGRES_DB: shop
+
+services:
+  postgres:
+    image: debezium/postgres:16
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      <<: *db-env
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.3
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+
+  connect:
+    image: debezium/connect:2.6
+    hostname: connect
+    container_name: connect
+    depends_on:
+      - postgres
+      - kafka
+      - schema-registry
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      STATUS_STORAGE_TOPIC: connect_statuses
+      KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+
+  redpanda-console:
+    image: redpandadata/console:v2.5.2
+    hostname: redpanda-console
+    container_name: redpanda-console
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_SCHEMAREGISTRY_ENABLED: "true"
+      KAFKA_SCHEMAREGISTRY_URLS: http://schema-registry:8081
+
+  materialize:
+    image: materialize/materialized:v0.120.0
+    hostname: materialize
+    container_name: materialize
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "6875:6875"
+      - "6876:6876"
+      - "6877:6877"
+    deploy:
+      resources:
+        limits:
+          memory: 16g
+          cpus: "8.0"
+        reservations:
+          memory: 8g
+          cpus: "4.0"
+    command:
+      - "--listen-addr=0.0.0.0:6875"
+      - "--http-console-addr=0.0.0.0:6876"
+      - "--internal-sql-listen-addr=0.0.0.0:6877"
+      - "--tls-mode=disable"
+      - "--orchestrator-process-tick-interval=10ms"
+    environment:
+      MZ_USER: materialize
+      MZ_DEFAULT_CLUSTER_SIZE: 4
+      MZ_LOG_FILTER: info,mz_dataflow=debug
+      MZ_STORAGE_PROGRESS_RECORD_INTERVAL: 10s
+    volumes:
+      mzdata:/mzdata
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      memlock:
+        soft: -1
+        hard: -1
+    shm_size: 4g
+
+  preset:
+    image: preset/superset:4.1.0
+    hostname: preset
+    container_name: preset
+    depends_on:
+      - materialize
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_SECRET_KEY: "dev-secret-change-me"
+      SQLALCHEMY_DATABASE_URI: "sqlite:////app/superset.db"
+      SUPERSET_LOAD_EXAMPLES: "no"
+    volumes:
+      presetdata:/app
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        pip install materialize-superset psycopg2-binary --no-input || true
+        superset db upgrade
+        superset fab create-admin --username admin --password admin \
+          --firstname Admin --lastname User --email admin@example.com || true
+        superset init
+        exec gunicorn --bind 0.0.0.0:8088 \
+          --workers 2 --timeout 120 \
+          --access-logfile - --error-logfile - \
+          "superset.app:create_app()"
+
+volumes:
+  pgdata:
+  mzdata:
+  presetdata:
