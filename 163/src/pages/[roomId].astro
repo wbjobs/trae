@@ -1,0 +1,138 @@
+---
+import Whiteboard from '../components/Whiteboard.tsx';
+import Chat from '../components/Chat.vue';
+import UserList from '../components/UserList.svelte';
+import { nanoid } from 'nanoid';
+
+const roomId = Astro.params.roomId || nanoid(8);
+const isReadOnly = Astro.url.searchParams.get('readonly') === 'true';
+
+const yjsWsUrl = import.meta.env.YJS_WS_URL || 'ws://localhost:1234';
+const appWsUrl = import.meta.env.APP_WS_URL || 'ws://localhost:1235';
+const apiUrl = import.meta.env.API_URL || 'http://localhost:1236';
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>协作白板 - {roomId}</title>
+  <link rel="stylesheet" href="/styles/global.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-left">
+        <h1 class="app-title">🎨 协作白板</h1>
+        <span class="room-badge">房间: {roomId}</span>
+        {isReadOnly && <span class="readonly-badge">只读模式</span>}
+      </div>
+      <div class="header-right">
+        <button id="shareBtn" class="share-btn">🔗 分享</button>
+        <button id="copyLinkBtn" class="copy-btn">📋 复制链接</button>
+        <button id="newRoomBtn" class="new-room-btn">🆕 新房间</button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <aside class="sidebar-left">
+        <UserList client:load roomId={roomId} wsUrl={appWsUrl} />
+      </aside>
+
+      <section class="canvas-section">
+        <Whiteboard client:load roomId={roomId} wsUrl={yjsWsUrl} apiUrl={apiUrl} isReadOnly={isReadOnly} />
+      </section>
+
+      <aside class="sidebar-right">
+        <Chat client:load roomId={roomId} wsUrl={appWsUrl} />
+      </aside>
+    </main>
+
+    <div id="shareModal" class="modal hidden">
+      <div class="modal-content">
+        <h2>🔗 分享白板</h2>
+        <div class="share-options">
+          <div class="share-option">
+            <h3>可编辑链接</h3>
+            <div class="link-container">
+              <input type="text" id="editLink" readonly />
+              <button class="copy-link-btn" data-target="editLink">复制</button>
+            </div>
+          </div>
+          <div class="share-option">
+            <h3>只读链接</h3>
+            <div class="link-container">
+              <input type="text" id="readOnlyLink" readonly />
+              <button class="copy-link-btn" data-target="readOnlyLink">复制</button>
+            </div>
+          </div>
+        </div>
+        <button id="closeModal" class="close-btn">关闭</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden">
+      <span id="toastMessage"></span>
+    </div>
+  </div>
+
+  <script is:inline>
+    const roomId = "{roomId}";
+
+    const getBaseUrl = () => {
+      const path = window.location.pathname;
+      const lastSlash = path.lastIndexOf('/');
+      return window.location.origin + path.substring(0, lastSlash);
+    };
+
+    const showToast = (message) => {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      if (toastMessage) toastMessage.textContent = message;
+      toast?.classList.remove('hidden');
+      setTimeout(() => toast?.classList.add('hidden'), 2500);
+    };
+
+    document.getElementById('shareBtn')?.addEventListener('click', () => {
+      const base = getBaseUrl();
+      const editLink = `${base}/${roomId}`;
+      const readOnlyLink = `${base}/${roomId}?readonly=true`;
+      (document.getElementById('editLink') as HTMLInputElement).value = editLink;
+      (document.getElementById('readOnlyLink') as HTMLInputElement).value = readOnlyLink;
+      document.getElementById('shareModal')?.classList.remove('hidden');
+    });
+
+    document.getElementById('closeModal')?.addEventListener('click', () => {
+      document.getElementById('shareModal')?.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.copy-link-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const targetId = (e.target as HTMLElement).dataset.target;
+        const input = document.getElementById(targetId) as HTMLInputElement;
+        input.select();
+        document.execCommand('copy');
+        showToast('链接已复制到剪贴板！');
+      });
+    });
+
+    document.getElementById('copyLinkBtn')?.addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showToast('链接已复制到剪贴板！');
+      });
+    });
+
+    document.getElementById('newRoomBtn')?.addEventListener('click', () => {
+      const newId = Math.random().toString(36).substring(2, 10);
+      window.location.href = `${getBaseUrl()}/${newId}`;
+    });
+
+    document.getElementById('shareModal')?.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).id === 'shareModal') {
+        document.getElementById('shareModal')?.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

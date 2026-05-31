@@ -1,0 +1,67 @@
+---
+import { nanoid } from 'nanoid';
+
+const newRoomId = nanoid(8);
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>协作白板</title>
+  <link rel="stylesheet" href="/styles/global.css">
+</head>
+<body class="landing-page">
+  <div class="landing-container">
+    <div class="landing-content">
+      <h1 class="landing-title">🎨 协作白板</h1>
+      <p class="landing-subtitle">实时协作 · 无限创意 · 简单易用</p>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">⚡</div>
+          <h3>实时同步</h3>
+          <p>基于 CRDT 技术，多人实时协作无冲突</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🔒</div>
+          <h3>隐私安全</h3>
+          <p>支持匿名使用，分享只读链接保护内容</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">💬</div>
+          <h3>内置聊天</h3>
+          <p>边画边聊，沟通更高效</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href={`/${newRoomId}`} class="btn-primary">🚀 创建新白板</a>
+      </div>
+
+      <div class="join-room">
+        <p>或者加入已有房间：</p>
+        <form id="joinForm" class="join-form">
+          <input type="text" id="roomIdInput" placeholder="输入房间 ID" class="room-input" />
+          <button type="submit" class="btn-secondary">加入房间</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="landing-footer">
+      <p>基于 Astro + React + Vue + Svelte + Yjs 构建</p>
+    </div>
+  </div>
+
+  <script is:inline>
+    document.getElementById('joinForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const roomId = (document.getElementById('roomIdInput') as HTMLInputElement).value.trim();
+      if (roomId) {
+        window.location.href = `/${roomId}`;
+      }
+    });
+  </script>
+</body>
+</html>
