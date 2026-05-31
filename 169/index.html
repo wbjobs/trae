@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>陶罐破碎效果 - Babylon.js + Ammo.js</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: "Segoe UI", Arial, sans-serif; }
+  #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; }
+  #ui {
+    position: absolute; top: 12px; left: 12px; z-index: 10;
+    background: rgba(0,0,0,0.55); color: #fff;
+    padding: 12px 16px; border-radius: 8px;
+    font-size: 14px; line-height: 1.6;
+    backdrop-filter: blur(6px);
+    user-select: none;
+  }
+  #ui h3 { margin: 0 0 6px 0; font-size: 15px; color: #ffb74d; }
+  #ui .row { margin-top: 6px; }
+  #resetBtn {
+    margin-top: 8px; padding: 6px 14px; font-size: 14px;
+    background: #ff9800; color: #fff; border: none; border-radius: 4px;
+    cursor: pointer;
+  }
+  #resetBtn:hover { background: #ffb74d; }
+  #info {
+    position: absolute; top: 12px; right: 12px; z-index: 10;
+    background: rgba(0,0,0,0.55); color: #fff;
+    padding: 8px 12px; border-radius: 8px; font-size: 13px;
+    pointer-events: none;
+  }
+</style>
+
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/ammo.js"></script>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+
+  <div id="ui">
+    <h3>陶罐破碎演示</h3>
+    <div>鼠标点击场景 → 发射子弹击碎陶罐</div>
+    <div>鼠标拖拽 → 旋转视角</div>
+    <div class="row">
+      <button id="resetBtn">重置陶罐</button>
+    </div>
+  </div>
+  <div id="info">碎片数: <span id="pieceCount">0</span></div>
+
+<script>
+(async function () {
+  const canvas = document.getElementById("renderCanvas");
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+
+  // ---------- Scene ----------
+  const scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.08, 0.10, 0.15, 1.0);
+  scene.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.35);
+
+  const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI / 2.2, Math.PI / 2.4, 6, new BABYLON.Vector3(0, 1.2, 0), scene);
+  camera.attachControl(canvas, true);
+  camera.wheelDeltaPercentage = 0.01;
+  camera.lowerRadiusLimit = 2;
+  camera.upperRadiusLimit = 20;
+  camera.minZ = 0.1;
+
+  const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+  hemi.intensity = 0.6;
+  const dir = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(-0.4, -1, -0.3), scene);
+  dir.intensity = 0.9;
+  dir.position = new BABYLON.Vector3(5, 8, 5);
+
+  // Ground
+  const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 20 }, scene);
+  const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+  groundMat.diffuseColor = new BABYLON.Color3(0.25, 0.27, 0.30);
+  groundMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+  ground.material = groundMat;
+  ground.position.y = 0;
+  ground.isPickable = true;
+
+  // ---------- Ammo physics ----------
+  await Ammo();
+  const gravityVector = new BABYLON.Vector3(0, -9.81, 0);
+  const physicsPlugin = new BABYLON.AmmoJSPlugin();
+  scene.enablePhysics(gravityVector, physicsPlugin);
+
+  ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, {
+    mass: 0, restitution: 0.15, friction: 0.9
+  }, scene);
+
+  // ---------- Materials ----------
+  const jarMat = new BABYLON.StandardMaterial("jarMat", scene);
+  jarMat.diffuseColor = new BABYLON.Color3(0.55, 0.32, 0.18);
+  jarMat.specularColor = new BABYLON.Color3(0.2, 0.15, 0.1);
+  jarMat.specularPower = 16;
+
+  const shardMat = new BABYLON.StandardMaterial("shardMat", scene);
+  shardMat.diffuseColor = new BABYLON.Color3(0.60, 0.38, 0.22);
+  shardMat.specularColor = new BABYLON.Color3(0.25, 0.2, 0.15);
+  shardMat.specularPower = 14;
+
+  const bulletMat = new BABYLON.StandardMaterial("bulletMat", scene);
+  bulletMat.emissiveColor = new BABYLON.Color3(1.0, 0.85, 0.2);
+  bulletMat.diffuseColor = new BABYLON.Color3(0.3, 0.2, 0.05);
+
+  // ---------- Web Audio: pottery shatter ----------
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  // Create a short noise burst that mimics ceramic shattering.
+  // Uses filtered white noise + random pitched clicks for shard impact.
+  function playBreakSound(fragmentCount) {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+
+    // Volume scales with fragment count (cap to avoid clipping)
+    const baseVolume = 0.25 + Math.min(fragmentCount / 120, 0.55);
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0, now);
+    masterGain.gain.linearRampToValueAtTime(baseVolume, now + 0.005);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+    masterGain.connect(ctx.destination);
+
+    // --- 1) Noise burst (the "crash" body) ---
+    const noiseDur = 0.9;
+    const bufferSize = Math.floor(ctx.sampleRate * noiseDur);
+    const noiseBuf = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      nd[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+    noiseSrc.loop = false;
+
+    // High-pass filter to make it sound like ceramic (crisp, not muddy)
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 1800;
+
+    // Band-pass for mid-range body
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 3200;
+    bp.Q.value = 1.2;
+
+    // Dynamic resonance sweep (quick drop)
+    const bpSweep = ctx.createBiquadFilter();
+    bpSweep.type = "bandpass";
+    bpSweep.frequency.setValueAtTime(6000, now);
+    bpSweep.frequency.exponentialRampToValueAtTime(800, now + 0.5);
+    bpSweep.Q.value = 3;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.7, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+
+    noiseSrc.connect(hp);
+    hp.connect(bp);
+    bp.connect(bpSweep);
+    bpSweep.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + noiseDur);
+
+    // --- 2) Random pitched clicks (shard impacts) ---
+    // More fragments → more clicks, mimicking individual shard sounds
+    const clickCount = Math.min(18 + Math.floor(fragmentCount * 0.35), 48);
+    for (let i = 0; i < clickCount; i++) {
+      const t = now + Math.random() * 1.2;
+      const freq = 1800 + Math.random() * 5200;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.08);
+
+      const oscGain = ctx.createGain();
+      const oscVol = 0.04 + Math.random() * 0.08;
+      oscGain.gain.setValueAtTime(0, t);
+      oscGain.gain.linearRampToValueAtTime(oscVol, t + 0.002);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+
+      const oscFilter = ctx.createBiquadFilter();
+      oscFilter.type = "highpass";
+      oscFilter.frequency.value = 1200;
+
+      osc.connect(oscFilter);
+      oscFilter.connect(oscGain);
+      oscGain.connect(masterGain);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    }
+
+    // --- 3) Low thump (initial impact "thud") ---
+    const thump = ctx.createOscillator();
+    thump.type = "sine";
+    thump.frequency.setValueAtTime(180, now);
+    thump.frequency.exponentialRampToValueAtTime(45, now + 0.15);
+    const thumpGain = ctx.createGain();
+    thumpGain.gain.setValueAtTime(0.35, now);
+    thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    thump.connect(thumpGain);
+    thumpGain.connect(masterGain);
+    thump.start(now);
+    thump.stop(now + 0.25);
+  }
+
+  // ---------- Jar generation (lathe) ----------
+  // Produces a closed manifold mesh (with top & bottom caps)
+  function createJarMesh(name, scene) {
+    const profile = [];
+    // profile points: bottom to top, on +X axis
+    const steps = [
+      [0.00, 0.00],
+      [0.72, 0.05],
+      [0.86, 0.25],
+      [0.92, 0.60],
+      [0.88, 1.00],
+      [0.78, 1.35],
+      [0.62, 1.65],
+      [0.50, 1.85],
+      [0.48, 2.05],
+      [0.56, 2.15],
+      [0.62, 2.25],
+      [0.60, 2.35],
+      [0.00, 2.40],
+    ];
+    for (const [x, y] of steps) {
+      profile.push(new BABYLON.Vector3(x, y, 0));
+    }
+
+    const radialSegments = 64;
+    const positions = [];
+    const indices = [];
+    const normals = [];
+    const uvs = [];
+
+    // side vertices
+    for (let i = 0; i < profile.length; i++) {
+      const p = profile[i];
+      for (let j = 0; j < radialSegments; j++) {
+        const theta = (j / radialSegments) * Math.PI * 2;
+        const cx = Math.cos(theta);
+        const sz = Math.sin(theta);
+        positions.push(p.x * cx, p.y, p.x * sz);
+        // normal approximated (will recompute)
+        normals.push(cx, 0, sz);
+        uvs.push(j / radialSegments, i / (profile.length - 1));
+      }
+    }
+
+    // side indices
+    const stride = radialSegments;
+    for (let i = 0; i < profile.length - 1; i++) {
+      for (let j = 0; j < radialSegments; j++) {
+        const a = i * stride + j;
+        const b = i * stride + ((j + 1) % stride);
+        const c = (i + 1) * stride + j;
+        const d = (i + 1) * stride + ((j + 1) % stride);
+        indices.push(a, c, b);
+        indices.push(b, c, d);
+      }
+    }
+
+    // bottom cap: vertex at profile[0] (on axis)
+    const bottomAxisIdx = positions.length / 3;
+    positions.push(0, profile[0].y, 0);
+    normals.push(0, -1, 0);
+    uvs.push(0.5, 0.5);
+    const bottomRingStart = 0; // ring at profile[0]
+    for (let j = 0; j < radialSegments; j++) {
+      const a = bottomRingStart + j;
+      const b = bottomRingStart + ((j + 1) % stride);
+      indices.push(bottomAxisIdx, b, a);
+    }
+
+    // top cap: vertex at profile[profile.length-1] (on axis)
+    const topAxisIdx = positions.length / 3;
+    positions.push(0, profile[profile.length - 1].y, 0);
+    normals.push(0, 1, 0);
+    uvs.push(0.5, 0.5);
+    const topRingStart = (profile.length - 1) * stride;
+    for (let j = 0; j < radialSegments; j++) {
+      const a = topRingStart + j;
+      const b = topRingStart + ((j + 1) % stride);
+      indices.push(topAxisIdx, a, b);
+    }
+
+    // Compute vertex normals properly
+    computeVertexNormals(positions, indices, normals);
+
+    const mesh = new BABYLON.Mesh(name, scene);
+    const vertexData = new BABYLON.VertexData();
+    vertexData.positions = positions;
+    vertexData.indices = indices;
+    vertexData.normals = normals;
+    vertexData.uvs = uvs;
+    vertexData.applyToMesh(mesh);
+    return mesh;
+  }
+
+  function computeVertexNormals(positions, indices, normals) {
+    for (let i = 0; i < indices.length; i += 3) {
+      const i0 = indices[i], i1 = indices[i + 1], i2 = indices[i + 2];
+      const ax = positions[i0 * 3], ay = positions[i0 * 3 + 1], az = positions[i0 * 3 + 2];
+      const bx = positions[i1 * 3], by = positions[i1 * 3 + 1], bz = positions[i1 * 3 + 2];
+      const cx = positions[i2 * 3], cy = positions[i2 * 3 + 1], cz = positions[i2 * 3 + 2];
+      const ux = bx - ax, uy = by - ay, uz = bz - az;
+      const vx = cx - ax, vy = cy - ay, vz = cz - az;
+      const nx = uy * vz - uz * vy;
+      const ny = uz * vx - ux * vz;
+      const nz = ux * vy - uy * vx;
+      normals[i0 * 3] += nx; normals[i0 * 3 + 1] += ny; normals[i0 * 3 + 2] += nz;
+      normals[i1 * 3] += nx; normals[i1 * 3 + 1] += ny; normals[i1 * 3 + 2] += nz;
+      normals[i2 * 3] += nx; normals[i2 * 3 + 1] += ny; normals[i2 * 3 + 2] += nz;
+    }
+    for (let i = 0; i < normals.length; i += 3) {
+      const x = normals[i], y = normals[i + 1], z = normals[i + 2];
+      const l = Math.hypot(x, y, z) || 1;
+      normals[i] = x / l; normals[i + 1] = y / l; normals[i + 2] = z / l;
+    }
+  }
+
+  // ---------- Voronoi fragmentation ----------
+  // Seed distribution: stratified random inside the jar's bounding volume,
+  // with bias toward the visible body for nice-looking pieces.
+  function generateSeeds(jars, count) {
+    // compute AABB of jars (world positions, they are all at origin)
+    let minx = Infinity, miny = Infinity, minz = Infinity;
+    let maxx = -Infinity, maxy = -Infinity, maxz = -Infinity;
+    for (const m of jars) {
+      const bb = m.getBoundingInfo().boundingBox;
+      const mn = bb.minimumWorld, mx = bb.maximumWorld;
+      if (mn.x < minx) minx = mn.x; if (mn.y < miny) miny = mn.y; if (mn.z < minz) minz = mn.z;
+      if (mx.x > maxx) maxx = mx.x; if (mx.y > maxy) maxy = mx.y; if (mx.z > maxz) maxz = mx.z;
+    }
+    // shrink slightly so seeds are inside
+    const pad = 0.05;
+    minx += pad; maxx -= pad; miny += pad; maxy -= pad; minz += pad; maxz -= pad;
+
+    const seeds = [];
+    // stratified: divide volume into cells and pick random inside each
+    const perDim = Math.ceil(Math.cbrt(count));
+    const cellX = (maxx - minx) / perDim;
+    const cellY = (maxy - miny) / perDim;
+    const cellZ = (maxz - minz) / perDim;
+
+    const allPts = [];
+    for (let ix = 0; ix < perDim; ix++) {
+      for (let iy = 0; iy < perDim; iy++) {
+        for (let iz = 0; iz < perDim; iz++) {
+          const x = minx + (ix + Math.random()) * cellX;
+          const y = miny + (iy + Math.random()) * cellY;
+          const z = minz + (iz + Math.random()) * cellZ;
+          allPts.push(new BABYLON.Vector3(x, y, z));
+        }
+      }
+    }
+    // shuffle and take count
+    for (let i = allPts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allPts[i], allPts[j]] = [allPts[j], allPts[i]];
+    }
+    for (let i = 0; i < count; i++) seeds.push(allPts[i]);
+    return seeds;
+  }
+
+  function nearestSeedIndex(p, seeds) {
+    let best = 0;
+    let bestD2 = Infinity;
+    for (let i = 0; i < seeds.length; i++) {
+      const s = seeds[i];
+      const dx = p.x - s.x, dy = p.y - s.y, dz = p.z - s.z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 < bestD2) { bestD2 = d2; best = i; }
+    }
+    return best;
+  }
+
+  // Split triangle so all its new vertices belong to the same seed cell.
+  // Returns list of {idx, tri} where idx is the cell id and tri is [v0,v1,v2] (each v is {pos,uv,normal})
+  function splitTriangleByCells(tri, seeds) {
+    // Map each vertex to its cell
+    const cells = tri.map(v => nearestSeedIndex(v.pos, seeds));
+
+    // If all same cell, keep as is
+    if (cells[0] === cells[1] && cells[1] === cells[2]) {
+      return [{ idx: cells[0], tri }];
+    }
+
+    // Find vertex with unique cell if any
+    let uniqueIdx = -1;
+    if (cells[0] !== cells[1] && cells[0] !== cells[2]) uniqueIdx = 0;
+    else if (cells[1] !== cells[0] && cells[1] !== cells[2]) uniqueIdx = 1;
+    else if (cells[2] !== cells[0] && cells[2] !== cells[1]) uniqueIdx = 2;
+
+    if (uniqueIdx >= 0) {
+      const a = tri[uniqueIdx];
+      const b = tri[(uniqueIdx + 1) % 3];
+      const c = tri[(uniqueIdx + 2) % 3];
+      // a belongs to cellA; b and c belong to cellB (same)
+      const cellA = cells[uniqueIdx];
+      const cellB = cells[(uniqueIdx + 1) % 3];
+      // Cut along plane through midpoint of seeds[cellA] and seeds[cellB],
+      // perpendicular to the line connecting them.
+      const sA = seeds[cellA];
+      const sB = seeds[cellB];
+      const mid = sA.add(sB).scale(0.5);
+      const nrm = sB.subtract(sA).normalize();
+
+      // Intersection of edges (a-b) and (a-c) with the plane
+      const tAB = planeIntersectT(a.pos, b.pos, mid, nrm);
+      const tAC = planeIntersectT(a.pos, c.pos, mid, nrm);
+
+      if (tAB < 0 || tAB > 1 || tAC < 0 || tAC > 1) {
+        // Fallback: assign whole triangle to majority cell
+        return [{ idx: cellB, tri }];
+      }
+
+      const mAB = {
+        pos: lerpV(a.pos, b.pos, tAB),
+        uv: lerpV2(a.uv, b.uv, tAB),
+        normal: lerpV(a.normal, b.normal, tAB).normalize(),
+      };
+      const mAC = {
+        pos: lerpV(a.pos, c.pos, tAC),
+        uv: lerpV2(a.uv, c.uv, tAC),
+        normal: lerpV(a.normal, c.normal, tAC).normalize(),
+      };
+
+      return [
+        { idx: cellA, tri: [a, mAB, mAC] },
+        { idx: cellB, tri: [mAB, b, c] },
+        { idx: cellB, tri: [mAB, c, mAC] },
+      ];
+    }
+
+    // All three vertices belong to different cells. Split through centroid & midpoints.
+    // This is a fallback; simpler: assign triangle to cell of nearest seed to centroid.
+    const centroid = tri[0].pos.add(tri[1].pos).add(tri[2].pos).scale(1 / 3);
+    const cIdx = nearestSeedIndex(centroid, seeds);
+    return [{ idx: cIdx, tri }];
+  }
+
+  function planeIntersectT(p0, p1, planePt, planeN) {
+    const d0 = p0.subtract(planePt).dot(planeN);
+    const d1 = p1.subtract(planePt).dot(planeN);
+    if (Math.abs(d1 - d0) < 1e-8) return 0;
+    return -d0 / (d1 - d0);
+  }
+  function lerpV(a, b, t) { return a.add(b.subtract(a).scale(t)); }
+  function lerpV2(a, b, t) { return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
+
+  function fragmentMeshArray(meshes, seeds) {
+    const buckets = new Array(seeds.length);
+    for (let i = 0; i < seeds.length; i++) buckets[i] = [];
+
+    for (const mesh of meshes) {
+      mesh.computeWorldMatrix(true);
+      const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+      const normals = mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind);
+      const uvs = mesh.getVerticesData(BABYLON.VertexBuffer.UVKind);
+      const indices = mesh.getIndices();
+      const world = mesh.getWorldMatrix();
+
+      // Pre-transform vertices to world
+      const n = positions.length / 3;
+      const wpos = new Array(n);
+      const wnorm = new Array(n);
+      const wuv = new Array(n);
+      for (let i = 0; i < n; i++) {
+        const v = BABYLON.Vector3.TransformCoordinates(
+          new BABYLON.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]), world);
+        const nn = BABYLON.Vector3.TransformNormal(
+          new BABYLON.Vector3(normals[i*3], normals[i*3+1], normals[i*3+2]), world).normalize();
+        wpos[i] = v;
+        wnorm[i] = nn;
+        wuv[i] = uvs ? { x: uvs[i*2], y: uvs[i*2+1] } : { x: 0, y: 0 };
+      }
+
+      for (let t = 0; t < indices.length; t += 3) {
+        const i0 = indices[t], i1 = indices[t+1], i2 = indices[t+2];
+        const tri = [
+          { pos: wpos[i0], normal: wnorm[i0], uv: wuv[i0] },
+          { pos: wpos[i1], normal: wnorm[i1], uv: wuv[i1] },
+          { pos: wpos[i2], normal: wnorm[i2], uv: wuv[i2] },
+        ];
+        const results = splitTriangleByCells(tri, seeds);
+        for (const r of results) buckets[r.idx].push(r.tri);
+      }
+    }
+    return buckets;
+  }
+
+  function buildMeshFromTris(name, tris, scene) {
+    if (tris.length === 0) return null;
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+    let vi = 0;
+    for (const tri of tris) {
+      for (let i = 0; i < 3; i++) {
+        positions.push(tri[i].pos.x, tri[i].pos.y, tri[i].pos.z);
+        normals.push(tri[i].normal.x, tri[i].normal.y, tri[i].normal.z);
+        uvs.push(tri[i].uv.x, tri[i].uv.y);
+      }
+      indices.push(vi, vi + 1, vi + 2);
+      vi += 3;
+    }
+    const mesh = new BABYLON.Mesh(name, scene);
+    const vd = new BABYLON.VertexData();
+    vd.positions = positions;
+    vd.normals = normals;
+    vd.uvs = uvs;
+    vd.indices = indices;
+    vd.applyToMesh(mesh);
+    return mesh;
+  }
+
+  // ---------- State ----------
+  const state = {
+    jarMeshes: [],
+    seeds: [],
+    fragments: [],
+    activeBullets: [],
+    broken: false,
+  };
+
+  const pieceCountEl = document.getElementById("pieceCount");
+
+  function buildJar() {
+    const jar = createJarMesh("jar", scene);
+    jar.material = jarMat;
+    jar.position.y = 0;
+    state.jarMeshes = [jar];
+    state.broken = false;
+  }
+
+  function precomputeFragments() {
+    state.seeds = generateSeeds(state.jarMeshes, 56);
+    const buckets = fragmentMeshArray(state.jarMeshes, state.seeds);
+    const frags = [];
+    for (let i = 0; i < buckets.length; i++) {
+      if (buckets[i].length === 0) continue;
+      const mesh = buildMeshFromTris("frag_" + i, buckets[i], scene);
+      if (!mesh) continue;
+      mesh.material = shardMat;
+      mesh.isVisible = false;
+      mesh.isPickable = false;
+      frags.push(mesh);
+    }
+    state.fragments = frags;
+    pieceCountEl.textContent = String(frags.length);
+  }
+
+  function computeCentroid(mesh) {
+    const pos = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    let cx = 0, cy = 0, cz = 0;
+    const n = pos.length / 3;
+    for (let i = 0; i < n; i++) {
+      cx += pos[i*3]; cy += pos[i*3+1]; cz += pos[i*3+2];
+    }
+    return new BABYLON.Vector3(cx / n, cy / n, cz / n);
+  }
+
+  function breakJar(impactPoint, impactDir) {
+    if (state.broken) return;
+    state.broken = true;
+    // Hide original
+    for (const m of state.jarMeshes) m.setEnabled(false);
+
+    // Audio feedback: play shatter sound, volume scales with fragment count
+    playBreakSound(state.fragments.length);
+
+    const LINEAR_DAMPING = 0.35;
+    const ANGULAR_DAMPING = 0.55;
+    const CCD_THRESHOLD = 0.001;
+
+    // Activate fragments
+    for (const mesh of state.fragments) {
+      mesh.isVisible = true;
+      // Re-center: compute centroid, offset vertices so mesh origin is at centroid,
+      // then set mesh position to centroid. This gives clean physics center-of-mass.
+      const c = computeCentroid(mesh);
+      offsetMeshVertices(mesh, c.scale(-1));
+      mesh.position.copyFrom(c);
+      mesh.computeWorldMatrix(true);
+
+      const size = mesh.getBoundingInfo().boundingBox.extendSize;
+      const minBox = 0.08;
+      const boxX = Math.max(size.x * 2, minBox);
+      const boxY = Math.max(size.y * 2, minBox);
+      const boxZ = Math.max(size.z * 2, minBox);
+      const volume = boxX * boxY * boxZ;
+      const mass = Math.max(0.08, volume * 1.5);
+
+      mesh.physicsImpostor = new BABYLON.PhysicsImpostor(mesh, BABYLON.PhysicsImpostor.BoxImpostor, {
+        mass: mass,
+        restitution: 0.12,
+        friction: 0.85,
+      }, scene);
+
+      // Damping + CCD to prevent tunneling between fragments
+      const body = mesh.physicsImpostor.physicsBody;
+      if (body) {
+        body.setDamping(LINEAR_DAMPING, ANGULAR_DAMPING);
+        body.setCcdMotionThreshold(CCD_THRESHOLD);
+        body.setCcdSweptSphereRadius(Math.min(boxX, boxY, boxZ) * 0.4);
+        // Ensure all fragments collide with each other
+        body.setCollisionFlags(body.getCollisionFlags() & ~2); // clear CF_NO_CONTACT_RESPONSE if set
+      }
+
+      // Explosive impulse from impact (reduced magnitude)
+      const rel = mesh.position.subtract(impactPoint);
+      const dist = rel.length();
+      const falloff = 1 / (1 + dist * 1.8);
+      const dir = dist > 1e-4 ? rel.normalize() : impactDir.clone();
+      const speed = 2.5 + Math.random() * 1.5;
+      const impulse = dir.scale(speed * falloff * mass);
+      // Tangential jitter (reduced)
+      impulse.x += (Math.random() - 0.5) * 0.6 * mass;
+      impulse.y += Math.random() * 0.6 * mass;
+      impulse.z += (Math.random() - 0.5) * 0.6 * mass;
+      mesh.physicsImpostor.applyImpulse(impulse, mesh.position);
+
+      // Angular impulse (reduced)
+      const ang = new BABYLON.Vector3(
+        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 3
+      );
+      mesh.physicsImpostor.setAngularVelocity(ang);
+    }
+  }
+
+  function offsetMeshVertices(mesh, offset) {
+    const pos = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    for (let i = 0; i < pos.length; i += 3) {
+      pos[i] += offset.x;
+      pos[i+1] += offset.y;
+      pos[i+2] += offset.z;
+    }
+    mesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, pos);
+  }
+
+  function clearFragments() {
+    for (const m of state.fragments) {
+      if (m.physicsImpostor) {
+        m.physicsImpostor.dispose();
+        m.physicsImpostor = null;
+      }
+      m.dispose();
+    }
+    state.fragments = [];
+  }
+
+  function resetJar() {
+    // Stop bullets
+    for (const b of state.activeBullets) {
+      if (b.physicsImpostor) b.physicsImpostor.dispose();
+      b.dispose();
+    }
+    state.activeBullets = [];
+
+    clearFragments();
+    for (const m of state.jarMeshes) m.dispose();
+    state.jarMeshes = [];
+
+    buildJar();
+    precomputeFragments();
+  }
+
+  // ---------- Bullets ----------
+  function spawnBullet(origin, direction) {
+    const bullet = BABYLON.MeshBuilder.CreateSphere("bullet", { diameter: 0.12, segments: 10 }, scene);
+    bullet.material = bulletMat;
+    bullet.position.copyFrom(origin);
+    bullet.isPickable = false;
+
+    bullet.physicsImpostor = new BABYLON.PhysicsImpostor(bullet, BABYLON.PhysicsImpostor.SphereImpostor, {
+      mass: 0.35, restitution: 0.08, friction: 0.5
+    }, scene);
+    // Enable CCD on bullet too so it doesn't tunnel through fragments
+    const bbody = bullet.physicsImpostor.physicsBody;
+    if (bbody) {
+      bbody.setDamping(0.1, 0.2);
+      bbody.setCcdMotionThreshold(0.001);
+      bbody.setCcdSweptSphereRadius(0.05);
+    }
+    const speed = 30;
+    const vel = direction.scale(speed);
+    bullet.physicsImpostor.setLinearVelocity(vel);
+    state.activeBullets.push(bullet);
+
+    // life timer
+    let life = 2.5;
+    const observer = scene.onBeforeRenderObservable.add(() => {
+      life -= engine.getDeltaTime() / 1000;
+      if (life <= 0) {
+        scene.onBeforeRenderObservable.remove(observer);
+        if (state.activeBullets.includes(bullet)) {
+          const idx = state.activeBullets.indexOf(bullet);
+          state.activeBullets.splice(idx, 1);
+        }
+        if (bullet.physicsImpostor) bullet.physicsImpostor.dispose();
+        bullet.dispose();
+      }
+    });
+  }
+
+  // Bullet-jar collision: each frame, if not broken, check active bullets against jar AABB.
+  // For better accuracy, we also check distance from bullet to the nearest jar surface point.
+  function checkBulletImpacts() {
+    if (state.broken || state.jarMeshes.length === 0) return;
+    const jar = state.jarMeshes[0];
+    const bb = jar.getBoundingInfo().boundingBox;
+    for (const b of state.activeBullets) {
+      const p = b.position;
+      // quick AABB reject
+      if (p.x < bb.minimumWorld.x - 0.3 || p.x > bb.maximumWorld.x + 0.3) continue;
+      if (p.y < bb.minimumWorld.y - 0.3 || p.y > bb.maximumWorld.y + 0.3) continue;
+      if (p.z < bb.minimumWorld.z - 0.3 || p.z > bb.maximumWorld.z + 0.3) continue;
+
+      // distance from point to jar profile (in local space)
+      const local = BABYLON.Vector3.TransformCoordinates(p, BABYLON.Matrix.Invert(jar.getWorldMatrix()));
+      // approximate jar surface: radius as function of y via piecewise profile
+      const r = jarRadiusAtY(local.y);
+      if (r < 0) continue;
+      const dxz = Math.hypot(local.x, local.z);
+      if (dxz <= r + 0.08) {
+        // impact!
+        const impact = p.clone();
+        const vel = b.physicsImpostor.getLinearVelocity();
+        const impactDir = vel ? vel.normalize() : new BABYLON.Vector3(0, 0, 1);
+        breakJar(impact, impactDir);
+        return;
+      }
+    }
+  }
+
+  function jarRadiusAtY(y) {
+    const profile = [
+      [0.00, 0.00], [0.72, 0.05], [0.86, 0.25], [0.92, 0.60], [0.88, 1.00],
+      [0.78, 1.35], [0.62, 1.65], [0.50, 1.85], [0.48, 2.05], [0.56, 2.15],
+      [0.62, 2.25], [0.60, 2.35], [0.00, 2.40],
+    ];
+    if (y < profile[0][1] || y > profile[profile.length-1][1]) return -1;
+    for (let i = 0; i < profile.length - 1; i++) {
+      const [x0, y0] = profile[i];
+      const [x1, y1] = profile[i+1];
+      if (y >= y0 && y <= y1) {
+        if (Math.abs(y1 - y0) < 1e-6) return x0;
+        const t = (y - y0) / (y1 - y0);
+        return x0 + (x1 - x0) * t;
+      }
+    }
+    return -1;
+  }
+
+  // ---------- Input ----------
+  scene.onPointerDown = (evt, pickResult) => {
+    if (evt.button !== 0) return;
+    // Fire bullet from camera toward pointer direction
+    const origin = camera.position.clone();
+    let dir;
+    if (pickResult && pickResult.hit) {
+      dir = pickResult.pickedPoint.subtract(origin).normalize();
+    } else {
+      const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);
+      dir = ray.direction.clone();
+    }
+    spawnBullet(origin, dir);
+  };
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    resetJar();
+  });
+
+  // ---------- Build initial state ----------
+  buildJar();
+  precomputeFragments();
+
+  // ---------- Main loop ----------
+  scene.onBeforeRenderObservable.add(() => {
+    checkBulletImpacts();
+  });
+
+  engine.runRenderLoop(() => scene.render());
+  window.addEventListener("resize", () => engine.resize());
+})();
+</script>
+</body>
+</html>
