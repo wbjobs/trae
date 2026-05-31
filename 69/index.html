@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地下岩层结构3D可视化系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div id="canvas-container"></div>
+        
+        <div id="performance-monitor" class="performance-monitor">
+            <span id="fps-display">FPS: 60</span>
+            <span id="quality-display">质量: high</span>
+        </div>
+        
+        <div class="ui-panel">
+            <div class="panel-header">
+                <h1>地下岩层结构3D可视化系统</h1>
+            </div>
+            
+            <div class="panel-section">
+                <h3>视图控制</h3>
+                <div class="button-group">
+                    <button id="btn-top" class="view-btn">俯视图</button>
+                    <button id="btn-front" class="view-btn">正视图</button>
+                    <button id="btn-side" class="view-btn">侧视图</button>
+                    <button id="btn-3d" class="view-btn active">3D视图</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>岩层剖面</h3>
+                <div class="button-group">
+                    <button id="btn-section-x" class="section-btn">X轴剖面</button>
+                    <button id="btn-section-z" class="section-btn">Z轴剖面</button>
+                    <button id="btn-section-reset" class="section-btn active">完整视图</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>断层模拟</h3>
+                <div class="button-group">
+                    <button id="btn-fault-toggle" class="fault-btn">显示断层</button>
+                    <button id="btn-fault-animate" class="fault-btn">动态演示</button>
+                    <button id="btn-fault-reset" class="fault-btn">重置</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>勘探路线</h3>
+                <div class="button-group">
+                    <button id="btn-path-mode" class="path-btn">绘制路线</button>
+                    <button id="btn-path-undo" class="path-btn">撤销</button>
+                    <button id="btn-path-clear" class="path-btn">清除</button>
+                </div>
+                <div class="button-group">
+                    <button id="btn-path-export" class="path-btn">导出路线</button>
+                </div>
+                <div class="info-box" id="path-info">
+                    <p>点击"绘制路线"后，在3D视图中点击添加勘探点</p>
+                </div>
+                <div id="path-result" class="result-box">
+                    <p class="placeholder">暂无路线数据</p>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>钻探控制</h3>
+                <div class="button-group">
+                    <button id="btn-drill-mode" class="drill-btn">启动钻探</button>
+                    <button id="btn-drill-clear" class="drill-btn">清除钻孔</button>
+                </div>
+                <div class="info-box" id="drill-info">
+                    <p>点击"启动钻探"后，在3D视图中点击任意位置进行虚拟钻探</p>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>数据导出</h3>
+                <div class="export-options">
+                    <label>
+                        <span>格式:</span>
+                        <select id="export-format">
+                            <option value="json">JSON</option>
+                            <option value="obj">OBJ</option>
+                            <option value="glb">GLB</option>
+                        </select>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="export-lightweight">
+                        <span>轻量化导出</span>
+                    </label>
+                </div>
+                <div class="button-group">
+                    <button id="btn-export-model" class="export-btn">导出模型</button>
+                </div>
+                <div class="export-options">
+                    <label>
+                        <span>钻探数据:</span>
+                        <select id="export-drill-format">
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="button-group">
+                    <button id="btn-export-drill" class="export-btn">导出钻探</button>
+                    <button id="btn-export-all" class="export-btn">导出全部</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>岩层图例</h3>
+                <div id="legend-container"></div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>钻探结果</h3>
+                <div id="drill-result" class="result-box">
+                    <p class="placeholder">暂无钻探数据</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="data-popup" class="data-popup hidden">
+            <div>
+                <div class="popup-header">
+                    <h3 id="popup-title">地质数据点</h3>
+                    <button id="popup-close">×</button>
+                </div>
+                <div class="popup-content" id="popup-content"></div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>正在加载3D场景...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
