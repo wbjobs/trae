@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-backup-operator
+  namespace: default
+  labels:
+    app: database-backup-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database-backup-operator
+  template:
+    metadata:
+      labels:
+        app: database-backup-operator
+    spec:
+      serviceAccountName: database-backup-operator
+      containers:
+        - name: operator
+          image: database-backup-operator:latest
+          ports:
+            - containerPort: 8080
+              name: metrics
+            - containerPort: 8081
+              name: health
+            - containerPort: 8082
+              name: api
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: database-backup-operator-api
+  namespace: default
+spec:
+  selector:
+    app: database-backup-operator
+  ports:
+    - name: api
+      port: 8082
+      targetPort: api
+    - name: metrics
+      port: 8080
+      targetPort: metrics

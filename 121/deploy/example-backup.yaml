@@ -1,0 +1,18 @@
+apiVersion: backup.example.com/v1
+kind: DatabaseBackup
+metadata:
+  name: example-mysql-backup
+  namespace: default
+spec:
+  mysqlHost: mysql-service.default.svc.cluster.local
+  mysqlPort: 3306
+  mysqlUser: root
+  mysqlPassword: your-password-here
+  mysqlDatabase: your_database
+  schedule: "0 2 * * *"
+  retentionDays: 7
+  s3Bucket: backups
+  s3Endpoint: minio.minio.svc.cluster.local:9000
+  s3AccessKey: minioadmin
+  s3SecretKey: minioadmin
+  s3UseSSL: false

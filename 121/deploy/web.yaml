@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-backup-web
+  namespace: default
+  labels:
+    app: database-backup-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database-backup-web
+  template:
+    metadata:
+      labels:
+        app: database-backup-web
+    spec:
+      containers:
+        - name: web
+          image: database-backup-web:latest
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: database-backup-web
+  namespace: default
+spec:
+  type: LoadBalancer
+  selector:
+    app: database-backup-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
