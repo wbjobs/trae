@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔防逆位 - 怪物指挥官</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen" class="screen">
+            <h1>🏰 塔防逆位 🏰</h1>
+            <p class="subtitle">指挥你的怪物军团，突破敌方防线！</p>
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="输入你的名字" maxlength="12">
+            </div>
+            <button id="findMatchBtn" class="btn-primary">寻找对战</button>
+            <button id="soloBtn" class="btn-secondary">单人练习</button>
+            <div class="instructions">
+                <h3>游戏说明</h3>
+                <ul>
+                    <li>🎯 控制怪物沿路径前进，突破防御塔</li>
+                    <li>🔄 按 <b>Q</b> 切换阵型：分散 / 集中</li>
+                    <li>⚡ 按 <b>W</b> 释放加速技能</li>
+                    <li>🛡️ 按 <b>E</b> 释放护盾技能</li>
+                    <li>👆 点击路径召唤怪物（上限20只）</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="waitingScreen" class="screen hidden">
+            <div class="waiting-animation">
+                <div class="spinner"></div>
+                <h2>正在寻找对手...</h2>
+                <p id="waitingText">请稍候</p>
+                <button id="cancelMatchBtn" class="btn-secondary">取消</button>
+            </div>
+        </div>
+
+        <div id="gameScreen" class="screen hidden">
+            <div id="hud">
+                <div class="hud-left">
+                    <div class="player-info">
+                        <span class="label">我方:</span>
+                        <span id="myName" class="player-name">玩家1</span>
+                        <span id="myScore" class="score">0</span>
+                    </div>
+                    <div class="monster-count">
+                        <span class="label">怪物:</span>
+                        <span id="monsterCount">0</span>/<span id="monsterMax">20</span>
+                    </div>
+                </div>
+                <div class="hud-center">
+                    <div id="gameTime">00:00</div>
+                </div>
+                <div class="hud-right">
+                    <div class="player-info">
+                        <span id="opponentScore" class="score">0</span>
+                        <span id="opponentName" class="player-name">对手</span>
+                        <span class="label">:对方</span>
+                    </div>
+                </div>
+            </div>
+
+            <canvas id="gameCanvas"></canvas>
+
+            <div id="controlPanel">
+                <div class="formation-controls">
+                    <button id="formationBtn" class="control-btn" data-formation="spread">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">阵型: 分散</span>
+                    </button>
+                </div>
+                <div class="skill-controls">
+                    <button id="speedSkillBtn" class="control-btn skill-btn" data-skill="speed">
+                        <span class="btn-icon">⚡</span>
+                        <span class="btn-text">加速 [W]</span>
+                        <span class="cooldown" id="speedCooldown"></span>
+                    </button>
+                    <button id="shieldSkillBtn" class="control-btn skill-btn" data-skill="shield">
+                        <span class="btn-icon">🛡️</span>
+                        <span class="btn-text">护盾 [E]</span>
+                        <span class="cooldown" id="shieldCooldown"></span>
+                    </button>
+                </div>
+                <div class="spawn-controls">
+                    <div class="spawn-hint">点击路径召唤怪物</div>
+                </div>
+            </div>
+
+            <div id="chatBox">
+                <div id="chatMessages"></div>
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="输入消息..." maxlength="50">
+                    <button id="sendChatBtn">发送</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="endScreen" class="screen hidden">
+            <h2 id="resultTitle">游戏结束</h2>
+            <p id="resultText"></p>
+            <div class="final-scores">
+                <div class="score-item">
+                    <span id="finalMyName">我</span>
+                    <span id="finalMyScore">0</span>
+                </div>
+                <div class="vs">VS</div>
+                <div class="score-item">
+                    <span id="finalOpponentScore">0</span>
+                    <span id="finalOpponentName">对手</span>
+                </div>
+            </div>
+            <button id="playAgainBtn" class="btn-primary">再来一局</button>
+            <button id="watchReplayBtn" class="btn-secondary">观看回放</button>
+            <button id="backToMenuBtn" class="btn-secondary">返回菜单</button>
+        </div>
+
+        <div id="replayScreen" class="screen hidden">
+            <div id="replayHud">
+                <div class="replay-info">
+                    <span class="replay-label">回放模式</span>
+                    <span id="replayTime">00:00 / 02:00</span>
+                </div>
+                <div class="replay-controls">
+                    <button id="playPauseBtn" class="replay-btn">⏸️ 暂停</button>
+                    <button id="speedBtn" class="replay-btn">⏩ 1x</button>
+                    <button id="heatmapBtn" class="replay-btn">🔥 热力图</button>
+                    <button id="followBtn" class="replay-btn">🎯 跟随</button>
+                </div>
+            </div>
+
+            <canvas id="replayCanvas"></canvas>
+
+            <div id="replayTimeline">
+                <div class="timeline-track">
+                    <div id="timelineProgress" class="timeline-progress"></div>
+                    <div id="timelineHandle" class="timeline-handle"></div>
+                </div>
+                <div class="timeline-labels">
+                    <span>00:00</span>
+                    <span>01:00</span>
+                    <span>02:00</span>
+                </div>
+            </div>
+
+            <div id="replayBottomPanel">
+                <button id="exitReplayBtn" class="replay-btn danger">❌ 退出回放</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/astar.js"></script>
+    <script src="js/replay.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

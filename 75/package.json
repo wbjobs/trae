@@ -1,0 +1,13 @@
+{
+  "name": "tower-defense-reverse",
+  "version": "1.0.0",
+  "description": "塔防逆位游戏 - 玩家控制怪物，AI控制防御塔",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.0",
+    "express": "^4.18.2"
+  }
+}
