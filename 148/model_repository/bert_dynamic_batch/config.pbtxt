@@ -1,0 +1,102 @@
+name: "bert_dynamic_batch"
+platform: "python"
+max_batch_size: 32
+
+input [
+  {
+    name: "input_ids"
+    data_type: TYPE_INT64
+    dims: [ -1 ]
+  },
+  {
+    name: "attention_mask"
+    data_type: TYPE_INT64
+    dims: [ -1 ]
+  },
+  {
+    name: "token_type_ids"
+    data_type: TYPE_INT64
+    dims: [ -1 ]
+  },
+  {
+    name: "priority"
+    data_type: TYPE_INT64
+    dims: [ 1 ]
+  }
+]
+
+output [
+  {
+    name: "last_hidden_state"
+    data_type: TYPE_FP32
+    dims: [ -1, 768 ]
+  },
+  {
+    name: "pooler_output"
+    data_type: TYPE_FP32
+    dims: [ 768 ]
+  }
+]
+
+dynamic_batching {
+  preferred_batch_size: [ 8, 16, 32 ]
+  max_queue_delay_microseconds: 100000
+  priority_levels: 2
+  default_priority_level: 2
+}
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_CPU
+  }
+]
+
+parameters: {
+  key: "MAX_BATCH_SIZE"
+  value: {
+    string_value: "32"
+  }
+}
+
+parameters: {
+  key: "MAX_WAIT_MS"
+  value: {
+    string_value: "100"
+  }
+}
+
+parameters: {
+  key: "AGING_THRESHOLD_MS"
+  value: {
+    string_value: "500"
+  }
+}
+
+parameters: {
+  key: "STARVATION_PROTECTION_INTERVAL"
+  value: {
+    string_value: "3"
+  }
+}
+
+parameters: {
+  key: "WARMUP_REQUESTS"
+  value: {
+    string_value: "100"
+  }
+}
+
+parameters: {
+  key: "PREALLOCATE_COUNT"
+  value: {
+    string_value: "3"
+  }
+}
+
+parameters: {
+  key: "MODEL_NAME"
+  value: {
+    string_value: "bert-base-uncased"
+  }
+}
