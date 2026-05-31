@@ -1,0 +1,39 @@
+{
+  "name": "distributed-api-key-cluster",
+  "version": "1.0.0",
+  "description": "分布式 API 密钥管理集群 - 支持多节点密钥自动轮换、分级鉴权、灰度拦截",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:node1": "cross-env PORT=3001 NODE_ID=node-1 node server.js",
+    "start:node2": "cross-env PORT=3002 NODE_ID=node-2 node server.js",
+    "start:node3": "cross-env PORT=3003 NODE_ID=node-3 node server.js",
+    "cluster": "concurrently \"npm run start:node1\" \"npm run start:node2\" \"npm run start:node3\""
+  },
+  "keywords": [
+    "api",
+    "key-management",
+    "distributed",
+    "cluster",
+    "authentication",
+    "gray-release"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2",
+    "mysql2": "^3.6.5",
+    "sequelize": "^6.35.1",
+    "crypto": "^1.0.1",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "ip": "^1.1.8",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "concurrently": "^8.2.2"
+  }
+}
