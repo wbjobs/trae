@@ -1,0 +1,65 @@
+{
+    "industry": "finance",
+    "version": "1.0",
+    "description": "金融行业文档解析规则集",
+    "extraction_rules": [
+        {
+            "name": "company_name",
+            "type": "keyword",
+            "keywords": ["公司名称", "企业名称", "全称"],
+            "case_sensitive": false,
+            "weight": 1.0,
+            "description": "公司名称提取",
+            "category": "company_info",
+            "enabled": true
+        },
+        {
+            "name": "amount",
+            "type": "regex",
+            "pattern": "金额[：:]*\\s*[￥¥$]?\\d[\\d,.]*",
+            "case_sensitive": false,
+            "weight": 1.2,
+            "description": "金额提取",
+            "category": "financial_data",
+            "enabled": true
+        },
+        {
+            "name": "date",
+            "type": "regex",
+            "pattern": "\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}",
+            "case_sensitive": false,
+            "weight": 1.0,
+            "description": "日期提取",
+            "category": "general",
+            "enabled": true
+        },
+        {
+            "name": "account",
+            "type": "regex",
+            "pattern": "账号[：:]*\\s*[0-9\\-]+",
+            "case_sensitive": false,
+            "weight": 1.5,
+            "description": "银行账号提取",
+            "category": "financial_data",
+            "enabled": true
+        }
+    ],
+    "correction_rules": [
+        {
+            "pattern": "元",
+            "replacement": "人民币元"
+        }
+    ],
+    "domain_keywords": [
+        "金额", "账户", "交易", "结算", "凭证", "发票", "报表",
+        "预算", "审计", "税务", "贷款", "利率", "汇率", "资产"
+    ],
+    "stop_words": [
+        "的", "了", "和", "与", "或", "在", "是", "有", "为", "对"
+    ],
+    "metadata": {
+        "created_at": "2024-01-01",
+        "updated_at": "2024-01-01",
+        "author": "finance_department"
+    }
+}
