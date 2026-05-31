@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roguelike ECS</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Courier New', monospace;
+      color: #eee;
+    }
+    h1 {
+      margin-bottom: 10px;
+      color: #4ade80;
+    }
+    #gameCanvas {
+      border: 2px solid #4ade80;
+      background: #0f0f1a;
+      image-rendering: pixelated;
+    }
+    .controls {
+      margin-top: 15px;
+      text-align: center;
+    }
+    .controls p {
+      margin: 5px 0;
+      color: #888;
+    }
+    .key {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #333;
+      border-radius: 4px;
+      color: #4ade80;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🗡️ Roguelike ECS Prototype</h1>
+  <canvas id="gameCanvas" width="800" height="800"></canvas>
+  <div class="controls">
+    <p><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> 移动</p>
+    <p>绿色方块 = 玩家 | 深灰色 = 墙壁 | 浅灰色 = 地板</p>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
