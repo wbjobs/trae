@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Request Router",
+  "version": "1.0.0",
+  "description": "Request interception and routing extension",
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "storage",
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestAuthProvider"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background/index.js"
+  },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Request Router"
+  },
+  "options_page": "options/index.html",
+  "declarative_net_request": {
+    "rule_resources": []
+  }
+}
