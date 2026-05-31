@@ -1,0 +1,98 @@
+apisix:
+  node_listen: 9080
+  enable_ipv6: false
+  enable_control: true
+  control:
+    ip: "0.0.0.0"
+    port: 9092
+  router:
+    http: 'radixtree_uri'
+  ssl:
+    listen: 9443
+  admin_key:
+    - name: admin
+      key: edd1c9f034335f136f87ad84b625c8f1
+      role: admin
+
+  # 新增：Lua 共享内存字典，用于分布式锁和缓存
+  lua_shared_dicts:
+    gray_routing_cache: 50m
+    gray_routing_lock: 10m
+    gray_routing_metrics: 10m
+
+  # 插件配置
+  extra_lua_path: "/usr/local/apisix/apisix/plugins/?.lua"
+
+deployment:
+  admin:
+    allow_admin:
+      - 0.0.0.0/0
+    admin_listen:
+      ip: 0.0.0.0
+      port: 9180
+  etcd:
+    host:
+      - "http://etcd:2379"
+    prefix: "/apisix"
+    timeout: 30
+
+  # Wasm 插件支持
+  wasm:
+    plugins:
+      - name: gray_routing_wasm
+        file: /usr/local/apisix/apisix/wasm/gray_routing_wasm.wasm
+        priority: 7999
+
+plugin_attr:
+  gray-routing:
+    etcd_watch_key: "/apisix/plugins/gray-routing/rules"
+    cache_ttl: 60
+    enable_hot_update: true
+    debounce_delay: 1
+
+plugins:
+  - real-ip
+  - client-control
+  - proxy-rewrite
+  - api-breaker
+  - authz-keycloak
+  - basic-auth
+  - batch-requests
+  - consumer-restriction
+  - cors
+  - echo
+  - fault-injection
+  - grpc-transcode
+  - hmac-auth
+  - http-logger
+  - ip-restriction
+  - jwt-auth
+  - kafka-logger
+  - key-auth
+  - limit-conn
+  - limit-count
+  - limit-req
+  - node-status
+  - openid-connect
+  - authz-casbin
+  - prometheus
+  - proxy-cache
+  - proxy-mirror
+  - redirect
+  - referer-restriction
+  - request-id
+  - request-validation
+  - response-rewrite
+  - serverless-post-function
+  - serverless-pre-function
+  - sls-logger
+  - syslog
+  - tcp-logger
+  - udp-logger
+  - uri-blocker
+  - wolf-rbac
+  - zipkin
+  - traffic-split
+  - gzip
+  - gray-routing
+  - public-api

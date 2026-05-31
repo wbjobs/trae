@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backend Canary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .container {
+            text-align: center;
+            color: white;
+        }
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .version {
+            font-size: 24px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 30px;
+            border-radius: 50px;
+            display: inline-block;
+        }
+        .badge {
+            background: #ff5722;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 15px;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Backend Service</h1>
+        <div class="version">Version: Canary</div>
+        <div class="badge">EXPERIMENTAL</div>
+    </div>
+</body>
+</html>
