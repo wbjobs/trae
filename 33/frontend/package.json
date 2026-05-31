@@ -1,0 +1,25 @@
+{
+  "name": "h265-video-filter-processor",
+  "version": "1.0.0",
+  "description": "Browser-based H.265 video frame-level filter processor",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 8080",
+    "start": "python -m http.server 8080",
+    "serve": "npx serve . -l 8080"
+  },
+  "keywords": [
+    "ffmpeg",
+    "wasm",
+    "webgl",
+    "video-filter",
+    "h265",
+    "hevc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
