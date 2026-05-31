@@ -1,0 +1,25 @@
+{
+  "name": "config-cli",
+  "version": "1.0.0",
+  "description": "Distributed microservice configuration management CLI tool with etcd backend",
+  "main": "src/index.js",
+  "bin": {
+    "config-cli": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "etcd",
+    "config",
+    "microservice",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.1.0",
+    "etcd3": "^1.1.2"
+  }
+}
