@@ -1,0 +1,12 @@
+{
+  "worker_id": "worker-01",
+  "listen_address": ":50051",
+  "scheduler_address": "localhost:50050",
+  "max_concurrent": 10,
+  "heartbeat_interval": 5,
+  "log_level": "info",
+  "labels": {
+    "region": "us-east-1",
+    "env": "production"
+  }
+}

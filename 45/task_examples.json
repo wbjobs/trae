@@ -1,0 +1,84 @@
+{
+  "shell_task_with_isolation": {
+    "id": "shell-task-001",
+    "type": "SHELL",
+    "command": "echo 'Running with resource limits' && sleep 10 && echo 'Done'",
+    "timeout_seconds": 60,
+    "enable_isolation": true,
+    "resource_quota": {
+      "cpu_limit": 0.5,
+      "memory_limit_bytes": 536870912,
+      "pids_limit": 100,
+      "io_read_bps": 1048576,
+      "io_write_bps": 1048576
+    },
+    "run_as_user": "1000",
+    "run_as_group": "1000"
+  },
+
+  "python_task_with_limits": {
+    "id": "python-task-001",
+    "type": "PYTHON",
+    "command": "import time; [print(i) for i in range(10)]; time.sleep(2); print('Complete')",
+    "timeout_seconds": 30,
+    "enable_isolation": true,
+    "resource_quota": {
+      "cpu_limit": 1.0,
+      "memory_limit_bytes": 268435456
+    }
+  },
+
+  "docker_task_secure": {
+    "id": "docker-task-001",
+    "type": "DOCKER",
+    "command": "echo 'Running in isolated container' && whoami",
+    "parameters": {
+      "image": "python:3.11-slim"
+    },
+    "timeout_seconds": 120,
+    "enable_isolation": true,
+    "resource_quota": {
+      "cpu_limit": 2.0,
+      "memory_limit_bytes": 1073741824,
+      "pids_limit": 200
+    },
+    "read_only_rootfs": true,
+    "network_mode": "none",
+    "run_as_user": "1000",
+    "cap_drop": ["ALL"],
+    "security_opt": ["no-new-privileges"]
+  },
+
+  "docker_task_with_network": {
+    "id": "docker-task-002",
+    "type": "DOCKER",
+    "command": "curl -s https://example.com",
+    "parameters": {
+      "image": "curlimages/curl:latest"
+    },
+    "timeout_seconds": 30,
+    "enable_isolation": true,
+    "resource_quota": {
+      "cpu_limit": 0.5,
+      "memory_limit_bytes": 134217728
+    },
+    "network_mode": "bridge"
+  },
+
+  "high_performance_task": {
+    "id": "high-perf-001",
+    "type": "SHELL",
+    "command": "./heavy_computation.sh",
+    "working_directory": "/data",
+    "timeout_seconds": 3600,
+    "environment": {
+      "OMP_NUM_THREADS": "4"
+    },
+    "enable_isolation": true,
+    "resource_quota": {
+      "cpu_limit": 4.0,
+      "memory_limit_bytes": 8589934592,
+      "cpu_shares": 1024
+    }
+  }
+}

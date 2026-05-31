@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package scheduler;
+
+option go_package = "github.com/distributed-scheduler/worker/proto";
+
+enum TaskType {
+  SHELL = 0;
+  PYTHON = 1;
+  DOCKER = 2;
+}
+
+enum TaskStatus {
+  PENDING = 0;
+  RUNNING = 1;
+  SUCCESS = 2;
+  FAILED = 3;
+  TIMEOUT = 4;
+  CANCELLED = 5;
+}
+
+message ResourceQuota {
+  double cpu_limit = 1;
+  int64 memory_limit_bytes = 2;
+  int64 disk_limit_bytes = 3;
+  int64 pids_limit = 4;
+  double io_read_bps = 5;
+  double io_write_bps = 6;
+  int32 cpu_shares = 7;
+  int32 cpu_soft_limit = 8;
+}
+
+message Task {
+  string id = 1;
+  TaskType type = 2;
+  string command = 3;
+  map<string, string> parameters = 4;
+  int64 timeout_seconds = 5;
+  map<string, string> environment = 6;
+  string working_directory = 7;
+  ResourceQuota resource_quota = 8;
+  bool enable_isolation = 9;
+  string run_as_user = 10;
+  string run_as_group = 11;
+  bool read_only_rootfs = 12;
+  repeated string cap_add = 13;
+  repeated string cap_drop = 14;
+  string network_mode = 15;
+  repeated string security_opt = 16;
+}
+
+message ResourceUsage {
+  double cpu_usage_percent = 1;
+  int64 memory_peak_bytes = 2;
+  int64 memory_avg_bytes = 3;
+  int64 disk_read_bytes = 4;
+  int64 disk_write_bytes = 5;
+  int64 network_rx_bytes = 6;
+  int64 network_tx_bytes = 7;
+  int64 max_pids = 8;
+}
+
+message TaskResult {
+  string task_id = 1;
+  TaskStatus status = 2;
+  int32 exit_code = 3;
+  string error_message = 4;
+  int64 start_time = 5;
+  int64 end_time = 6;
+  ResourceUsage resource_usage = 7;
+}
+
+message TaskLogRequest {
+  string task_id = 1;
+}
+
+message TaskLog {
+  string task_id = 1;
+  string content = 2;
+  bool is_stderr = 3;
+  int64 timestamp = 4;
+}
+
+message NodeResource {
+  double cpu_usage = 1;
+  double memory_usage = 2;
+  double memory_total = 3;
+  double memory_used = 4;
+  double disk_usage = 5;
+  double disk_total = 6;
+  double disk_used = 7;
+  int32 running_tasks = 8;
+  int64 timestamp = 9;
+}
+
+message HeartbeatRequest {
+  string worker_id = 1;
+  NodeResource resource = 2;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+}
+
+message ExecuteTaskRequest {
+  Task task = 1;
+}
+
+message ExecuteTaskResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+message CancelTaskRequest {
+  string task_id = 1;
+}
+
+message CancelTaskResponse {
+  bool cancelled = 1;
+  string message = 2;
+}
+
+service WorkerService {
+  rpc ExecuteTask(ExecuteTaskRequest) returns (ExecuteTaskResponse);
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+  rpc StreamTaskLogs(TaskLogRequest) returns (stream TaskLog);
+}
+
+service SchedulerService {
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc ReportTaskResult(TaskResult) returns (HeartbeatResponse);
+  rpc StreamLogs(stream TaskLog) returns (HeartbeatResponse);
+}
