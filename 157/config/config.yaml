@@ -1,0 +1,58 @@
+system:
+  name: "IoT Anomaly Detection System"
+  log_level: "INFO"
+
+questdb:
+  host: "localhost"
+  port: 8812
+  http_port: 9000
+  user: "admin"
+  password: "quest"
+  database: "qdb"
+  table_sensor_data: "sensor_data"
+  table_anomalies: "anomalies"
+  table_predictions: "predictions"
+
+sensors:
+  count: 1000
+  base_temperature: 25.0
+  temperature_variance: 3.0
+  sampling_rate: 1
+
+anomaly_detection:
+  sudden_change:
+    enabled: true
+    threshold: 5.0
+    window: 2
+
+  stuck:
+    enabled: true
+    window: 100
+
+  oscillation:
+    enabled: true
+    window: 60
+    threshold: 10
+
+  sensor_reset:
+    enabled: true
+    reset_temperature_threshold: 1.0
+    cooldown_seconds: 30
+    min_baseline_samples: 50
+
+  adaptive:
+    enabled: true
+    update_interval: 300
+    noise_level_low_threshold: 0.5
+    noise_level_high_threshold: 2.0
+    relaxation_factor: 2.0
+    min_adaptive_threshold: 3.0
+    oscillation_relaxation_factor: 1.5
+
+prophet:
+  enabled: true
+  training_window: 86400
+  prediction_horizon: 3600
+  confidence_interval: 0.95
+  retrain_interval: 3600
+  seasonality_mode: "additive"

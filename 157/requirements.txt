@@ -1,0 +1,7 @@
+questdb>=7.0.0
+prophet>=1.1.5
+pandas>=2.0.0
+numpy>=1.24.0
+psycopg2-binary>=2.9.9
+PyYAML>=6.0.1
+python-dateutil>=2.8.2

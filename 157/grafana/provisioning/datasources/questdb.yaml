@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: QuestDB
+    type: postgres
+    access: proxy
+    url: questdb:8812
+    database: qdb
+    user: admin
+    secureJsonData:
+      password: quest
+    isDefault: true
+    editable: true
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1200
