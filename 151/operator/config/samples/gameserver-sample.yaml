@@ -1,0 +1,21 @@
+apiVersion: game.kruise.io/v1alpha1
+kind: GameServer
+metadata:
+  name: world-of-warcraft-server
+  namespace: games
+  labels:
+    game.kruise.io/game: wow
+    app: gameserver
+spec:
+  gameName: "魔兽世界"
+  serverId: "wow-server-001"
+  replicas: 3
+  template:
+    containers:
+      - name: gameserver
+        image: gameserver/wow:v1.0.0
+  upgradePolicy:
+    strategy: InPlace
+    maxUnavailable: "1"
+    migrationTimeoutSeconds: 300
+    agentPort: 8080

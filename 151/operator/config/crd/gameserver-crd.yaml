@@ -1,0 +1,351 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gameservers.game.kruise.io
+spec:
+  group: game.kruise.io
+  names:
+    kind: GameServer
+    listKind: GameServerList
+    plural: gameservers
+    singular: gameserver
+    shortNames:
+      - gs
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - gameName
+                - serverId
+                - replicas
+                - template
+              properties:
+                gameName:
+                  type: string
+                  description: 游戏名称
+                serverId:
+                  type: string
+                  description: 服务器ID
+                replicas:
+                  type: integer
+                  minimum: 1
+                  description: 副本数量
+                template:
+                  type: object
+                  required:
+                    - containers
+                  properties:
+                    containers:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - name
+                          - image
+                        properties:
+                          name:
+                            type: string
+                          image:
+                            type: string
+                upgradePolicy:
+                  type: object
+                  properties:
+                    strategy:
+                      type: string
+                      enum:
+                        - InPlace
+                      default: InPlace
+                    maxUnavailable:
+                      oneOf:
+                        - type: string
+                        - type: integer
+                      default: "1"
+                    migrationTimeoutSeconds:
+                      type: integer
+                      default: 300
+                    agentPort:
+                      type: integer
+                      default: 8080
+                    canary:
+                      type: object
+                      description: 金丝雀升级策略
+                      properties:
+                        enable:
+                          type: boolean
+                          default: false
+                          description: 是否启用金丝雀升级
+                        canaryReplicas:
+                          oneOf:
+                            - type: string
+                            - type: integer
+                          description: 金丝雀副本数（优先级高于百分比）
+                        canaryPercentage:
+                          type: integer
+                          default: 10
+                          minimum: 1
+                          maximum: 100
+                          description: 金丝雀百分比（默认10%）
+                        observationDurationSeconds:
+                          type: integer
+                          default: 300
+                          minimum: 30
+                          description: 观察时长（秒）
+                        autoDecision:
+                          type: boolean
+                          default: true
+                          description: 是否自动决策
+                        maxCPUDeviation:
+                          type: number
+                          default: 0.3
+                          description: CPU最大偏差比例（如0.3表示30%）
+                        maxMemoryDeviation:
+                          type: number
+                          default: 0.3
+                          description: 内存最大偏差比例
+                        maxPlayerLossPercent:
+                          type: number
+                          default: 0.2
+                          description: 玩家数最大损失比例
+                        minPlayerCount:
+                          type: integer
+                          default: 10
+                          description: 最小玩家数阈值（低于此值跳过对比）
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Running
+                    - Upgrading
+                    - Migrating
+                    - Draining
+                    - Canary
+                    - Succeeded
+                    - Failed
+                    - RollingBack
+                currentVersion:
+                  type: string
+                targetVersion:
+                  type: string
+                readyReplicas:
+                  type: integer
+                updatedReplicas:
+                  type: integer
+                totalReplicas:
+                  type: integer
+                onlinePlayers:
+                  type: integer
+                migrationStatus:
+                  type: object
+                  properties:
+                    state:
+                      type: string
+                      enum:
+                        - Pending
+                        - Migrating
+                        - Completed
+                        - Failed
+                    totalPlayers:
+                      type: integer
+                    migratedPlayers:
+                      type: integer
+                    failedPlayers:
+                      type: integer
+                    sourcePod:
+                      type: string
+                    targetPod:
+                      type: string
+                    startTime:
+                      type: string
+                      format: date-time
+                    endTime:
+                      type: string
+                      format: date-time
+                    players:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          playerId:
+                            type: string
+                          playerName:
+                            type: string
+                          level:
+                            type: integer
+                          dataSize:
+                            type: integer
+                          migrateTime:
+                            type: string
+                            format: date-time
+                          status:
+                            type: string
+                          errorMessage:
+                            type: string
+                upgradeProgress:
+                  type: object
+                  properties:
+                    totalPods:
+                      type: integer
+                    upgradedPods:
+                      type: integer
+                    currentPodIndex:
+                      type: integer
+                    percentage:
+                      type: integer
+                    estimatedTime:
+                      type: string
+                    startTime:
+                      type: string
+                      format: date-time
+                canaryStatus:
+                  type: object
+                  description: 金丝雀升级状态
+                  properties:
+                    phase:
+                      type: string
+                      enum:
+                        - Preparing
+                        - Observing
+                        - Deciding
+                        - Completed
+                        - Promoting
+                        - RollingBack
+                    canaryReplicas:
+                      type: integer
+                    stableReplicas:
+                      type: integer
+                    observationStart:
+                      type: string
+                      format: date-time
+                    observationEnd:
+                      type: string
+                      format: date-time
+                    decision:
+                      type: string
+                      enum:
+                        - Pending
+                        - Promote
+                        - Rollback
+                        - Observe
+                    decisionReason:
+                      type: string
+                    metricsComparison:
+                      type: object
+                      properties:
+                        canaryAvgCPU:
+                          type: number
+                        stableAvgCPU:
+                          type: number
+                        cpuDeviation:
+                          type: number
+                        canaryAvgMemory:
+                          type: number
+                        stableAvgMemory:
+                          type: number
+                        memoryDeviation:
+                          type: number
+                        canaryAvgPlayers:
+                          type: integer
+                        stableAvgPlayers:
+                          type: integer
+                        playerLossPercent:
+                          type: number
+                        comparisonTime:
+                          type: string
+                          format: date-time
+                        overallHealthScore:
+                          type: number
+                    canaryPods:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          podName:
+                            type: string
+                          cpuPercent:
+                            type: number
+                          memoryPercent:
+                            type: number
+                          memoryRSS:
+                            type: integer
+                          onlinePlayers:
+                            type: integer
+                          timestamp:
+                            type: string
+                            format: date-time
+                    stablePods:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          podName:
+                            type: string
+                          cpuPercent:
+                            type: number
+                          memoryPercent:
+                            type: number
+                          memoryRSS:
+                            type: integer
+                          onlinePlayers:
+                            type: integer
+                          timestamp:
+                            type: string
+                            format: date-time
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                lastUpdateTime:
+                  type: string
+                  format: date-time
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: 游戏
+          type: string
+          jsonPath: .spec.gameName
+        - name: 状态
+          type: string
+          jsonPath: .status.phase
+        - name: 副本
+          type: string
+          jsonPath: .status.readyReplicas
+        - name: 总副本
+          type: integer
+          jsonPath: .spec.replicas
+        - name: 当前版本
+          type: string
+          jsonPath: .status.currentVersion
+        - name: 在线玩家
+          type: integer
+          jsonPath: .status.onlinePlayers
+        - name: 升级进度
+          type: string
+          jsonPath: .status.upgradeProgress.percentage
+        - name: 金丝雀决策
+          type: string
+          jsonPath: .status.canaryStatus.decision
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

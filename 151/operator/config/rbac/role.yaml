@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gameserver-operator
+  namespace: gameserver-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gameserver-operator-role
+  namespace: gameserver-system
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/status", "events", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps.kruise.io"]
+    resources: ["clonesets", "clonesets/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["game.kruise.io"]
+    resources: ["gameservers", "gameservers/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gameserver-operator-rolebinding
+  namespace: gameserver-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gameserver-operator-role
+subjects:
+  - kind: ServiceAccount
+    name: gameserver-operator
+    namespace: gameserver-system

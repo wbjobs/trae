@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gameserver-operator
+  namespace: gameserver-system
+  labels:
+    app: gameserver-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gameserver-operator
+  template:
+    metadata:
+      labels:
+        app: gameserver-operator
+    spec:
+      serviceAccountName: gameserver-operator
+      containers:
+        - name: operator
+          image: gameserver-operator:latest
+          command:
+            - /manager
+          args:
+            - --leader-elect
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+          ports:
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+            - containerPort: 8081
+              name: health
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      terminationGracePeriodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gameserver-operator-metrics
+  namespace: gameserver-system
+  labels:
+    app: gameserver-operator
+spec:
+  ports:
+    - port: 8080
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    app: gameserver-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gameserver-operator
+  namespace: gameserver-system
+  labels:
+    app: gameserver-operator
+spec:
+  selector:
+    matchLabels:
+      app: gameserver-operator
+  endpoints:
+    - port: metrics
+      interval: 30s
