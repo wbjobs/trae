@@ -1,0 +1,309 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background-color: #fffacd;
+}
+
+.note-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #fffacd;
+}
+
+.note-header {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  background: linear-gradient(180deg, #f0e68c 0%, #e6d87a 100%);
+  padding: 0 8px;
+  -webkit-app-region: drag;
+}
+
+.drag-area {
+  flex: 1;
+  height: 100%;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.btn-delete:hover {
+  background-color: #ff6b6b;
+  color: white;
+}
+
+.btn-new:hover {
+  background-color: #4ecdc4;
+  color: white;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background-color: #f5eec2;
+  border-bottom: 1px solid #e0d68c;
+}
+
+.toolbar-btn {
+  width: 28px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.toolbar-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-btn.active {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background-color: #ccc;
+  margin: 0 4px;
+}
+
+.color-picker {
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.note-content {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.note-content:empty:before {
+  content: attr(placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+.note-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.note-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.note-content::-webkit-scrollbar-thumb {
+  background: #d4c878;
+  border-radius: 4px;
+}
+
+.note-content::-webkit-scrollbar-thumb:hover {
+  background: #c4b868;
+}
+
+.note-content ul,
+.note-content ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.conflict-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.conflict-dialog {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.conflict-dialog h3 {
+  margin: 0 0 10px 0;
+  color: #e74c3c;
+  font-size: 18px;
+}
+
+.conflict-dialog > p {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.conflict-content {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex: 1;
+  min-height: 0;
+}
+
+.conflict-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.conflict-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #555;
+}
+
+.conflict-preview {
+  flex: 1;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow-y: auto;
+  font-size: 12px;
+  min-height: 80px;
+  max-height: 150px;
+}
+
+.conflict-preview::-webkit-scrollbar {
+  width: 6px;
+}
+
+.conflict-preview::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.conflict-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.conflict-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+.conflict-btn.keep-local {
+  background-color: #3498db;
+  color: white;
+}
+
+.conflict-btn.keep-local:hover {
+  background-color: #2980b9;
+}
+
+.conflict-btn.keep-server {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.conflict-btn.keep-server:hover {
+  background-color: #7f8c8d;
+}
+
+.conflict-btn.merge {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.conflict-btn.merge:hover {
+  background-color: #27ae60;
+}
+
+.password-dialog {
+  max-width: 350px;
+}
+
+.password-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+.password-input:focus {
+  border-color: #3498db;
+}
+
+.password-error {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-bottom: 10px;
+  min-height: 16px;
+}
+
+.btn-export:hover,
+.btn-import:hover {
+  background-color: rgba(52, 152, 219, 0.8);
+  color: white;
+}

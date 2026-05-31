@@ -1,0 +1,28 @@
+{
+  "name": "sticky-notes",
+  "version": "1.0.0",
+  "description": "Electron桌面便签应用",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": ["electron", "notes", "sticky-notes"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^31.0.0",
+    "sql.js": "^1.10.3"
+  },
+  "build": {
+    "fileAssociations": [
+      {
+        "ext": "ele",
+        "name": "Sticky Notes File",
+        "description": "加密便签文件",
+        "role": "Editor",
+        "mimeType": "application/x-ele-notes"
+      }
+    ]
+  }
+}

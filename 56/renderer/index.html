@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>便签</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="note-container">
+    <div class="note-header">
+      <div class="drag-area"></div>
+      <div class="header-buttons">
+        <button class="btn btn-export" title="导出便签">📤</button>
+        <button class="btn btn-import" title="导入便签">📥</button>
+        <button class="btn btn-new" title="新建便签">+</button>
+        <button class="btn btn-delete" title="删除便签">×</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="toolbar-btn" data-command="bold" title="粗体"><b>B</b></button>
+      <button class="toolbar-btn" data-command="italic" title="斜体"><i>I</i></button>
+      <button class="toolbar-btn" data-command="underline" title="下划线"><u>U</u></button>
+      <button class="toolbar-btn" data-command="strikeThrough" title="删除线"><s>S</s></button>
+      <span class="divider"></span>
+      <button class="toolbar-btn" data-command="insertUnorderedList" title="无序列表">•</button>
+      <button class="toolbar-btn" data-command="insertOrderedList" title="有序列表">1.</button>
+      <span class="divider"></span>
+      <select class="color-picker" id="textColor" title="文字颜色">
+        <option value="black">黑</option>
+        <option value="red">红</option>
+        <option value="blue">蓝</option>
+        <option value="green">绿</option>
+        <option value="purple">紫</option>
+      </select>
+    </div>
+    <div class="note-content" id="editor" contenteditable="true" placeholder="开始输入..."></div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
