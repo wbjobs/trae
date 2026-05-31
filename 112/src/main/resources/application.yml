@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: id-generator
+
+zookeeper:
+  connect-string: 127.0.0.1:2181
+  namespace: id-generator
+  connection-timeout: 15000
+  session-timeout: 60000
+  max-retries: 3
+  retry-interval: 1000
+
+id-generator:
+  worker-id-bits: 10
+  sequence-bits: 12
+  max-clock-backward-ms: 5000
+  self-healing-check-interval-ms: 10
+
+ntp:
+  servers:
+    - pool.ntp.org
+    - time.google.com
+    - time.windows.com
+  port: 123
+  timeout-ms: 3000
+  max-offset-ms: 5
+  check-interval-ms: 60000
+  max-failures: 3
