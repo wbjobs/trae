@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>手势分类器 - TensorFlow.js + MediaPipe</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2rem;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #video, #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #canvas {
+      z-index: 10;
+    }
+
+    .gesture-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .gesture-btn {
+      padding: 12px;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .gesture-btn:hover {
+      border-color: #667eea;
+      background: #f0f3ff;
+    }
+
+    .gesture-btn.active {
+      border-color: #667eea;
+      background: #667eea;
+      color: white;
+    }
+
+    .gesture-btn.recording {
+      animation: pulse 1s infinite;
+      border-color: #e74c3c;
+      background: #e74c3c;
+      color: white;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .control-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-success {
+      background: #27ae60;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #229954;
+    }
+
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+
+    .btn-warning {
+      background: #f39c12;
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: #d68910;
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .stat-item {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-item .label {
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    .stat-item .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .confidence-bars {
+      margin-top: 15px;
+    }
+
+    .confidence-item {
+      margin-bottom: 12px;
+    }
+
+    .confidence-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+
+    .confidence-bar {
+      height: 20px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    #trainingChart {
+      width: 100%;
+      height: 250px;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+
+    .status.info {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    .status.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status.warning {
+      background: #fff3e0;
+      color: #e65100;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .model-management {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .model-list {
+      max-height: 150px;
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+
+    .model-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 5px;
+    }
+
+    .model-item button {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+
+    .sample-count {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✋ 手势分类器 - 实时训练与推理</h1>
+    
+    <div class="main-grid">
+      <div class="card">
+        <h2>📹 摄像头与数据采集</h2>
+        <div class="video-container">
+          <video id="video" autoplay playsinline></video>
+          <canvas id="canvas"></canvas>
+        </div>
+        
+        <div id="status" class="status info">正在初始化摄像头...</div>
+        
+        <div class="gesture-buttons">
+          <button class="gesture-btn" data-gesture="0">✊ 握拳</button>
+          <button class="gesture-btn" data-gesture="1">🖐️ 五指张开</button>
+          <button class="gesture-btn" data-gesture="2">👌 OK</button>
+        </div>
+        
+        <div class="stats">
+          <div class="stat-item">
+            <div class="label">握拳样本</div>
+            <div class="value" id="count0">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">张开样本</div>
+            <div class="value" id="count1">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">OK样本</div>
+            <div class="value" id="count2">0</div>
+          </div>
+        </div>
+        
+        <div class="control-buttons">
+          <button id="recordBtn" class="btn-warning" disabled>⏺️ 开始采集 (按R)</button>
+          <button id="clearDataBtn" class="btn-danger">🗑️ 清空数据</button>
+        </div>
+        <div class="sample-count">提示：选择手势后按R键或点击按钮开始采集，每次采集30帧</div>
+      </div>
+
+      <div class="card">
+        <h2>🤖 模型训练与推理</h2>
+        
+        <div class="confidence-bars">
+          <div class="confidence-item">
+            <div class="confidence-label">
+              <span>✊ 握拳</span>
+              <span id="conf0">0%</span>
+            </div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" id="bar0" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="confidence-item">
+            <div class="confidence-label">
+              <span>🖐️ 五指张开</span>
+              <span id="conf1">0%</span>
+            </div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" id="bar1" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="confidence-item">
+            <div class="confidence-label">
+              <span>👌 OK</span>
+              <span id="conf2">0%</span>
+            </div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" id="bar2" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="predictionResult" class="status info" style="text-align: center; font-size: 1.1rem; font-weight: bold;">
+          等待模型训练...
+        </div>
+
+        <div class="control-buttons">
+          <button id="trainBtn" class="btn-success" disabled>🎓 训练模型</button>
+          <button id="inferBtn" class="btn-primary" disabled>▶️ 开始推理</button>
+          <button id="stopInferBtn" class="btn-danger" disabled>⏹️ 停止推理</button>
+          <button id="clearModelBtn" class="btn-secondary">🧹 重置模型</button>
+        </div>
+
+        <div class="model-management">
+          <h3 style="margin-bottom: 10px; color: #555;">💾 模型管理</h3>
+          <input type="text" id="modelName" placeholder="输入模型名称 (可选)">
+          <div class="control-buttons">
+            <button id="saveModelBtn" class="btn-primary" disabled>📤 保存到服务器</button>
+            <button id="listModelsBtn" class="btn-secondary">📋 列出模型</button>
+          </div>
+          <div id="modelList" class="model-list"></div>
+        </div>
+
+        <div class="transfer-learning" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;">
+          <h3 style="margin-bottom: 10px; color: #555;">🔄 迁移学习</h3>
+          <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            加载预训练模型（100人数据），只需采集5次样本即可快速微调
+          </p>
+          <div id="pretrainedModelList" class="model-list" style="margin-bottom: 10px;"></div>
+          <div class="control-buttons">
+            <button id="loadPretrainedBtn" class="btn-primary">📥 加载预训练模型</button>
+            <button id="fineTuneBtn" class="btn-success" disabled>⚡ 快速微调 (5轮)</button>
+          </div>
+          <div id="transferStatus" class="status info" style="margin-top: 10px; font-size: 12px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h2>📊 训练曲线</h2>
+      <canvas id="trainingChart"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466124/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
