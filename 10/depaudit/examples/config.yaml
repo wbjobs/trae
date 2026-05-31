@@ -1,0 +1,65 @@
+scan:
+  paths:
+    - "."
+  languages:
+    - javascript
+    - python
+    - java
+    - golang
+  exclude_dirs:
+    - node_modules
+    - vendor
+    - dist
+    - build
+    - .git
+  include_dev: true
+
+vulnerability:
+  min_severity: LOW
+  ignore_ids:
+    - CVE-2021-12345
+  ignore_packages:
+    lodash: "4.17.20"
+    requests: ""
+  data_sources:
+    - osv
+
+license:
+  enabled: true
+  project_license: ""
+  blacklist_licenses:
+    - AGPL-3.0
+    - AGPL-2.0
+    - SSPL
+  ignore_packages:
+    - some-internal-package
+  check_unknown: false
+
+constraint:
+  enabled: true
+  check_peer_dependencies: true
+  ignore_packages: []
+
+fix:
+  enabled: false
+  auto_rollback: true
+  dry_run: false
+  max_updates: 10
+  exclude_packages:
+    - react
+    - django
+
+report:
+  formats:
+    - text
+    - json
+  output_dir: "."
+  include_details: true
+
+ci:
+  enabled: true
+  fail_on_vulnerability: true
+  min_severity: HIGH
+  create_artifact: true
+  fail_on_license_issue: false
+  fail_on_constraint_issue: false
