@@ -1,0 +1,67 @@
+{
+  "name": "file-sync-backup",
+  "version": "1.0.0",
+  "description": "Cross-platform file synchronization and incremental backup tool",
+  "main": "dist-electron/main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vue-tsc --noEmit && vite build && electron-builder",
+    "electron:preview": "vite build && electron ."
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.3.0",
+    "pinia": "^2.1.7",
+    "element-plus": "^2.5.0",
+    "better-sqlite3": "^9.4.0",
+    "chokidar": "^3.6.0",
+    "ssh2-sftp-client": "^10.0.0",
+    "webdav": "^5.3.0",
+    "crc-32": "^1.2.2",
+    "node-cron": "^3.0.3",
+    "fs-extra": "^11.2.0",
+    "path-browserify": "^1.0.1",
+    "crypto-browserify": "^3.12.0",
+    "stream-browserify": "^3.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.1.0",
+    "vue-tsc": "^2.0.0",
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0",
+    "concurrently": "^8.2.0",
+    "wait-on": "^7.2.0",
+    "@types/node": "^20.11.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/fs-extra": "^11.0.4",
+    "@types/ssh2-sftp-client": "^9.0.3",
+    "@types/better-sqlite3": "^7.6.9"
+  },
+  "build": {
+    "appId": "com.example.filesync",
+    "productName": "FileSyncBackup",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
