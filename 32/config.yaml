@@ -1,0 +1,59 @@
+server:
+  http_port: 8080
+  ssh_port: 2222
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: bastion_audit
+  sslmode: disable
+
+ssh:
+  host_key_path: ./keys/ssh_host_rsa_key
+  max_sessions: 100
+  idle_timeout: 3600
+
+recording:
+  tty_log_dir: ./data/tty_logs
+  screenshot_dir: ./data/screenshots
+  screenshot_interval: 10
+  storage_type: s3
+
+storage:
+  s3:
+    endpoint: localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    bucket: session-logs
+    use_ssl: false
+  local:
+    base_path: ./data/storage
+
+alerting:
+  rules:
+    - name: "危险命令"
+      pattern: "(rm\\s+-rf|mkfs|dd\\s+if=|chmod\\s+777|passwd|useradd|usermod|visudo)"
+      severity: high
+      enabled: true
+    - name: "敏感文件访问"
+      pattern: "(cat|vi|vim|nano|less)\\s+(/etc/shadow|/etc/passwd|/etc/sudoers)"
+      severity: medium
+      enabled: true
+    - name: "网络扫描"
+      pattern: "(nmap|netcat|nc\\s+-z|telnet).*(\\d{1,3}\\.){3}\\d{1,3}"
+      severity: medium
+      enabled: true
+
+ha:
+  enabled: false
+  node_id: bastion-1
+  etcd_endpoints:
+    - localhost:2379
+  lease_ttl: 5
+  session_sync_interval: 1
+
+log:
+  level: info
+  format: json
