@@ -1,0 +1,16 @@
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+sqlalchemy==2.0.29
+pydantic==2.6.4
+pydantic-settings==2.2.1
+numpy==1.26.4
+gmsh==4.12.2
+python-occ-core==7.7.2
+trimesh==4.3.2
+vtk==9.3.0
+meshio==5.3.4
+aiofiles==23.2.1
+httpx==0.27.0
+reportlab==4.1.0
+matplotlib==3.8.3
