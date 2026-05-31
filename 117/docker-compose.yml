@@ -1,0 +1,195 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: sentiment-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - sentiment-network
+    healthcheck:
+      test: echo ruok | nc localhost 2181
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: sentiment-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - sentiment-network
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server localhost:9092
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: sentiment-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: sentiment-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - sentiment-network
+
+  druid-coordinator:
+    image: apache/druid:28.0.0
+    container_name: sentiment-druid-coordinator
+    depends_on:
+      - zookeeper
+    command: coordinator
+    ports:
+      - "8082:8082"
+    environment:
+      DRUID_SINGLE_NODE_CLUSTER: "true"
+      DRUID_ZK_HOST: zookeeper:2181
+      DRUID_METADATA_STORAGE_TYPE: derby
+      DRUID_SERVICE: coordinator
+    volumes:
+      - druid-data:/opt/druid/var
+    networks:
+      - sentiment-network
+
+  druid-overlord:
+    image: apache/druid:28.0.0
+    container_name: sentiment-druid-overlord
+    depends_on:
+      - zookeeper
+    command: overlord
+    ports:
+      - "8083:8083"
+    environment:
+      DRUID_SINGLE_NODE_CLUSTER: "true"
+      DRUID_ZK_HOST: zookeeper:2181
+      DRUID_METADATA_STORAGE_TYPE: derby
+      DRUID_SERVICE: overlord
+    volumes:
+      - druid-data:/opt/druid/var
+    networks:
+      - sentiment-network
+
+  druid-broker:
+    image: apache/druid:28.0.0
+    container_name: sentiment-druid-broker
+    depends_on:
+      - druid-coordinator
+      - druid-overlord
+    command: broker
+    ports:
+      - "8088:8088"
+    environment:
+      DRUID_SINGLE_NODE_CLUSTER: "true"
+      DRUID_ZK_HOST: zookeeper:2181
+      DRUID_METADATA_STORAGE_TYPE: derby
+      DRUID_SERVICE: broker
+    volumes:
+      - druid-data:/opt/druid/var
+    networks:
+      - sentiment-network
+
+  druid-router:
+    image: apache/druid:28.0.0
+    container_name: sentiment-druid-router
+    depends_on:
+      - druid-broker
+    command: router
+    ports:
+      - "8888:8888"
+    environment:
+      DRUID_SINGLE_NODE_CLUSTER: "true"
+      DRUID_ZK_HOST: zookeeper:2181
+      DRUID_METADATA_STORAGE_TYPE: derby
+      DRUID_SERVICE: router
+      DRUID_HOST: localhost
+    volumes:
+      - druid-data:/opt/druid/var
+    networks:
+      - sentiment-network
+
+  druid-historical:
+    image: apache/druid:28.0.0
+    container_name: sentiment-druid-historical
+    depends_on:
+      - druid-coordinator
+    command: historical
+    environment:
+      DRUID_SINGLE_NODE_CLUSTER: "true"
+      DRUID_ZK_HOST: zookeeper:2181
+      DRUID_METADATA_STORAGE_TYPE: derby
+      DRUID_SERVICE: historical
+    volumes:
+      - druid-data:/opt/druid/var
+    networks:
+      - sentiment-network
+
+  druid-middleManager:
+    image: apache/druid:28.0.0
+    container_name: sentiment-druid-mm
+    depends_on:
+      - druid-overlord
+    command: middleManager
+    environment:
+      DRUID_SINGLE_NODE_CLUSTER: "true"
+      DRUID_ZK_HOST: zookeeper:2181
+      DRUID_METADATA_STORAGE_TYPE: derby
+      DRUID_SERVICE: middleManager
+    volumes:
+      - druid-data:/opt/druid/var
+    networks:
+      - sentiment-network
+
+  sentiment-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentiment-monitor-app
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      DRUID_BROKER: http://druid-router:8888
+      JAVA_OPTS: "-Xmx1g -Xms512m"
+    networks:
+      - sentiment-network
+    healthcheck:
+      test: curl -f http://localhost:8080/api/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  druid-data:
+
+networks:
+  sentiment-network:
+    driver: bridge

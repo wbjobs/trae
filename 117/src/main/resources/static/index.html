@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时舆情监控系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@6.1.2/dist/esm5/index.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #eee; min-height: 100vh; }
+        .header { background: rgba(0,0,0,0.3); padding: 20px; text-align: center; border-bottom: 2px solid #0f3460; }
+        .header h1 { font-size: 28px; background: linear-gradient(90deg, #e94560, #0f3460); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header .subtitle { color: #888; margin-top: 5px; font-size: 14px; }
+        .container { padding: 20px; max-width: 1920px; margin: 0 auto; }
+        .stats-bar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.08); }
+        .stat-card .label { font-size: 12px; color: #888; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; }
+        .stat-card.positive .value { color: #4ade80; }
+        .stat-card.negative .value { color: #f87171; }
+        .stat-card.neutral .value { color: #fbbf24; }
+        .stat-card.total .value { color: #60a5fa; }
+        .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #e94560, #0f3460); color: white; }
+        .btn-primary:hover { transform: scale(1.05); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #eee; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-secondary.active { background: #e94560; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .grid-full { grid-template-columns: 1fr; }
+        .card { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .card-title { font-size: 18px; margin-bottom: 15px; color: #60a5fa; display: flex; align-items: center; gap: 10px; }
+        .card-title::before { content: ''; width: 4px; height: 20px; background: #e94560; border-radius: 2px; }
+        .chart-container { position: relative; height: 300px; }
+        .wordcloud-container { height: 300px; display: flex; align-items: center; justify-content: center; }
+        .heatmap-container { height: 400px; }
+        .entity-list { max-height: 300px; overflow-y: auto; }
+        .entity-item { display: flex; justify-content: space-between; padding: 10px; margin-bottom: 5px; background: rgba(255,255,255,0.03); border-radius: 6px; transition: background 0.3s; }
+        .entity-item:hover { background: rgba(255,255,255,0.08); }
+        .entity-name { font-weight: 500; }
+        .entity-type { font-size: 12px; padding: 2px 8px; border-radius: 10px; margin-right: 10px; }
+        .entity-type.PERSON { background: rgba(96,165,250,0.2); color: #60a5fa; }
+        .entity-type.BRAND { background: rgba(249,115,22,0.2); color: #f97316; }
+        .entity-type.LOCATION { background: rgba(74,222,128,0.2); color: #4ade80; }
+        .entity-count { color: #e94560; font-weight: bold; }
+        .loading { text-align: center; padding: 40px; color: #888; }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+        .status-indicator.live { background: #4ade80; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @media (max-width: 1200px) { .stats-bar { grid-template-columns: repeat(3, 1fr); } .grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .stats-bar { grid-template-columns: repeat(2, 1fr); } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: #e94560; border-radius: 3px; }
+
+        .burst-alert-panel {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(15, 52, 96, 0.15));
+            border: 2px solid #e94560;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(233, 69, 96, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(233, 69, 96, 0); }
+        }
+
+        .burst-alert-header {
+            background: linear-gradient(90deg, #e94560, #0f3460);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .burst-alert-title {
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .burst-alert-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .burst-alert-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .burst-alert-item {
+            background: rgba(255,255,255,0.05);
+            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            animation: slideIn 0.5s ease-out;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .burst-alert-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+
+        .burst-alert-item.severity-CRITICAL { border-left-color: #ff0000; background: rgba(255, 0, 0, 0.1); }
+        .burst-alert-item.severity-HIGH { border-left-color: #ff6600; background: rgba(255, 102, 0, 0.1); }
+        .burst-alert-item.severity-MEDIUM { border-left-color: #ffcc00; background: rgba(255, 204, 0, 0.1); }
+        .burst-alert-item.severity-LOW { border-left-color: #00ccff; background: rgba(0, 204, 255, 0.1); }
+
+        .burst-alert-item.acknowledged { opacity: 0.5; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .burst-alert-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .burst-alert-severity {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .burst-alert-severity.CRITICAL { background: #ff0000; color: white; }
+        .burst-alert-severity.HIGH { background: #ff6600; color: white; }
+        .burst-alert-severity.MEDIUM { background: #ffcc00; color: black; }
+        .burst-alert-severity.LOW { background: #00ccff; color: black; }
+
+        .burst-alert-time { font-size: 11px; color: #888; }
+
+        .burst-alert-message { font-size: 13px; line-height: 1.5; }
+
+        .burst-alert-details {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+        }
+
+        .burst-alert-item.expanded .burst-alert-details { display: block; }
+
+        .burst-alert-detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .burst-alert-detail-label { color: #888; }
+        .burst-alert-detail-value { color: #eee; }
+
+        .burst-alert-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .burst-alert-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .burst-alert-btn.ack { background: rgba(74, 222, 128, 0.3); color: #4ade80; }
+        .burst-alert-btn.ack:hover { background: rgba(74, 222, 128, 0.5); }
+
+        .no-burst-alerts {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+        }
+
+        .no-burst-alerts .icon { font-size: 48px; margin-bottom: 10px; }
+
+        .burst-highlight {
+            animation: highlight-pulse 1s infinite;
+            font-weight: bold;
+        }
+
+        @keyframes highlight-pulse {
+            0%, 100% { color: #e94560; }
+            50% { color: #ffcc00; }
+        }
+
+        .burst-stat-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .burst-stat-item {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .burst-stat-label { font-size: 10px; color: #888; }
+        .burst-stat-value { font-size: 16px; font-weight: bold; }
+        .burst-stat-value.CRITICAL { color: #ff0000; }
+        .burst-stat-value.HIGH { color: #ff6600; }
+        .burst-stat-value.MEDIUM { color: #ffcc00; }
+        .burst-stat-value.LOW { color: #00ccff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 实时舆情监控系统</h1>
+        <div class="subtitle">
+            <span class="status-indicator live"></span>
+            实时监控社交媒体情感分析 | 每秒处理 5000+ 条数据
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="stats-bar">
+            <div class="stat-card total">
+                <div class="label">总数据量</div>
+                <div class="value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card positive">
+                <div class="label">积极情感</div>
+                <div class="value" id="positiveCount">0</div>
+            </div>
+            <div class="stat-card negative">
+                <div class="label">消极情感</div>
+                <div class="value" id="negativeCount">0</div>
+            </div>
+            <div class="stat-card neutral">
+                <div class="label">中性情感</div>
+                <div class="value" id="neutralCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">积极占比</div>
+                <div class="value" id="positiveRatio" style="color: #4ade80;">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">消极占比</div>
+                <div class="value" id="negativeRatio" style="color: #f87171;">0%</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-secondary active" data-window="1m" onclick="setTimeWindow('1m')">1分钟</button>
+            <button class="btn btn-secondary" data-window="5m" onclick="setTimeWindow('5m')">5分钟</button>
+            <button class="btn btn-secondary" data-window="1h" onclick="setTimeWindow('1h')">1小时</button>
+            <button class="btn btn-primary" onclick="refreshAll()">🔄 刷新数据</button>
+        </div>
+
+        <div class="burst-alert-panel" id="burstAlertPanel" style="display: none;">
+            <div class="burst-alert-header">
+                <div class="burst-alert-title">
+                    <span>🚨 突发舆情预警</span>
+                    <span class="burst-alert-badge" id="burstAlertCount">0</span>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="acknowledgeAllAlerts()" style="padding: 6px 12px; font-size: 12px;">全部确认</button>
+                </div>
+            </div>
+            <div class="burst-alert-list" id="burstAlertList">
+                <div class="no-burst-alerts">
+                    <div class="icon">✨</div>
+                    <div>暂无突发预警</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-title">情感趋势分析</div>
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">地理分布热力图</div>
+                    <div class="heatmap-container" id="heatmap"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-title">实体词云</div>
+                    <div class="wordcloud-container" id="wordcloud">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">热门实体排行</div>
+                    <div class="entity-list" id="entityList">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentWindow = '1m';
+        let trendChart = null;
+        let heatmapChart = null;
+        let stompClient = null;
+
+        const API_BASE = window.location.origin + '/api';
+
+        function setTimeWindow(window) {
+            currentWindow = window;
+            document.querySelectorAll('[data-window]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.window === window);
+            });
+            refreshAll();
+        }
+
+        async function fetchDashboard() {
+            const response = await fetch(`${API_BASE}/dashboard?window=${currentWindow}`);
+            const data = await response.json();
+            updateStats(data);
+            updateTrendChart(data.recentTrends);
+            updateHeatmap(data.topLocations);
+            updateWordcloud(data.topEntities);
+            updateEntityList(data.topEntities);
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalCount').textContent = data.totalPosts?.toLocaleString() || '0';
+            document.getElementById('positiveCount').textContent = data.totalPositive?.toLocaleString() || '0';
+            document.getElementById('negativeCount').textContent = data.totalNegative?.toLocaleString() || '0';
+            document.getElementById('neutralCount').textContent = data.totalNeutral?.toLocaleString() || '0';
+            document.getElementById('positiveRatio').textContent = (data.positiveRatio || 0) + '%';
+            document.getElementById('negativeRatio').textContent = (data.negativeRatio || 0) + '%';
+        }
+
+        function updateTrendChart(trends) {
+            if (!trends || trends.length === 0) return;
+
+            const labels = trends.map(t => new Date(t.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+            const positiveData = trends.map(t => t.positiveCount);
+            const negativeData = trends.map(t => t.negativeCount);
+            const neutralData = trends.map(t => t.neutralCount);
+
+            if (trendChart) {
+                trendChart.data.labels = labels;
+                trendChart.data.datasets[0].data = positiveData;
+                trendChart.data.datasets[1].data = negativeData;
+                trendChart.data.datasets[2].data = neutralData;
+                trendChart.update('none');
+                return;
+            }
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '积极',
+                            data: positiveData,
+                            borderColor: '#4ade80',
+                            backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: '消极',
+                            data: negativeData,
+                            borderColor: '#f87171',
+                            backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: '中性',
+                            data: neutralData,
+                            borderColor: '#fbbf24',
+                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#eee', font: { size: 12 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        }
+
+        function updateHeatmap(locations) {
+            if (!locations || locations.length === 0) return;
+
+            const points = locations.map(loc => ({
+                name: loc.location,
+                value: [loc.longitude, loc.latitude, loc.count]
+            }));
+
+            const maxCount = Math.max(...locations.map(l => l.count));
+
+            if (!heatmapChart) {
+                heatmapChart = echarts.init(document.getElementById('heatmap'), 'dark');
+            }
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        return `${params.name}<br/>数量: ${params.value[2]}`;
+                    }
+                },
+                visualMap: {
+                    min: 0,
+                    max: maxCount,
+                    calculable: true,
+                    inRange: { color: ['#0f3460', '#e94560', '#fbbf24', '#4ade80'] },
+                    textStyle: { color: '#eee' },
+                    left: 20,
+                    bottom: 20
+                },
+                geo: {
+                    map: 'world',
+                    roam: true,
+                    zoom: 1.5,
+                    center: [104.1954, 35.8617],
+                    itemStyle: {
+                        areaColor: 'rgba(15, 52, 96, 0.3)',
+                        borderColor: 'rgba(255,255,255,0.1)'
+                    },
+                    emphasis: {
+                        itemStyle: { areaColor: 'rgba(233, 69, 96, 0.3)' }
+                    }
+                },
+                series: [{
+                    type: 'effectScatter',
+                    coordinateSystem: 'geo',
+                    data: points,
+                    symbolSize: function(val) {
+                        return Math.max(8, Math.sqrt(val[2]) * 2);
+                    },
+                    showEffectOn: 'render',
+                    rippleEffect: { brushType: 'stroke' },
+                    label: {
+                        show: true,
+                        formatter: '{b}',
+                        position: 'right',
+                        color: '#eee',
+                        fontSize: 10
+                    },
+                    itemStyle: {
+                        color: '#e94560',
+                        shadowBlur: 10,
+                        shadowColor: '#e94560'
+                    }
+                }]
+            };
+
+            heatmapChart.setOption(option);
+        }
+
+        function updateWordcloud(entities) {
+            if (!entities || entities.length === 0) return;
+
+            const container = document.getElementById('wordcloud');
+            const words = entities.slice(0, 50).map(e => [e.name, Math.max(15, Math.sqrt(e.count) * 8)]);
+
+            const colors = ['#e94560', '#60a5fa', '#4ade80', '#fbbf24', '#f97316', '#a78bfa', '#f472b6'];
+
+            WordCloud(container, {
+                list: words,
+                gridSize: 8,
+                weightFactor: 3,
+                fontFamily: 'Segoe UI, sans-serif',
+                color: function() { return colors[Math.floor(Math.random() * colors.length)]; },
+                rotateRatio: 0.3,
+                rotationSteps: 2,
+                backgroundColor: 'transparent',
+                drawOutOfBound: false,
+                shrinkToFit: true
+            });
+        }
+
+        function updateEntityList(entities) {
+            if (!entities || entities.length === 0) {
+                document.getElementById('entityList').innerHTML = '<div class="loading">暂无数据</div>';
+                return;
+            }
+
+            const html = entities.slice(0, 30).map(e => `
+                <div class="entity-item">
+                    <div>
+                        <span class="entity-type ${e.type}">${e.type}</span>
+                        <span class="entity-name">${e.name}</span>
+                    </div>
+                    <span class="entity-count">${e.count}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('entityList').innerHTML = html;
+        }
+
+        function refreshAll() {
+            fetchDashboard();
+            fetchBurstAlerts();
+        }
+
+        async function fetchBurstAlerts() {
+            try {
+                const response = await fetch(`${API_BASE}/bursts/active?limit=10`);
+                const data = await response.json();
+                updateBurstAlerts(data);
+            } catch (e) {
+                console.warn('Failed to fetch burst alerts:', e);
+            }
+        }
+
+        function updateBurstAlerts(data) {
+            const panel = document.getElementById('burstAlertPanel');
+            const list = document.getElementById('burstAlertList');
+            const countBadge = document.getElementById('burstAlertCount');
+
+            const alerts = data.alerts || [];
+            const unacknowledged = alerts.filter(a => !a.acknowledged);
+
+            countBadge.textContent = unacknowledged.length;
+
+            if (unacknowledged.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            panel.style.display = 'block';
+
+            let html = '';
+            unacknowledged.slice(0, 5).forEach(alert => {
+                const burst = alert.burstEvent;
+                const context = alert.context || {};
+                const time = new Date(alert.alertTime).toLocaleTimeString('zh-CN');
+
+                html += `
+                    <div class="burst-alert-item severity-${alert.severity} ${alert.acknowledged ? 'acknowledged' : ''}" 
+                         onclick="toggleAlertDetails('${alert.id}')"
+                         id="alert-${alert.id}">
+                        <div class="burst-alert-meta">
+                            <span class="burst-alert-severity ${alert.severity}">${alert.severity}</span>
+                            <span class="burst-alert-time">${time}</span>
+                        </div>
+                        <div class="burst-alert-message">${alert.message}</div>
+                        <div class="burst-alert-details">
+                            <div class="burst-stat-bar">
+                                <div class="burst-stat-item">
+                                    <div class="burst-stat-label">突发等级</div>
+                                    <div class="burst-stat-value ${alert.severity}">${burst.burstLevel}</div>
+                                </div>
+                                <div class="burst-stat-item">
+                                    <div class="burst-stat-label">增长率</div>
+                                    <div class="burst-stat-value">${burst.growthRate}x</div>
+                                </div>
+                                <div class="burst-stat-item">
+                                    <div class="burst-stat-label">讨论数</div>
+                                    <div class="burst-stat-value">${burst.count}</div>
+                                </div>
+                                <div class="burst-stat-item">
+                                    <div class="burst-stat-label">显著性</div>
+                                    <div class="burst-stat-value">${burst.significance}</div>
+                                </div>
+                            </div>
+                            <div class="burst-alert-detail-row">
+                                <span class="burst-alert-detail-label">情感倾向</span>
+                                <span class="burst-alert-detail-value" style="color: ${context.sentiment === 'NEGATIVE' ? '#f87171' : context.sentiment === 'POSITIVE' ? '#4ade80' : '#fbbf24'}">
+                                    ${context.sentiment === 'NEGATIVE' ? '负面' : context.sentiment === 'POSITIVE' ? '正面' : '中性'}
+                                </span>
+                            </div>
+                            <div class="burst-alert-detail-row">
+                                <span class="burst-alert-detail-label">实体类型</span>
+                                <span class="burst-alert-detail-value">${burst.entityType}</span>
+                            </div>
+                            <div class="burst-alert-actions" onclick="event.stopPropagation()">
+                                <button class="burst-alert-btn ack" onclick="acknowledgeAlert('${alert.id}')">
+                                    ✓ 确认
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function toggleAlertDetails(alertId) {
+            const alertEl = document.getElementById('alert-' + alertId);
+            if (alertEl) {
+                alertEl.classList.toggle('expanded');
+            }
+        }
+
+        async function acknowledgeAlert(alertId) {
+            try {
+                await fetch(`${API_BASE}/bursts/alerts/${alertId}/acknowledge`, { method: 'POST' });
+                fetchBurstAlerts();
+            } catch (e) {
+                console.warn('Failed to acknowledge alert:', e);
+            }
+        }
+
+        async function acknowledgeAllAlerts() {
+            try {
+                await fetch(`${API_BASE}/bursts/alerts/acknowledge-all`, { method: 'POST' });
+                fetchBurstAlerts();
+            } catch (e) {
+                console.warn('Failed to acknowledge all alerts:', e);
+            }
+        }
+
+        function connectWebSocket() {
+            const socket = new SockJS('/ws');
+            stompClient = new StompJs.Client({
+                webSocketFactory: () => socket,
+                reconnectDelay: 5000,
+                debug: function(str) { console.log(str); }
+            });
+
+            stompClient.onConnect = function(frame) {
+                console.log('WebSocket connected');
+
+                stompClient.subscribe('/topic/realtime', function(message) {
+                    const stats = JSON.parse(message.body);
+                    if (stats.totalPositive !== undefined) {
+                        document.getElementById('totalCount').textContent = (stats.totalPositive + stats.totalNegative + stats.totalNeutral).toLocaleString();
+                        document.getElementById('positiveCount').textContent = stats.totalPositive?.toLocaleString() || '0';
+                        document.getElementById('negativeCount').textContent = stats.totalNegative?.toLocaleString() || '0';
+                        document.getElementById('neutralCount').textContent = stats.totalNeutral?.toLocaleString() || '0';
+                    }
+                });
+
+                stompClient.subscribe('/topic/trends', function(message) {
+                    const trends = JSON.parse(message.body);
+                    if (trends.length > 0) {
+                        updateTrendChart(trends);
+                    }
+                });
+
+                stompClient.subscribe('/topic/entities', function(message) {
+                    const entities = JSON.parse(message.body);
+                    if (entities.length > 0) {
+                        updateWordcloud(entities);
+                        updateEntityList(entities);
+                    }
+                });
+
+                stompClient.subscribe('/topic/geo', function(message) {
+                    const geo = JSON.parse(message.body);
+                    if (geo.length > 0) {
+                        updateHeatmap(geo);
+                    }
+                });
+
+                stompClient.subscribe('/topic/bursts', function(message) {
+                    const burstData = JSON.parse(message.body);
+                    if (burstData.alerts && burstData.alerts.length > 0) {
+                        updateBurstAlerts(burstData);
+                    }
+                });
+            };
+
+            stompClient.onStompError = function(frame) {
+                console.error('WebSocket error:', frame.headers['message']);
+            };
+
+            stompClient.activate();
+        }
+
+        fetch('https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js')
+            .then(r => r.text())
+            .then(text => {
+                eval(text);
+                document.addEventListener('DOMContentLoaded', function() {
+                    refreshAll();
+                    connectWebSocket();
+                    setInterval(refreshAll, 30000);
+                });
+            })
+            .catch(err => {
+                console.warn('Failed to load world map:', err);
+                document.addEventListener('DOMContentLoaded', function() {
+                    refreshAll();
+                    connectWebSocket();
+                    setInterval(refreshAll, 30000);
+                });
+            });
+
+        window.addEventListener('resize', function() {
+            if (heatmapChart) heatmapChart.resize();
+        });
+    </script>
+</body>
+</html>

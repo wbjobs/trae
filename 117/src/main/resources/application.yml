@@ -1,0 +1,68 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: sentiment-monitor
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: 1
+        batch.size: 16384
+        linger.ms: 5
+        buffer.memory: 33554432
+        compression.type: snappy
+    consumer:
+      group-id: sentiment-consumer-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      properties:
+        max.poll.records: 500
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 30000
+        enable.auto.commit: false
+
+app:
+  kafka:
+    topic:
+      raw: social-media-raw
+      processed: social-media-processed
+  druid:
+    broker-url: ${DRUID_BROKER:http://localhost:8888}
+    datasource: social-media
+    ingestion:
+      batch-size: 5000
+      flush-interval-ms: 5000
+    segment:
+      target-partition-size: 50000000
+      max-total-rows: 5000000
+    query:
+      retry:
+        max-attempts: 3
+        delay-ms: 100
+      cache:
+        ttl-seconds: 30
+      timeout-seconds: 30
+  sentiment:
+    producer:
+      rate-per-second: 5000
+      enabled: true
+  burst:
+    detection:
+      enabled: true
+      interval-ms: 10000
+      granularity: 10s
+      min-significance: 5.0
+      min-burst-level: 2
+      cooldown-seconds: 60
+
+logging:
+  level:
+    root: INFO
+    com.sentiment: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.druid: WARN
