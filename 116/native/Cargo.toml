@@ -1,0 +1,23 @@
+[package]
+name = "offline_map_engine"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "offline_map_engine"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+gl = "0.14"
+glutin = "0.31"
+sqlite = "0.34"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+glam = { version = "0.24", features = ["std"] }
+log = "0.4"
+env_logger = "0.11"
+thiserror = "1.0"
+bytemuck = { version = "1.14", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+rand = "0.8"
+lazy_static = "1.4"
