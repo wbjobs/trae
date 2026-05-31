@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.11
+    container_name: redpanda
+    command:
+      - redpanda start
+      - --overprovisioned
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --node-id 0
+      - --check=false
+      - --set redpanda.auto_create_topics_enabled=true
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feature-network
+
+  redpanda-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.11
+    container_name: redpanda-init
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    command: >
+      bash -c "
+        rpk topic create user_events --brokers redpanda:9092 --partitions 3 --replicas 1 || true;
+        rpk topic create user_features --brokers redpanda:9092 --partitions 3 --replicas 1 || true;
+        echo 'Topics created successfully';
+      "
+    networks:
+      - feature-network
+
+  risingwave:
+    image: risingwavelabs/risingwave:v1.7.0
+    container_name: risingwave
+    command:
+      - -c
+      - "
+        ./risingwave meta-node --config-path /risingwave/config/risingwave.toml &
+        ./risingwave compute-node --config-path /risingwave/config/risingwave.toml &
+        ./risingwave frontend --config-path /risingwave/config/risingwave.toml &
+        ./risingwave compactor --config-path /risingwave/config/risingwave.toml &
+        wait
+      "
+    ports:
+      - "4566:4566"
+      - "5691:5691"
+    volumes:
+      - risingwave_data:/risingwave/data
+      - ./config/risingwave.toml:/risingwave/config/risingwave.toml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5691/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feature-network
+
+  risingwave-init:
+    image: risingwavelabs/risingwave:v1.7.0
+    container_name: risingwave-init
+    depends_on:
+      risingwave:
+        condition: service_healthy
+    volumes:
+      - ./sql:/sql
+    command: >
+      bash -c "
+        echo 'Waiting for RisingWave to be ready...';
+        sleep 10;
+        ./risingwave sql --host risingwave --port 4566 -f /sql/risingwave.sql || true;
+        echo 'RisingWave initialized';
+      "
+    networks:
+      - feature-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - feature-network
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=feature_store
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - feature-network
+
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    container_name: event-producer
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+    environment:
+      - REDPANDA_BROKERS=redpanda:9092
+    networks:
+      - feature-network
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    container_name: feature-consumer
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    environment:
+      - REDPANDA_BROKERS=redpanda:9092
+      - REDIS_ADDR=redis:6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=feature_store
+    networks:
+      - feature-network
+
+  feature-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: feature-service
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "50051:50051"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=feature_store
+    healthcheck:
+      test: ["CMD", "grpc-health-probe", "-addr=:50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feature-network
+
+volumes:
+  redpanda_data:
+  risingwave_data:
+  redis_data:
+  postgres_data:
+
+networks:
+  feature-network:
+    driver: bridge

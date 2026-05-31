@@ -1,0 +1,56 @@
+[system]
+data_directory = "/risingwave/data"
+backup_storage_url = "memory"
+
+[meta]
+listen_addr = "0.0.0.0:5690"
+advertise_addr = "risingwave:5690"
+dashboard_host = "0.0.0.0:5691"
+
+[frontend]
+listen_addr = "0.0.0.0:4566"
+
+[compute]
+listen_addr = "0.0.0.0:5688"
+
+[compactor]
+listen_addr = "0.0.0.0:5689"
+
+[storage]
+# Use memory for S3-compatible storage
+s3.endpoint = "memory://"
+s3.bucket = "risingwave"
+
+[server]
+# Total memory for streaming executors (70% of system memory)
+total_memory_bytes = 1610612736
+
+[streaming]
+# Number of streaming executor threads
+parallelism = 4
+
+# Operator buffer size (larger for throughput)
+operator_buffer_size = 65536
+
+# Maximum number of messages per chunk
+chunk_size = 1024
+
+# Backpressure settings
+# When watermark delay exceeds this, trigger backpressure
+max_watermark_delay_sec = 120
+
+# Memory limit per operator (in bytes)
+memory_limit_per_operator = 134217728
+
+# State store write buffer size
+state_store_write_buffer_size = 268435456
+
+# State store read parallelism
+state_store_read_parallelism = 4
+
+[batch]
+# Number of batch executor threads
+parallelism = 2
+
+# Memory limit for batch execution
+memory_limit = 536870912

@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package featurestore;
+
+option go_package = "github.com/realtime-feature-store/proto";
+
+message UserEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string event_type = 3;
+  int64 timestamp = 4;
+  string item_id = 5;
+  double amount = 6;
+  string session_id = 7;
+}
+
+message Feature {
+  string user_id = 1;
+  string feature_name = 2;
+  double feature_value = 3;
+  int64 timestamp = 4;
+}
+
+message GetFeaturesRequest {
+  string user_id = 1;
+  repeated string feature_names = 2;
+}
+
+message GetFeaturesResponse {
+  repeated Feature features = 1;
+}
+
+message BatchGetFeaturesRequest {
+  repeated string user_ids = 1;
+  repeated string feature_names = 2;
+}
+
+message UserFeatures {
+  string user_id = 1;
+  repeated Feature features = 2;
+}
+
+message BatchGetFeaturesResponse {
+  repeated UserFeatures user_features = 1;
+}
+
+// Point-in-time lookup for historical features
+message GetFeaturesAtTimeRequest {
+  string user_id = 1;
+  repeated string feature_names = 2;
+  int64 target_timestamp = 3;
+}
+
+message GetFeaturesAtTimeResponse {
+  repeated Feature features = 1;
+  int64 target_timestamp = 2;
+  int64 actual_timestamp = 3;
+}
+
+// Batch point-in-time lookup
+message BatchGetFeaturesAtTimeRequest {
+  repeated string user_ids = 1;
+  repeated string feature_names = 2;
+  int64 target_timestamp = 3;
+}
+
+message BatchGetFeaturesAtTimeResponse {
+  repeated UserFeatures user_features = 1;
+  int64 target_timestamp = 2;
+}
+
+// Time range query for feature history
+message GetFeatureHistoryRequest {
+  string user_id = 1;
+  string feature_name = 2;
+  int64 start_timestamp = 3;
+  int64 end_timestamp = 4;
+  int32 limit = 5;
+}
+
+message GetFeatureHistoryResponse {
+  string user_id = 1;
+  string feature_name = 2;
+  repeated Feature features = 3;
+}
+
+// Backfill/recompute features for a time range
+message BackfillFeaturesRequest {
+  string user_id = 1;
+  repeated string feature_names = 2;
+  int64 start_timestamp = 3;
+  int64 end_timestamp = 4;
+  int64 interval_seconds = 5;
+}
+
+message BackfillFeaturesResponse {
+  string status = 1;
+  int32 total_points = 2;
+  repeated Feature features = 3;
+}
+
+service FeatureService {
+  // Real-time feature queries
+  rpc GetFeatures(GetFeaturesRequest) returns (GetFeaturesResponse);
+  rpc BatchGetFeatures(BatchGetFeaturesRequest) returns (BatchGetFeaturesResponse);
+
+  // Point-in-time feature queries (for model training alignment)
+  rpc GetFeaturesAtTime(GetFeaturesAtTimeRequest) returns (GetFeaturesAtTimeResponse);
+  rpc BatchGetFeaturesAtTime(BatchGetFeaturesAtTimeRequest) returns (BatchGetFeaturesAtTimeResponse);
+
+  // Feature history queries
+  rpc GetFeatureHistory(GetFeatureHistoryRequest) returns (GetFeatureHistoryResponse);
+
+  // Backfill features for a time range
+  rpc BackfillFeatures(BackfillFeaturesRequest) returns (BackfillFeaturesResponse);
+}
