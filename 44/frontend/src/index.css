@@ -1,0 +1,262 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
+.viewer-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.control-panel {
+  width: 320px;
+  background: #16213e;
+  border-left: 1px solid #0f3460;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.control-panel h2 {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #e94560;
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section h3 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.btn:hover {
+  background: #d63850;
+}
+
+.btn-secondary {
+  background: #0f3460;
+}
+
+.btn-secondary:hover {
+  background: #1a4a8a;
+}
+
+.file-input {
+  display: none;
+}
+
+.slider-container {
+  margin-bottom: 12px;
+}
+
+.slider-container label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #c0c0c0;
+}
+
+.slider-container input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: #0f3460;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #e94560;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.checkbox-container input {
+  margin-right: 10px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox-container label {
+  cursor: pointer;
+  font-size: 14px;
+  color: #c0c0c0;
+}
+
+.stats-info {
+  background: #0f3460;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.stats-info p {
+  margin-bottom: 6px;
+  color: #a0a0a0;
+}
+
+.stats-info span {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.atom-info-popup {
+  position: absolute;
+  background: rgba(22, 33, 62, 0.95);
+  border: 1px solid #e94560;
+  border-radius: 8px;
+  padding: 12px;
+  pointer-events: none;
+  z-index: 100;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.atom-info-popup h4 {
+  color: #e94560;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.atom-info-popup p {
+  font-size: 12px;
+  color: #c0c0c0;
+  margin-bottom: 4px;
+}
+
+.atom-info-popup span {
+  color: #ffffff;
+}
+
+.highlight-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.highlight-btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 12px;
+  background: #0f3460;
+  border: 1px solid #1a4a8a;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.highlight-btn:hover {
+  background: #1a4a8a;
+}
+
+.highlight-btn.active {
+  background: #e94560;
+  border-color: #e94560;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(26, 26, 46, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #0f3460;
+  border-top: 4px solid #e94560;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px;
+  background: linear-gradient(to bottom, rgba(22, 33, 62, 0.9), transparent);
+  z-index: 10;
+}
+
+.header h1 {
+  font-size: 20px;
+  color: #e94560;
+}
+
+.header p {
+  font-size: 13px;
+  color: #a0a0a0;
+  margin-top: 4px;
+}
