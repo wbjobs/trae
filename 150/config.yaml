@@ -1,0 +1,41 @@
+servers:
+  - name: web-server-01
+    host: 192.168.1.10
+    port: 22
+    user: deploy
+    auth:
+      type: key
+      key_path: ~/.ssh/id_rsa
+    jump_host: bastion.example.com
+    jump_port: 22
+    jump_user: admin
+    jump_auth:
+      type: key
+      key_path: ~/.ssh/bastion_key
+    record: true
+    record_dir: ./recordings
+
+  - name: db-server-01
+    host: 10.0.0.20
+    port: 22
+    user: root
+    auth:
+      type: password
+      password: "your_password_here"
+    record: true
+    record_dir: ./recordings
+
+  - name: internal-app
+    host: 172.16.0.15
+    port: 22
+    user: appuser
+    auth:
+      type: key
+      key_path: ~/.ssh/app_key
+    jump_host: jump.internal.corp
+    jump_port: 2222
+    jump_user: jumper
+    jump_auth:
+      type: password
+      password: "jump_password"
+    record: false
