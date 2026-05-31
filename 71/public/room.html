@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频批注房间</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="room-container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>房间信息</h3>
+        <button class="btn btn-small" onclick="copyRoomId()">复制房间ID</button>
+      </div>
+      <div class="room-info">
+        <p><strong>房间ID:</strong> <span id="roomIdDisplay"></span></p>
+        <p><strong>身份:</strong> <span id="roleDisplay"></span></p>
+        <p><strong>主持人:</strong> <span id="hostDisplay"></span></p>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>在线用户</h4>
+        <ul id="userList" class="user-list"></ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>批注工具</h4>
+        <div class="tool-buttons">
+          <button class="tool-btn" data-tool="select" title="选择/移动">
+            <span class="tool-icon">🖱️</span> 选择
+          </button>
+          <button class="tool-btn active" data-tool="arrow" title="箭头">
+            <span class="tool-icon">➡️</span> 箭头
+          </button>
+          <button class="tool-btn" data-tool="rectangle" title="矩形">
+            <span class="tool-icon">⬜</span> 矩形
+          </button>
+          <button class="tool-btn" data-tool="text" title="文本">
+            <span class="tool-icon">📝</span> 文本
+          </button>
+          <button class="tool-btn" data-tool="eraser" title="橡皮擦">
+            <span class="tool-icon">🗑️</span> 删除
+          </button>
+        </div>
+
+        <div class="color-picker">
+          <label>颜色:</label>
+          <div class="color-options">
+            <button class="color-btn active" style="background: #ff4444" data-color="#ff4444"></button>
+            <button class="color-btn" style="background: #44ff44" data-color="#44ff44"></button>
+            <button class="color-btn" style="background: #4444ff" data-color="#4444ff"></button>
+            <button class="color-btn" style="background: #ffff44" data-color="#ffff44"></button>
+            <button class="color-btn" style="background: #ff44ff" data-color="#ff44ff"></button>
+            <button class="color-btn" style="background: #ffffff" data-color="#ffffff"></button>
+          </div>
+        </div>
+
+        <button class="btn btn-danger btn-full" id="clearBtn" onclick="clearAnnotations()">
+          清除所有批注
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>批注回放</h4>
+        <div class="playback-controls">
+          <div class="playback-timeline">
+            <canvas id="timelineCanvas" width="280" height="40"></canvas>
+          </div>
+          <div class="playback-buttons">
+            <button class="btn btn-small" id="playbackPlayBtn" onclick="togglePlayback()">▶️ 回放</button>
+            <button class="btn btn-small" onclick="stopPlayback()">⏹️ 停止</button>
+          </div>
+          <div class="playback-speed">
+            <label>速度:</label>
+            <select id="playbackSpeed" onchange="changePlaybackSpeed()">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+          <div class="playback-range">
+            <label>时间范围:</label>
+            <div class="range-inputs">
+              <input type="text" id="rangeStart" placeholder="开始" value="00:00">
+              <span>-</span>
+              <input type="text" id="rangeEnd" placeholder="结束" value="00:00">
+            </div>
+            <button class="btn btn-small btn-full" onclick="setPlaybackRange()">应用范围</button>
+          </div>
+          <div class="playback-status" id="playbackStatus">就绪</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>批注列表</h4>
+        <div id="annotationList" class="annotation-list"></div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="video-wrapper">
+        <video id="videoPlayer" controls></video>
+        <canvas id="annotationCanvas"></canvas>
+      </div>
+
+      <div class="video-controls">
+        <button class="btn btn-primary" id="playPauseBtn" onclick="togglePlay()">▶️ 播放</button>
+        <span id="timeDisplay">00:00 / 00:00</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="textInputModal" class="modal">
+    <div class="modal-content">
+      <h3>输入文本</h3>
+      <input type="text" id="textInput" placeholder="输入批注文本..." maxlength="50">
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeTextModal()">取消</button>
+        <button class="btn btn-primary" onclick="confirmText()">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多人视频批注系统</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 多人视频批注系统</h1>
+    <p class="subtitle">实时同步观看视频，共同批注讨论</p>
+
+    <div class="card">
+      <h2>创建房间</h2>
+      <div class="form-group">
+        <label>您的昵称</label>
+        <input type="text" id="hostName" placeholder="输入您的昵称">
+      </div>
+      <div class="form-group">
+        <label>视频URL (MP4)</label>
+        <input type="text" id="videoUrl" placeholder="https://example.com/video.mp4">
+      </div>
+      <button class="btn btn-primary" onclick="createRoom()">创建房间</button>
+    </div>
+
+    <div class="divider">或</div>
+
+    <div class="card">
+      <h2>加入房间</h2>
+      <div class="form-group">
+        <label>您的昵称</label>
+        <input type="text" id="viewerName" placeholder="输入您的昵称">
+      </div>
+      <div class="form-group">
+        <label>房间ID</label>
+        <input type="text" id="joinRoomId" placeholder="输入房间ID">
+      </div>
+      <button class="btn btn-secondary" onclick="joinRoom()">加入房间</button>
+    </div>
+  </div>
+
+  <script>
+    function createRoom() {
+      const userName = document.getElementById('hostName').value.trim();
+      const videoUrl = document.getElementById('videoUrl').value.trim();
+
+      if (!userName || !videoUrl) {
+        alert('请填写昵称和视频URL');
+        return;
+      }
+
+      fetch('/api/room/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userName, videoUrl })
+      })
+      .then(res => res.json())
+      .then(data => {
+        localStorage.setItem('userId', data.hostId);
+        localStorage.setItem('userName', userName);
+        localStorage.setItem('roomId', data.roomId);
+        localStorage.setItem('isHost', 'true');
+        window.location.href = `/room.html?roomId=${data.roomId}`;
+      })
+      .catch(err => {
+        alert('创建房间失败: ' + err.message);
+      });
+    }
+
+    function joinRoom() {
+      const userName = document.getElementById('viewerName').value.trim();
+      const roomId = document.getElementById('joinRoomId').value.trim();
+
+      if (!userName || !roomId) {
+        alert('请填写昵称和房间ID');
+        return;
+      }
+
+      fetch(`/api/room/${roomId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('房间不存在');
+        return res.json();
+      })
+      .then(() => {
+        const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('userName', userName);
+        localStorage.setItem('roomId', roomId);
+        localStorage.setItem('isHost', 'false');
+        window.location.href = `/room.html?roomId=${roomId}`;
+      })
+      .catch(err => {
+        alert('加入房间失败: ' + err.message);
+      });
+    }
+  </script>
+</body>
+</html>
