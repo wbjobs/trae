@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR 看房应用</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <div id="canvas-container"></div>
+        
+        <div id="ui-overlay">
+            <div id="top-bar">
+                <h1>VR 看房</h1>
+                <div id="connection-status" class="status-disconnected"></div>
+                <div id="controls">
+                    <button id="vr-button" class="btn">进入 VR</button>
+                    <button id="mute-btn" class="btn" title="静音">🔊</button>
+                    <button id="save-btn" class="btn">保存布局</button>
+                    <button id="reset-btn" class="btn">重置布局</button>
+                </div>
+            </div>
+            
+            <div id="player-panel">
+                <div id="player-panel-header">
+                    <span>在线玩家</span>
+                    <span id="player-count">0/4</span>
+                </div>
+                <div id="player-list"></div>
+            </div>
+            
+            <div id="minimap-container">
+                <canvas id="minimap" width="200" height="200"></canvas>
+                <div id="minimap-label">平面图</div>
+            </div>
+            
+            <div id="instructions">
+                <p><strong>操作说明:</strong></p>
+                <p>VR 模式: 使用手柄扳机键瞬移</p>
+                <p>桌面模式: WASD 移动, 鼠标拖拽旋转视角</p>
+                <p>抓取物体: 靠近物体并按下扳机键</p>
+                <p>语音聊天: 点击 🔊 按钮切换静音</p>
+            </div>
+        </div>
+        
+        <div id="loading-screen">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="main.js"></script>
+</body>
+</html>
