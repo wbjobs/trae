@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package demo;
+
+option go_package = "grpcmock/proto/demo";
+
+// Greeter is an example service used to demonstrate the mock server.
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+  rpc GetUser (UserRequest) returns (UserReply);
+  rpc ListItems (ListRequest) returns (ListReply);
+}
+
+// Catalog demonstrates nested messages, repeated messages, and maps.
+service Catalog {
+  rpc GetProduct (ProductRequest) returns (ProductReply);
+  rpc SearchProducts (SearchRequest) returns (SearchReply);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+  int64 timestamp = 2;
+}
+
+message UserRequest {
+  int64 id = 1;
+}
+
+message UserReply {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  bool active = 4;
+}
+
+message ListRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListReply {
+  repeated string items = 1;
+  int32 total = 2;
+}
+
+// --- Complex nested types ---
+
+message ProductRequest {
+  string product_id = 1;
+  string locale = 2;
+}
+
+message ProductReply {
+  string id = 1;
+  string title = 2;
+  Money price = 3;              // nested message
+  repeated string tags = 4;     // repeated scalar
+  map<string, string> attrs = 5; // map<string, string>
+  repeated Category categories = 6; // repeated message
+  map<string, Money> regional_prices = 7; // map<string, nested message>
+  Vendor vendor = 8;             // nested message with nested fields
+}
+
+message Money {
+  string currency = 1;
+  double amount = 2;
+}
+
+message Category {
+  int64 id = 1;
+  string name = 2;
+  repeated string path = 3;     // repeated scalar inside repeated message
+}
+
+message Vendor {
+  string id = 1;
+  string name = 2;
+  Address address = 3;          // deeply nested
+  map<string, string> contact = 4;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string country = 3;
+}
+
+message SearchRequest {
+  string query = 1;
+  repeated string filters = 2;
+}
+
+message SearchReply {
+  repeated ProductReply results = 1; // repeated message with nested fields
+  int32 total = 2;
+  map<string, int32> facets = 3;     // map<string, int32>
+}

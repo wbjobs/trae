@@ -1,0 +1,152 @@
+# Mock responses YAML configuration.
+#
+# This file serves two purposes:
+#   1. In MOCK mode (default): response templates are evaluated and returned.
+#   2. In RECORD mode (--record --backend host:port): real backend responses
+#      are captured and written here as JSON literals.  You can then switch
+#      to mock mode and the captured data will be served back.
+#
+# Manually maintained entries (with Go templates) are preserved on reload;
+# entries produced by the recorder use plain JSON literals and will be
+# overwritten on the next recording session.
+#
+# Structure:
+#   services:
+#     "<full.service.Name>":
+#       methods:
+#         "<MethodName>":
+#           response: <JSON object or Go text/template producing JSON>
+#           error:      { code: <grpc code name>, message: "<msg>" }  # optional, overrides response
+#           delay_ms:   <int>   # optional simulated latency
+#           match:      <optional JSON object>; request must contain these fields
+# Template access: {{ .Request.<field> }}, {{ .Method }}, {{ .Service }}, {{ nowUnix }}
+#
+# Recording workflow:
+#   1. ./mock-server --record --backend real-host:50051
+#   2. Send requests through the proxy (gRPC or HTTP gateway)
+#   3. POST /mock/_record/flush  (or wait for periodic flush)
+#   4. Stop the proxy; mock.yaml now contains captured responses
+#   5. ./mock-server  (restart in mock mode to serve captured data)
+
+services:
+  "demo.Greeter":
+    methods:
+      SayHello:
+        response: |
+          {
+            "message": "Hello, {{ .Request.name }}!",
+            "timestamp": {{ nowUnix }}
+          }
+
+      GetUser:
+        delay_ms: 20
+        response: |
+          {
+            "id": {{ .Request.id }},
+            "name": "user-{{ .Request.id }}",
+            "email": "user{{ .Request.id }}@example.com",
+            "active": true
+          }
+
+      ListItems:
+        response: |
+          {
+            "items": ["a-{{ .Request.page }}", "b-{{ .Request.page }}", "c-{{ .Request.page }}"],
+            "total": 3
+          }
+
+  "demo.Catalog":
+    methods:
+      GetProduct:
+        response: |
+          {
+            "id": "{{ .Request.product_id }}",
+            "title": "Product {{ .Request.product_id }}",
+            "price": {
+              "currency": "{{ .Request.locale }}",
+              "amount": 29.99
+            },
+            "tags": ["electronics", "new", "sale"],
+            "attrs": {
+              "color": "red",
+              "size": "L",
+              "material": "cotton"
+            },
+            "categories": [
+              {
+                "id": 1,
+                "name": "Electronics",
+                "path": ["root", "electronics"]
+              },
+              {
+                "id": 2,
+                "name": "Audio",
+                "path": ["root", "electronics", "audio"]
+              }
+            ],
+            "regional_prices": {
+              "US": { "currency": "USD", "amount": 29.99 },
+              "EU": { "currency": "EUR", "amount": 27.99 },
+              "JP": { "currency": "JPY", "amount": 3200.0 }
+            },
+            "vendor": {
+              "id": "v-001",
+              "name": "Acme Corp",
+              "address": {
+                "street": "123 Main St",
+                "city": "Springfield",
+                "country": "US"
+              },
+              "contact": {
+                "email": "support@acme.com",
+                "phone": "+1-555-0100"
+              }
+            }
+          }
+
+      SearchProducts:
+        response: |
+          {
+            "results": [
+              {
+                "id": "p-1",
+                "title": "Result 1 for {{ .Request.query }}",
+                "price": { "currency": "USD", "amount": 19.99 },
+                "tags": ["tag1"],
+                "attrs": { "key": "value" },
+                "categories": [],
+                "regional_prices": {},
+                "vendor": {
+                  "id": "v-1",
+                  "name": "Vendor 1",
+                  "address": { "street": "", "city": "", "country": "" },
+                  "contact": {}
+                }
+              },
+              {
+                "id": "p-2",
+                "title": "Result 2 for {{ .Request.query }}",
+                "price": { "currency": "USD", "amount": 39.99 },
+                "tags": ["tag2", "tag3"],
+                "attrs": { "brand": "acme" },
+                "categories": [
+                  { "id": 10, "name": "Gadgets", "path": ["gadgets"] }
+                ],
+                "regional_prices": {
+                  "US": { "currency": "USD", "amount": 39.99 }
+                },
+                "vendor": {
+                  "id": "v-2",
+                  "name": "Vendor 2",
+                  "address": { "street": "456 Oak Ave", "city": "Portland", "country": "US" },
+                  "contact": { "email": "v2@example.com" }
+                }
+              }
+            ],
+            "total": 2,
+            "facets": {
+              "category_electronics": 10,
+              "category_audio": 5,
+              "brand_acme": 3
+            }
+          }
