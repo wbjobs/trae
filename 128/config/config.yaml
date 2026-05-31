@@ -1,0 +1,104 @@
+system:
+  use_multi_camera: true
+  num_cameras: 4
+  enable_3d_fusion: true
+
+cameras:
+  - id: 0
+    name: "cam_front"
+    width: 640
+    height: 480
+    fps: 30
+    position: [0.0, 0.0, 2.0]
+    rotation: [0.0, 0.0, 0.0]
+    intrinsic_matrix:
+      - [525.0, 0.0, 319.5]
+      - [0.0, 525.0, 239.5]
+      - [0.0, 0.0, 1.0]
+    distortion_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+  - id: 1
+    name: "cam_right"
+    width: 640
+    height: 480
+    fps: 30
+    position: [1.5, 0.0, 1.5]
+    rotation: [0.0, -0.52, 0.0]
+    intrinsic_matrix:
+      - [525.0, 0.0, 319.5]
+      - [0.0, 525.0, 239.5]
+      - [0.0, 0.0, 1.0]
+    distortion_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+  - id: 2
+    name: "cam_back"
+    width: 640
+    height: 480
+    fps: 30
+    position: [0.0, 0.0, 0.0]
+    rotation: [0.0, 3.14, 0.0]
+    intrinsic_matrix:
+      - [525.0, 0.0, 319.5]
+      - [0.0, 525.0, 239.5]
+      - [0.0, 0.0, 1.0]
+    distortion_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+  - id: 3
+    name: "cam_left"
+    width: 640
+    height: 480
+    fps: 30
+    position: [-1.5, 0.0, 1.5]
+    rotation: [0.0, 0.52, 0.0]
+    intrinsic_matrix:
+      - [525.0, 0.0, 319.5]
+      - [0.0, 525.0, 239.5]
+      - [0.0, 0.0, 1.0]
+    distortion_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+fusion:
+  min_visible_cameras: 2
+  confidence_weighted: true
+  temporal_smoothing: 0.8
+  outlier_rejection_threshold: 0.3
+  use_triangulation: true
+  occlusion_penalty: 0.5
+
+mediapipe:
+  model_path: "../models/pose_landmarker_full.task"
+  num_poses: 1
+  min_pose_detection_confidence: 0.3
+  min_pose_presence_confidence: 0.3
+  min_tracking_confidence: 0.3
+
+lstm:
+  model_path: "../models/fall_detection_lstm_3d.tflite"
+  sequence_length: 5
+  num_keypoints: 33
+  num_features: 6
+  threshold: 0.8
+  use_3d_features: true
+
+mqtt:
+  broker: "localhost"
+  port: 1883
+  topic: "fall_detection/alarm"
+  client_id: "fall_detector_multi_cam"
+  username: ""
+  password: ""
+  qos: 1
+
+fall_detection:
+  cooldown_seconds: 10
+  min_fall_confidence: 0.85
+  recovery_frames: 30
+  standing_aspect_ratio_threshold: 1.5
+  reset_sequence_on_alarm: true
+  min_3d_height_change: -0.3
+  max_3d_horizontal_speed: 2.0
+
+web:
+  host: "0.0.0.0"
+  port: 5000
+  mqtt_topic: "fall_detection/alarm"
+  database_path: "../data/fall_events.db"
