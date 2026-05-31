@@ -1,0 +1,103 @@
+ssh_defaults:
+  port: 22
+  timeout: 10
+  username: "admin"
+  password: ""
+  key_file: "~/.ssh/id_rsa"
+  use_sudo: false
+  sudo_password: ""
+
+nodes:
+  - name: "web-server-01"
+    host: "192.168.1.101"
+    port: 22
+    username: "admin"
+    password: ""
+    key_file: "~/.ssh/id_rsa"
+
+  - name: "web-server-02"
+    host: "192.168.1.102"
+    port: 22
+    username: "admin"
+    password: ""
+    key_file: "~/.ssh/id_rsa"
+
+  - name: "db-server-01"
+    host: "192.168.1.201"
+    port: 22
+    username: "admin"
+    password: ""
+    key_file: "~/.ssh/id_rsa"
+
+  - name: "redis-server-01"
+    host: "192.168.1.301"
+    port: 22
+    username: "admin"
+    password: ""
+    key_file: "~/.ssh/id_rsa"
+
+services:
+  - name: "Nginx"
+    process: "nginx"
+    service_name: "nginx"
+    port: 80
+
+  - name: "MySQL"
+    process: "mysqld"
+    service_name: "mysql"
+    port: 3306
+
+  - name: "Redis"
+    process: "redis-server"
+    service_name: "redis"
+    port: 6379
+
+log_paths:
+  - path: "/var/log/nginx/error.log"
+    type: "grep"
+    keyword: "error"
+    lines: 50
+
+  - path: "/var/log/mysql/error.log"
+    type: "tail"
+    lines: 100
+
+  - path: "/var/log/syslog"
+    type: "count"
+    keyword: "ERROR"
+
+commands:
+  - name: "检查磁盘空间"
+    cmd: "df -h"
+
+  - name: "检查内存使用"
+    cmd: "free -h"
+
+  - name: "检查CPU负载"
+    cmd: "uptime"
+
+inspection_rules:
+  node_detection:
+    ping_timeout: 3
+    ssh_timeout: 5
+    check_ssh_port: true
+
+  service_check:
+    check_process: true
+    check_port: true
+    check_systemd: true
+
+  log_capture:
+    default_tail_lines: 100
+    max_log_size_mb: 50
+    include_stacktrace: true
+
+  command_execution:
+    default_timeout: 30
+    parallel: true
+    max_workers: 10
+
+output:
+  format: "table"
+  dir: "./output"
+  save_to_file: true
