@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+database:
+  host: localhost
+  port: 3306
+  user: root
+  password: password
+  dbname: scheduler
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+scheduler:
+  heartbeat_interval: 30
+  scan_interval: 5
+
+executor:
+  worker_count: 5
+  heartbeat_interval: 30
+
+email:
+  enabled: false
+  host: smtp.example.com
+  port: 587
+  username: your-email@example.com
+  password: your-password
+  from_email: no-reply@example.com
+  from_name: 分布式任务调度系统
+  use_tls: true
