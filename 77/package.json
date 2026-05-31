@@ -1,0 +1,22 @@
+{
+  "name": "realtime-trading-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time trading data anomaly detection dashboard with Kafka, InfluxDB and WebSocket",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "producer": "node producer.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "@influxdata/influxdb-client": "^1.33.0",
+    "ws": "^8.14.2",
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "stats-lite": "^2.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
