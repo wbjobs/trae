@@ -1,0 +1,25 @@
+{
+  "name": "academic-citation-system",
+  "version": "1.0.0",
+  "description": "学术文献引文系统 - 前后端分离全栈项目",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start"
+  },
+  "keywords": [
+    "academic",
+    "citation",
+    "literature",
+    "reference-management"
+  ],
+  "author": "",
+  "license": "MIT"
+}

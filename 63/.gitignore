@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+pnp/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.output/
+.nuxt/
+.next/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Data storage
+backend/data/users/*.json
+backend/data/literature/*.json
+backend/data/crawl-tasks/*.json
+backend/data/collections/*.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+Thumbs.db
