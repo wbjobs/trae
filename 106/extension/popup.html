@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>密码管理器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+      border-radius: 10px;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .status-indicator.connected {
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    .status-indicator.disconnected {
+      background: #ef4444;
+    }
+
+    .status-text {
+      font-size: 14px;
+      color: #94a3b8;
+    }
+
+    .settings-form {
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid rgba(71, 85, 105, 0.4);
+      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.8);
+      color: #ffffff;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #4361ee;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(67, 97, 238, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(71, 85, 105, 0.2);
+      color: #94a3b8;
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(71, 85, 105, 0.4);
+    }
+
+    .credentials-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .credential-item {
+      padding: 12px;
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .credential-item:hover {
+      background: rgba(67, 97, 238, 0.2);
+    }
+
+    .credential-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .credential-username {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #64748b;
+    }
+
+    .empty-state p {
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: rgba(71, 85, 105, 0.2);
+      color: #94a3b8;
+    }
+
+    .tab.active {
+      background: rgba(67, 97, 238, 0.3);
+      color: #ffffff;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <h1>密码管理器</h1>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab active" data-tab="credentials">密码</button>
+      <button class="tab" data-tab="settings">设置</button>
+    </div>
+
+    <div class="section active" id="credentials-section">
+      <div class="status">
+        <div class="status-indicator disconnected" id="status-indicator"></div>
+        <span class="status-text" id="status-text">未连接</span>
+      </div>
+
+      <div class="credentials-list" id="credentials-list">
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+          <p>请先在设置中配置连接</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="settings-section">
+      <div class="settings-form">
+        <div class="form-group">
+          <label>服务地址</label>
+          <input type="text" id="server-url" placeholder="http://127.0.0.1:9234" />
+        </div>
+        <div class="form-group">
+          <label>访问令牌</label>
+          <input type="text" id="access-token" placeholder="粘贴您的访问令牌" />
+        </div>
+        <button class="btn btn-primary" id="save-btn">保存设置</button>
+        <button class="btn btn-secondary" id="test-btn">测试连接</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
