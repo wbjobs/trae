@@ -1,0 +1,239 @@
+{
+  "manufacturer": "Generic",
+  "brand": "Modbus",
+  "protocol": "modbus",
+  "description": "标准Modbus协议设备驱动配置",
+  "models": {
+    "Modbus_TCP_Server": {
+      "description": "标准Modbus TCP服务器/从站设备",
+      "default_port": 502,
+      "protocol": "modbus_tcp",
+      "slave_id": 1,
+      "supported_functions": [1, 2, 3, 4, 5, 6, 15, 16],
+      "max_connections": 16,
+      "timeout": 5000,
+      "features": {
+        "read_coils": true,
+        "read_discrete_inputs": true,
+        "read_holding_registers": true,
+        "read_input_registers": true,
+        "write_single_coil": true,
+        "write_single_register": true,
+        "write_multiple_coils": true,
+        "write_multiple_registers": true
+      },
+      "data_mapping": {
+        "coil": { "function": 1, "offset": 0 },
+        "discrete_input": { "function": 2, "offset": 0 },
+        "input_register": { "function": 4, "offset": 0 },
+        "holding_register": { "function": 3, "offset": 0 }
+      }
+    },
+    "Modbus_RTU_Device": {
+      "description": "标准Modbus RTU串口设备",
+      "default_port": "COM1",
+      "protocol": "modbus_rtu",
+      "slave_id": 1,
+      "baud_rate": 9600,
+      "data_bits": 8,
+      "stop_bits": 1,
+      "parity": "N",
+      "supported_functions": [1, 2, 3, 4, 5, 6, 15, 16],
+      "timeout": 5000,
+      "features": {
+        "read_coils": true,
+        "read_discrete_inputs": true,
+        "read_holding_registers": true,
+        "read_input_registers": true,
+        "write_single_coil": true,
+        "write_single_register": true,
+        "write_multiple_coils": true,
+        "write_multiple_registers": true
+      }
+    },
+    "Modbus_ASCII_Device": {
+      "description": "标准Modbus ASCII串口设备",
+      "default_port": "COM1",
+      "protocol": "modbus_ascii",
+      "slave_id": 1,
+      "baud_rate": 9600,
+      "data_bits": 7,
+      "stop_bits": 1,
+      "parity": "E",
+      "supported_functions": [1, 2, 3, 4, 5, 6, 15, 16],
+      "timeout": 5000,
+      "features": {
+        "read_coils": true,
+        "read_discrete_inputs": true,
+        "read_holding_registers": true,
+        "read_input_registers": true,
+        "write_single_coil": true,
+        "write_single_register": true
+      }
+    }
+  },
+  "tag_templates": {
+    "coil": {
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "线圈(可读写)"
+    },
+    "discrete_input": {
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "离散输入(只读)"
+    },
+    "input_register": {
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "输入寄存器(只读)"
+    },
+    "holding_register": {
+      "point_type": "AO",
+      "data_type": "int16",
+      "description": "保持寄存器(可读写)"
+    },
+    "input_register_32bit": {
+      "point_type": "AI",
+      "data_type": "int32",
+      "description": "输入寄存器(32位)"
+    },
+    "holding_register_32bit": {
+      "point_type": "AO",
+      "data_type": "int32",
+      "description": "保持寄存器(32位)"
+    },
+    "input_register_float": {
+      "point_type": "AI",
+      "data_type": "float32",
+      "description": "输入寄存器(浮点)"
+    },
+    "holding_register_float": {
+      "point_type": "AO",
+      "data_type": "float32",
+      "description": "保持寄存器(浮点)"
+    }
+  },
+  "address_format": {
+    "coil": { "prefix": "0", "range": "00001-09999" },
+    "discrete_input": { "prefix": "1", "range": "10001-19999" },
+    "input_register": { "prefix": "3", "range": "30001-39999" },
+    "holding_register": { "prefix": "4", "range": "40001-49999" },
+    "examples": [
+      "00001",
+      "10001",
+      "30001",
+      "40001",
+      "40001:float",
+      "40001:int32"
+    ]
+  },
+  "data_type_codes": {
+    "bool": 1,
+    "int8": 1,
+    "uint8": 1,
+    "int16": 1,
+    "uint16": 1,
+    "int32": 2,
+    "uint32": 2,
+    "float32": 2,
+    "float64": 4
+  },
+  "default_tags": [
+    {
+      "name": "DI_Start_Button",
+      "address": "10001",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "启动按钮"
+    },
+    {
+      "name": "DI_Stop_Button",
+      "address": "10002",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "停止按钮"
+    },
+    {
+      "name": "DO_Motor_Contactor",
+      "address": "00001",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电机接触器"
+    },
+    {
+      "name": "DO_Valve",
+      "address": "00002",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电磁阀"
+    },
+    {
+      "name": "AI_Temperature",
+      "address": "30001",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "温度检测",
+      "unit": "℃",
+      "coefficient": 0.1,
+      "min_value": -50,
+      "max_value": 200
+    },
+    {
+      "name": "AI_Pressure",
+      "address": "30002",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "压力检测",
+      "unit": "MPa",
+      "coefficient": 0.001,
+      "min_value": 0,
+      "max_value": 10
+    },
+    {
+      "name": "AI_Flow",
+      "address": "30003",
+      "point_type": "AI",
+      "data_type": "float32",
+      "description": "流量检测",
+      "unit": "m3/h",
+      "min_value": 0,
+      "max_value": 100
+    },
+    {
+      "name": "AO_Control_Output",
+      "address": "40001",
+      "point_type": "AO",
+      "data_type": "int16",
+      "description": "控制输出",
+      "unit": "%",
+      "coefficient": 0.1,
+      "min_value": 0,
+      "max_value": 100
+    },
+    {
+      "name": "AO_Setpoint",
+      "address": "40002",
+      "point_type": "AO",
+      "data_type": "float32",
+      "description": "设定值",
+      "unit": "℃",
+      "min_value": 0,
+      "max_value": 200
+    },
+    {
+      "name": "HR_Counter",
+      "address": "40003",
+      "point_type": "CI",
+      "data_type": "int32",
+      "description": "计数器"
+    },
+    {
+      "name": "HR_Status_Word",
+      "address": "40004",
+      "point_type": "CI",
+      "data_type": "uint16",
+      "description": "状态字"
+    }
+  ]
+}

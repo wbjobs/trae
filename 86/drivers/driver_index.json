@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-05-20",
+  "manufacturers": [
+    {
+      "name": "Siemens",
+      "country": "Germany",
+      "drivers": [
+        {
+          "id": "siemens_simatic s7",
+          "name": "SIMATIC S7 Series",
+          "protocol": "s7",
+          "models": ["S7-1200", "S7-1500", "S7-300", "S7-400", "S7-200_SMART"],
+          "config_file": "siemens/s7_series.json"
+        }
+      ]
+    },
+    {
+      "name": "Mitsubishi",
+      "country": "Japan",
+      "drivers": [
+        {
+          "id": "mitsubishi_melsec",
+          "name": "MELSEC Series",
+          "protocol": "mc",
+          "models": ["Q_Series", "L_Series", "FX_Series", "FX5U", "A_Series"],
+          "config_file": "mitsubishi/melsec_series.json"
+        }
+      ]
+    },
+    {
+      "name": "Omron",
+      "country": "Japan",
+      "drivers": [
+        {
+          "id": "omron_sysmac",
+          "name": "SYSMAC Series",
+          "protocol": "fins",
+          "models": ["NJ_Series", "NX_Series", "CP_Series", "CJ_Series", "CS_Series"],
+          "config_file": "omron/sysmac_series.json"
+        }
+      ]
+    },
+    {
+      "name": "Allen-Bradley",
+      "country": "USA",
+      "drivers": [
+        {
+          "id": "allen-bradley_rockwell",
+          "name": "Rockwell PLC Series",
+          "protocol": "eip",
+          "models": ["ControlLogix", "CompactLogix", "MicroLogix", "SLC500", "PLC5"],
+          "config_file": "allen_bradley/logix_series.json"
+        }
+      ]
+    },
+    {
+      "name": "Generic",
+      "country": "International",
+      "drivers": [
+        {
+          "id": "generic_modbus",
+          "name": "Modbus Protocol",
+          "protocol": "modbus",
+          "models": ["Modbus_TCP_Server", "Modbus_RTU_Device", "Modbus_ASCII_Device"],
+          "config_file": "modbus/generic_modbus.json"
+        }
+      ]
+    }
+  ],
+  "total_drivers": 5,
+  "total_models": 24
+}

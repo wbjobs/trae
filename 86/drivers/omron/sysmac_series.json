@@ -1,0 +1,245 @@
+{
+  "manufacturer": "Omron",
+  "brand": "SYSMAC",
+  "protocol": "fins",
+  "description": "欧姆龙SYSMAC系列PLC驱动配置",
+  "models": {
+    "NJ_Series": {
+      "description": "欧姆龙NJ系列机器自动化控制器",
+      "default_port": 9600,
+      "protocol": "fins_tcp",
+      "network": 0,
+      "node": 0,
+      "unit": 0,
+      "supported_areas": ["CIO", "WR", "HR", "AR", "DM", "EM", "T", "C", "IR", "DR"],
+      "max_connections": 16,
+      "timeout": 5000,
+      "features": {
+        "fins_tcp": true,
+        "fins_udp": true,
+        "high_speed": true,
+        "tag_data_link": true
+      },
+      "data_mapping": {
+        "cio": { "area": "CIO", "offset": 0 },
+        "work": { "area": "WR", "offset": 0 },
+        "holding": { "area": "HR", "offset": 0 },
+        "auxiliary": { "area": "AR", "offset": 0 },
+        "data_memory": { "area": "DM", "offset": 0 },
+        "timer": { "area": "T", "offset": 0 },
+        "counter": { "area": "C", "offset": 0 }
+      }
+    },
+    "NX_Series": {
+      "description": "欧姆龙NX系列机械自动化控制器",
+      "default_port": 9600,
+      "protocol": "fins_tcp",
+      "network": 0,
+      "node": 0,
+      "unit": 0,
+      "supported_areas": ["CIO", "WR", "HR", "AR", "DM", "T", "C"],
+      "max_connections": 8,
+      "timeout": 5000,
+      "features": {
+        "fins_tcp": true,
+        "high_speed": true,
+        "eip": true
+      }
+    },
+    "CP_Series": {
+      "description": "欧姆龙CP系列微型PLC",
+      "default_port": 9600,
+      "protocol": "fins_udp",
+      "network": 0,
+      "node": 0,
+      "unit": 0,
+      "supported_areas": ["CIO", "WR", "HR", "AR", "DM", "T", "C"],
+      "max_connections": 4,
+      "timeout": 5000,
+      "features": {
+        "fins_udp": true,
+        "host_link": true
+      }
+    },
+    "CJ_Series": {
+      "description": "欧姆龙CJ系列中型PLC",
+      "default_port": 9600,
+      "protocol": "fins_tcp",
+      "network": 0,
+      "node": 0,
+      "unit": 0,
+      "supported_areas": ["CIO", "WR", "HR", "AR", "DM", "EM", "T", "C"],
+      "max_connections": 8,
+      "timeout": 5000,
+      "features": {
+        "fins_tcp": true,
+        "fins_udp": true
+      }
+    },
+    "CS_Series": {
+      "description": "欧姆龙CS系列大型PLC",
+      "default_port": 9600,
+      "protocol": "fins_tcp",
+      "network": 0,
+      "node": 0,
+      "unit": 0,
+      "supported_areas": ["CIO", "WR", "HR", "AR", "DM", "EM", "T", "C", "IR", "DR"],
+      "max_connections": 16,
+      "timeout": 5000,
+      "features": {
+        "fins_tcp": true,
+        "fins_udp": true,
+        "tag_data_link": true
+      }
+    }
+  },
+  "tag_templates": {
+    "digital_input": {
+      "point_type": "DI",
+      "data_type": "bool",
+      "area": "CIO",
+      "description": "数字量输入"
+    },
+    "digital_output": {
+      "point_type": "DO",
+      "data_type": "bool",
+      "area": "CIO",
+      "description": "数字量输出"
+    },
+    "work_bit": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "WR",
+      "description": "工作位"
+    },
+    "holding_bit": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "HR",
+      "description": "保持位"
+    },
+    "data_memory": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "DM",
+      "description": "数据存储器"
+    },
+    "timer_pv": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "T",
+      "description": "定时器当前值"
+    },
+    "timer_completion": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "T",
+      "description": "定时器完成标志"
+    },
+    "counter_pv": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "C",
+      "description": "计数器当前值"
+    },
+    "counter_completion": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "C",
+      "description": "计数器完成标志"
+    }
+  },
+  "address_format": {
+    "pattern": "^(CIO|WR|HR|AR|DM|EM|T|C)(\\d+)(\\.\\d+)?$",
+    "examples": [
+      "CIO0.00",
+      "CIO100.00",
+      "W0.00",
+      "H0.00",
+      "D0",
+      "D100",
+      "T0",
+      "C0"
+    ]
+  },
+  "default_tags": [
+    {
+      "name": "DI_Start_Button",
+      "address": "CIO0.00",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "启动按钮"
+    },
+    {
+      "name": "DI_Stop_Button",
+      "address": "CIO0.01",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "停止按钮"
+    },
+    {
+      "name": "DO_Motor_Contactor",
+      "address": "CIO100.00",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电机接触器"
+    },
+    {
+      "name": "DO_Valve",
+      "address": "CIO100.01",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电磁阀"
+    },
+    {
+      "name": "AI_Temperature",
+      "address": "D0",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "温度检测",
+      "unit": "℃",
+      "coefficient": 0.1,
+      "min_value": -50,
+      "max_value": 200
+    },
+    {
+      "name": "AI_Pressure",
+      "address": "D1",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "压力检测",
+      "unit": "MPa",
+      "coefficient": 0.001,
+      "min_value": 0,
+      "max_value": 10
+    },
+    {
+      "name": "W_Run_Flag",
+      "address": "W0.00",
+      "point_type": "CI",
+      "data_type": "bool",
+      "description": "运行标志"
+    },
+    {
+      "name": "H_Setpoint_Memory",
+      "address": "H0",
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "设定值保持"
+    },
+    {
+      "name": "T_Process_Timer",
+      "address": "T0",
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "过程定时器"
+    },
+    {
+      "name": "C_Product_Counter",
+      "address": "C0",
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "产品计数器"
+    }
+  ]
+}

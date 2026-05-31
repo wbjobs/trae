@@ -1,0 +1,241 @@
+{
+  "manufacturer": "Siemens",
+  "brand": "SIMATIC S7",
+  "protocol": "s7",
+  "description": "西门子SIMATIC S7系列PLC驱动配置",
+  "models": {
+    "S7-1200": {
+      "description": "西门子S7-1200系列小型PLC",
+      "default_port": 102,
+      "connection_type": "PG",
+      "rack": 0,
+      "slot": 1,
+      "supported_areas": ["I", "Q", "M", "DB"],
+      "max_connections": 3,
+      "timeout": 5000,
+      "features": {
+        "s7_basic": true,
+        "s7_communication": true,
+        "put_get": true,
+        "read_write": true
+      },
+      "data_mapping": {
+        "input": { "area": "I", "offset": 0 },
+        "output": { "area": "Q", "offset": 0 },
+        "memory": { "area": "M", "offset": 0 },
+        "datablock": { "area": "DB", "offset": 0 }
+      }
+    },
+    "S7-1500": {
+      "description": "西门子S7-1500系列中型PLC",
+      "default_port": 102,
+      "connection_type": "PG",
+      "rack": 0,
+      "slot": 1,
+      "supported_areas": ["I", "Q", "M", "DB", "T", "C"],
+      "max_connections": 8,
+      "timeout": 5000,
+      "features": {
+        "s7_basic": true,
+        "s7_communication": true,
+        "put_get": true,
+        "read_write": true,
+        "optimized_blocks": true
+      },
+      "data_mapping": {
+        "input": { "area": "I", "offset": 0 },
+        "output": { "area": "Q", "offset": 0 },
+        "memory": { "area": "M", "offset": 0 },
+        "datablock": { "area": "DB", "offset": 0 },
+        "timer": { "area": "T", "offset": 0 },
+        "counter": { "area": "C", "offset": 0 }
+      }
+    },
+    "S7-300": {
+      "description": "西门子S7-300系列中型PLC",
+      "default_port": 102,
+      "connection_type": "PG",
+      "rack": 0,
+      "slot": 2,
+      "supported_areas": ["I", "Q", "M", "DB", "T", "C"],
+      "max_connections": 6,
+      "timeout": 5000,
+      "features": {
+        "s7_basic": true,
+        "s7_communication": true,
+        "put_get": true,
+        "read_write": true
+      }
+    },
+    "S7-400": {
+      "description": "西门子S7-400系列大型PLC",
+      "default_port": 102,
+      "connection_type": "PG",
+      "rack": 0,
+      "slot": 3,
+      "supported_areas": ["I", "Q", "M", "DB", "T", "C"],
+      "max_connections": 16,
+      "timeout": 5000,
+      "features": {
+        "s7_basic": true,
+        "s7_communication": true,
+        "put_get": true,
+        "read_write": true,
+        "redundancy": true
+      }
+    },
+    "S7-200_SMART": {
+      "description": "西门子S7-200 SMART系列微型PLC",
+      "default_port": 102,
+      "connection_type": "PG",
+      "rack": 0,
+      "slot": 1,
+      "supported_areas": ["I", "Q", "M", "DB", "T", "C"],
+      "max_connections": 3,
+      "timeout": 5000,
+      "features": {
+        "s7_basic": true,
+        "read_write": true
+      }
+    }
+  },
+  "tag_templates": {
+    "digital_input": {
+      "point_type": "DI",
+      "data_type": "bool",
+      "area": "I",
+      "description": "数字量输入"
+    },
+    "digital_output": {
+      "point_type": "DO",
+      "data_type": "bool",
+      "area": "Q",
+      "description": "数字量输出"
+    },
+    "analog_input": {
+      "point_type": "AI",
+      "data_type": "int16",
+      "area": "PIW",
+      "description": "模拟量输入"
+    },
+    "analog_output": {
+      "point_type": "AO",
+      "data_type": "int16",
+      "area": "PQW",
+      "description": "模拟量输出"
+    },
+    "memory_bit": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "M",
+      "description": "中间继电器"
+    },
+    "memory_word": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "MW",
+      "description": "存储器字"
+    },
+    "datablock_word": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "DB",
+      "description": "数据块字"
+    },
+    "datablock_dword": {
+      "point_type": "CI",
+      "data_type": "int32",
+      "area": "DB",
+      "description": "数据块双字"
+    },
+    "datablock_real": {
+      "point_type": "CI",
+      "data_type": "float32",
+      "area": "DB",
+      "description": "数据块浮点数"
+    }
+  },
+  "address_format": {
+    "pattern": "^(DB(\\d+))?\\.?(I|Q|M|PIW|PQW|T|C)?(\\d+)(\\.\\d+)?$",
+    "examples": [
+      "I0.0",
+      "Q0.0",
+      "M0.0",
+      "MW0",
+      "DB1.DBX0.0",
+      "DB1.DBW0",
+      "DB1.DBD0",
+      "DB1.DBD0"
+    ]
+  },
+  "default_tags": [
+    {
+      "name": "DI_Start_Button",
+      "address": "I0.0",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "启动按钮"
+    },
+    {
+      "name": "DI_Stop_Button",
+      "address": "I0.1",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "停止按钮"
+    },
+    {
+      "name": "DO_Motor_Contactor",
+      "address": "Q0.0",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电机接触器"
+    },
+    {
+      "name": "AI_Temperature",
+      "address": "PIW256",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "温度检测",
+      "unit": "℃",
+      "coefficient": 0.1,
+      "min_value": -50,
+      "max_value": 200
+    },
+    {
+      "name": "AI_Pressure",
+      "address": "PIW258",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "压力检测",
+      "unit": "MPa",
+      "coefficient": 0.001,
+      "min_value": 0,
+      "max_value": 10
+    },
+    {
+      "name": "AO_Valve_Control",
+      "address": "PQW256",
+      "point_type": "AO",
+      "data_type": "int16",
+      "description": "阀门控制输出",
+      "unit": "%",
+      "coefficient": 27.648,
+      "min_value": 0,
+      "max_value": 100
+    },
+    {
+      "name": "MW_Counter",
+      "address": "MW0",
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "计数器"
+    },
+    {
+      "name": "DB1_Real_Value",
+      "address": "DB1.DBD0",
+      "point_type": "CI",
+      "data_type": "float32",
+      "description": "DB1浮点数"
+    }
+  ]
+}

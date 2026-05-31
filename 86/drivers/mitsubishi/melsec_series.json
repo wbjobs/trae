@@ -1,0 +1,251 @@
+{
+  "manufacturer": "Mitsubishi",
+  "brand": "MELSEC",
+  "protocol": "mc",
+  "description": "三菱MELSEC系列PLC驱动配置",
+  "models": {
+    "Q_Series": {
+      "description": "三菱Q系列大型PLC",
+      "default_port": 5000,
+      "frame_type": "3E",
+      "plc_type": "Q",
+      "network": 0,
+      "station": 0xFF,
+      "supported_areas": ["X", "Y", "M", "L", "F", "V", "B", "W", "D", "W", "R", "ZR", "TN", "TS", "TC", "CN", "CS", "CC"],
+      "max_connections": 16,
+      "timeout": 5000,
+      "features": {
+        "mc_protocol_3e": true,
+        "mc_protocol_4e": true,
+        "binary_mode": true,
+        "ascii_mode": true,
+        "random_read_write": true,
+        "block_read_write": true
+      },
+      "data_mapping": {
+        "input": { "area": "X", "offset": 0 },
+        "output": { "area": "Y", "offset": 0 },
+        "internal": { "area": "M", "offset": 0 },
+        "latch": { "area": "L", "offset": 0 },
+        "data_register": { "area": "D", "offset": 0 },
+        "link_register": { "area": "W", "offset": 0 },
+        "file_register": { "area": "R", "offset": 0 }
+      }
+    },
+    "L_Series": {
+      "description": "三菱L系列中型PLC",
+      "default_port": 5000,
+      "frame_type": "3E",
+      "plc_type": "L",
+      "network": 0,
+      "station": 0xFF,
+      "supported_areas": ["X", "Y", "M", "L", "D", "W", "R", "ZR"],
+      "max_connections": 8,
+      "timeout": 5000,
+      "features": {
+        "mc_protocol_3e": true,
+        "binary_mode": true,
+        "ascii_mode": true
+      }
+    },
+    "FX_Series": {
+      "description": "三菱FX系列小型PLC",
+      "default_port": 5000,
+      "frame_type": "1C",
+      "plc_type": "FX",
+      "supported_areas": ["X", "Y", "M", "S", "T", "C", "D"],
+      "max_connections": 4,
+      "timeout": 5000,
+      "features": {
+        "mc_protocol_1c": true,
+        "binary_mode": true
+      }
+    },
+    "FX5U": {
+      "description": "三菱FX5U系列微型PLC",
+      "default_port": 5000,
+      "frame_type": "3E",
+      "plc_type": "FX5",
+      "supported_areas": ["X", "Y", "M", "D", "SD", "W", "SW"],
+      "max_connections": 4,
+      "timeout": 5000,
+      "features": {
+        "mc_protocol_3e": true,
+        "binary_mode": true,
+        "ascii_mode": true
+      }
+    },
+    "A_Series": {
+      "description": "三菱A系列PLC",
+      "default_port": 5000,
+      "frame_type": "1C",
+      "plc_type": "A",
+      "supported_areas": ["X", "Y", "M", "L", "D", "W", "R"],
+      "max_connections": 6,
+      "timeout": 5000,
+      "features": {
+        "mc_protocol_1c": true,
+        "binary_mode": true
+      }
+    }
+  },
+  "tag_templates": {
+    "digital_input": {
+      "point_type": "DI",
+      "data_type": "bool",
+      "area": "X",
+      "description": "数字量输入"
+    },
+    "digital_output": {
+      "point_type": "DO",
+      "data_type": "bool",
+      "area": "Y",
+      "description": "数字量输出"
+    },
+    "internal_relay": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "M",
+      "description": "内部继电器"
+    },
+    "data_register": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "D",
+      "description": "数据寄存器"
+    },
+    "link_register": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "W",
+      "description": "链接寄存器"
+    },
+    "file_register": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "R",
+      "description": "文件寄存器"
+    },
+    "timer_current": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "TN",
+      "description": "定时器当前值"
+    },
+    "timer_contact": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "area": "TS",
+      "description": "定时器触点"
+    },
+    "counter_current": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "area": "CN",
+      "description": "计数器当前值"
+    },
+    "counter_contact": {
+      "point_type": "CI",
+      "data_type": "bool",
+      "description": "计数器触点"
+    }
+  },
+  "address_format": {
+    "pattern": "^(X|Y|M|L|F|V|B|D|W|R|ZR|T|C|SD|SW)(\\d+)(\\.\\d+)?$",
+    "examples": [
+      "X0",
+      "Y0",
+      "M0",
+      "D0",
+      "W0",
+      "R0",
+      "T0",
+      "C0",
+      "D0.0"
+    ]
+  },
+  "default_tags": [
+    {
+      "name": "DI_Start_Button",
+      "address": "X0",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "启动按钮"
+    },
+    {
+      "name": "DI_Stop_Button",
+      "address": "X1",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "停止按钮"
+    },
+    {
+      "name": "DO_Motor_Contactor",
+      "address": "Y0",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电机接触器"
+    },
+    {
+      "name": "DO_Valve_Output",
+      "address": "Y1",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电磁阀输出"
+    },
+    {
+      "name": "AI_Temperature",
+      "address": "D0",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "温度检测",
+      "unit": "℃",
+      "coefficient": 0.1,
+      "min_value": -50,
+      "max_value": 200
+    },
+    {
+      "name": "AI_Pressure",
+      "address": "D1",
+      "point_type": "AI",
+      "data_type": "int16",
+      "description": "压力检测",
+      "unit": "MPa",
+      "coefficient": 0.001,
+      "min_value": 0,
+      "max_value": 10
+    },
+    {
+      "name": "AO_Control_Output",
+      "address": "D10",
+      "point_type": "AO",
+      "data_type": "int16",
+      "description": "模拟量输出",
+      "unit": "%",
+      "coefficient": 0.1,
+      "min_value": 0,
+      "max_value": 100
+    },
+    {
+      "name": "M_Run_Flag",
+      "address": "M0",
+      "point_type": "CI",
+      "data_type": "bool",
+      "description": "运行标志"
+    },
+    {
+      "name": "D_Process_Value",
+      "address": "D100",
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "过程值"
+    },
+    {
+      "name": "D_Setpoint",
+      "address": "D101",
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "设定值"
+    }
+  ]
+}

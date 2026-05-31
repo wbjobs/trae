@@ -1,0 +1,221 @@
+{
+  "manufacturer": "Allen-Bradley",
+  "brand": "Rockwell",
+  "protocol": "eip",
+  "description": "Allen-Bradley PLC驱动配置",
+  "models": {
+    "ControlLogix": {
+      "description": "Allen-Bradley ControlLogix 系列大型PLC",
+      "default_port": 44818,
+      "backplane": 1,
+      "slot": 0,
+      "supported_types": ["BOOL", "SINT", "INT", "DINT", "LINT", "REAL", "LREAL", "STRING", "STRUCT"],
+      "max_connections": 32,
+      "timeout": 5000,
+      "features": {
+        "ethernet_ip": true,
+        "tag_based": true,
+        "explicit_messaging": true,
+        "implicit_messaging": true,
+        "forward_open": true,
+        "ucmm": true,
+        "class3": true,
+        "class1": true
+      },
+      "data_types": {
+        "BOOL": 1,
+        "SINT": 1,
+        "INT": 2,
+        "DINT": 4,
+        "LINT": 8,
+        "REAL": 4,
+        "LREAL": 8,
+        "STRING": 88
+      }
+    },
+    "CompactLogix": {
+      "description": "Allen-Bradley CompactLogix 系列中型PLC",
+      "default_port": 44818,
+      "backplane": 1,
+      "slot": 0,
+      "supported_types": ["BOOL", "SINT", "INT", "DINT", "REAL", "STRING"],
+      "max_connections": 16,
+      "timeout": 5000,
+      "features": {
+        "ethernet_ip": true,
+        "tag_based": true,
+        "explicit_messaging": true,
+        "class3": true
+      }
+    },
+    "MicroLogix": {
+      "description": "Allen-Bradley MicroLogix 系列小型PLC",
+      "default_port": 44818,
+      "supported_types": ["BOOL", "INT", "DINT", "REAL"],
+      "max_connections": 4,
+      "timeout": 5000,
+      "features": {
+        "ethernet_ip": true,
+        "pccc": true
+      },
+      "data_mapping": {
+        "input": { "file": "I", "offset": 0 },
+        "output": { "file": "O", "offset": 0 },
+        "status": { "file": "S", "offset": 0 },
+        "bit": { "file": "B", "offset": 0 },
+        "timer": { "file": "T", "offset": 0 },
+        "counter": { "file": "C", "offset": 0 },
+        "control": { "file": "R", "offset": 0 },
+        "integer": { "file": "N", "offset": 0 },
+        "float": { "file": "F", "offset": 0 }
+      }
+    },
+    "SLC500": {
+      "description": "Allen-Bradley SLC 500 系列PLC",
+      "default_port": 44818,
+      "supported_types": ["BOOL", "INT", "DINT", "REAL"],
+      "max_connections": 6,
+      "timeout": 5000,
+      "features": {
+        "ethernet_ip": true,
+        "pccc": true
+      }
+    },
+    "PLC5": {
+      "description": "Allen-Bradley PLC-5 系列PLC",
+      "default_port": 44818,
+      "supported_types": ["BOOL", "INT", "DINT", "REAL"],
+      "max_connections": 8,
+      "timeout": 5000,
+      "features": {
+        "ethernet_ip": true,
+        "pccc": true
+      }
+    }
+  },
+  "tag_templates": {
+    "boolean_tag": {
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "布尔标签"
+    },
+    "integer_tag": {
+      "point_type": "CI",
+      "data_type": "int16",
+      "description": "整数标签"
+    },
+    "double_integer": {
+      "point_type": "CI",
+      "data_type": "int32",
+      "description": "双字整数标签"
+    },
+    "real_tag": {
+      "point_type": "CI",
+      "data_type": "float32",
+      "description": "浮点数标签"
+    },
+    "string_tag": {
+      "point_type": "CI",
+      "data_type": "string",
+      "description": "字符串标签"
+    }
+  },
+  "address_format": {
+    "logix_pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\[[0-9]+\\])?(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$",
+    "pccc_pattern": "^(I|O|B|T|C|R|N|F)(\\d+)(:\\d+)?$",
+    "examples": [
+      "Tag_Bool",
+      "Tag_Int",
+      "Tag_Dint",
+      "Tag_Real",
+      "Tag_String",
+      "Array_Tag[0]",
+      "Struct.Member",
+      "I:0/0",
+      "O:0/0",
+      "N7:0",
+      "F8:0"
+    ]
+  },
+  "default_tags": [
+    {
+      "name": "DI_Start_Button",
+      "address": "DI_Start_Button",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "启动按钮"
+    },
+    {
+      "name": "DI_Stop_Button",
+      "address": "DI_Stop_Button",
+      "point_type": "DI",
+      "data_type": "bool",
+      "description": "停止按钮"
+    },
+    {
+      "name": "DO_Motor",
+      "address": "DO_Motor",
+      "point_type": "DO",
+      "data_type": "bool",
+      "description": "电机输出"
+    },
+    {
+      "name": "AI_Temperature",
+      "address": "AI_Temperature",
+      "point_type": "AI",
+      "data_type": "float32",
+      "description": "温度检测",
+      "unit": "℃",
+      "min_value": -50,
+      "max_value": 200
+    },
+    {
+      "name": "AI_Pressure",
+      "address": "AI_Pressure",
+      "point_type": "AI",
+      "data_type": "float32",
+      "description": "压力检测",
+      "unit": "MPa",
+      "min_value": 0,
+      "max_value": 10
+    },
+    {
+      "name": "AO_Control",
+      "address": "AO_Control",
+      "point_type": "AO",
+      "data_type": "float32",
+      "description": "控制输出",
+      "unit": "%",
+      "min_value": 0,
+      "max_value": 100
+    },
+    {
+      "name": "Run_Flag",
+      "address": "Run_Flag",
+      "point_type": "CI",
+      "data_type": "bool",
+      "description": "运行标志"
+    },
+    {
+      "name": "Process_Value",
+      "address": "Process_Value",
+      "point_type": "CI",
+      "data_type": "float32",
+      "description": "过程值"
+    },
+    {
+      "name": "Setpoint",
+      "address": "Setpoint",
+      "point_type": "CI",
+      "data_type": "float32",
+      "description": "设定值"
+    },
+    {
+      "name": "Production_Count",
+      "address": "Production_Count",
+      "point_type": "CI",
+      "data_type": "int32",
+      "description": "生产计数"
+    }
+  ]
+}

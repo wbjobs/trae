@@ -1,0 +1,28 @@
+app:
+  name: "Industrial Config Studio"
+  version: "1.0.0"
+  theme: "dark"
+  language: "zh_CN"
+
+communication:
+  default_timeout: 5000
+  retry_count: 3
+  poll_interval: 1000
+  max_connections: 10
+
+project:
+  auto_save: true
+  auto_save_interval: 60
+  backup_enabled: true
+  backup_count: 5
+
+security:
+  encryption_algorithm: "AES-256"
+  password_hashing: "SHA-256"
+  require_password: false
+
+logging:
+  level: "INFO"
+  file: "logs/app.log"
+  max_file_size: 10485760
+  backup_count: 5
