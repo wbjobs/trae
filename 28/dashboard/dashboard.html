@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工厂监控仪表盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e4e4e7;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-connected .status-dot {
+            background: #22c55e;
+        }
+
+        .status-disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .status-disconnected .status-dot {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #a1a1aa;
+        }
+
+        .card-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .card-unit {
+            font-size: 0.9rem;
+            color: #71717a;
+            margin-left: 4px;
+        }
+
+        .temperature-card {
+            grid-column: span 1;
+        }
+
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+
+        .motors-section {
+            grid-column: 1 / -1;
+        }
+
+        .motors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .motor-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #52525b;
+            transition: border-color 0.3s;
+        }
+
+        .motor-card.running {
+            border-left-color: #22c55e;
+        }
+
+        .motor-card.stopped {
+            border-left-color: #eab308;
+        }
+
+        .motor-card.fault {
+            border-left-color: #ef4444;
+        }
+
+        .motor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .motor-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .motor-state {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .state-running {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .state-stopped {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+        }
+
+        .state-fault {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .motor-speed {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .speed-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .speed-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .speed-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #0099ff);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .control-panel {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #e4e4e7;
+            font-size: 0.9rem;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .control-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .select-control {
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #e4e4e7;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .select-control:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .stats-card {
+            grid-column: span 1;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #a1a1aa;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .motors-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 工厂设备监控中心</h1>
+        <div id="connectionStatus" class="connection-status status-disconnected">
+            <span class="status-dot"></span>
+            <span>连接中...</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card temperature-card">
+            <div class="card-header">
+                <span class="card-title">🌡️ 温度传感器</span>
+                <span id="tempValue" class="card-value">--<span class="card-unit">°C</span></span>
+            </div>
+            <div class="chart-container">
+                <canvas id="tempChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card stats-card">
+            <div class="card-header">
+                <span class="card-title">📊 系统状态</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">运行电机</span>
+                <span id="runningMotors" class="stat-value">0/3</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">故障电机</span>
+                <span id="faultMotors" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">数据更新频率</span>
+                <span id="updateRate" class="stat-value">-- Hz</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">最后更新</span>
+                <span id="lastUpdate" class="stat-value">--</span>
+            </div>
+        </div>
+
+        <div class="card motors-section">
+            <div class="card-header">
+                <span class="card-title">⚡ 电机控制</span>
+            </div>
+            <div class="motors-grid" id="motorsGrid">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            values: {},
+            history: {},
+            tagConfigs: {},
+            ws: null,
+            updateCount: 0,
+            lastUpdateTime: Date.now(),
+        };
+
+        let tempChart = null;
+
+        function initChart() {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '温度 (°C)',
+                        data: [],
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#71717a'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!tempChart || !state.history.temperature) return;
+
+            const history = state.history.temperature.slice(-50);
+            tempChart.data.labels = history.map((_, i) => i);
+            tempChart.data.datasets[0].data = history.map(h => h.value);
+            tempChart.update('none');
+        }
+
+        function createMotorCards() {
+            const grid = document.getElementById('motorsGrid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 3; i++) {
+                const card = document.createElement('div');
+                card.className = 'motor-card';
+                card.id = `motor${i}Card`;
+                card.innerHTML = `
+                    <div class="motor-header">
+                        <span class="motor-name">🔧 电机 ${i}</span>
+                        <span id="motor${i}State" class="motor-state state-stopped">STOPPED</span>
+                    </div>
+                    <div class="motor-speed">
+                        <span style="color: #a1a1aa;">转速</span>
+                        <span><span id="motor${i}Speed" class="speed-value">0</span> <span style="color: #71717a; font-size: 0.9rem;">RPM</span></span>
+                    </div>
+                    <div class="speed-bar">
+                        <div id="motor${i}SpeedBar" class="speed-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="control-panel">
+                        <div class="control-row" style="margin-bottom: 8px;">
+                            <input type="number" id="motor${i}SpeedInput" class="control-input" placeholder="目标转速 (0-3000)" min="0" max="3000">
+                            <button class="control-btn" onclick="sendSpeedCommand(${i})">设置转速</button>
+                        </div>
+                        <div class="control-row">
+                            <select id="motor${i}StateSelect" class="select-control">
+                                <option value="RUNNING">运行</option>
+                                <option value="STOPPED">停止</option>
+                                <option value="FAULT">故障</option>
+                            </select>
+                            <button class="control-btn" onclick="sendStateCommand(${i})">设置状态</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function updateMotorUI(motorNum) {
+            const speedKey = `motor${motorNum}_speed`;
+            const stateKey = `motor${motorNum}_state`;
+
+            const speed = state.values[speedKey] || 0;
+            const motorState = state.values[stateKey] || 'STOPPED';
+
+            const speedEl = document.getElementById(`motor${motorNum}Speed`);
+            const stateEl = document.getElementById(`motor${motorNum}State`);
+            const cardEl = document.getElementById(`motor${motorNum}Card`);
+            const speedBarEl = document.getElementById(`motor${motorNum}SpeedBar`);
+
+            if (speedEl) speedEl.textContent = Math.round(speed);
+            if (stateEl) {
+                stateEl.textContent = motorState;
+                stateEl.className = `motor-state state-${motorState.toLowerCase()}`;
+            }
+            if (cardEl) {
+                cardEl.className = `motor-card ${motorState.toLowerCase()}`;
+            }
+            if (speedBarEl) {
+                const percentage = Math.min(100, (speed / 3000) * 100);
+                speedBarEl.style.width = `${percentage}%`;
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            let running = 0;
+            let fault = 0;
+
+            for (let i = 1; i <= 3; i++) {
+                const stateVal = state.values[`motor${i}_state`];
+                if (stateVal === 'RUNNING') running++;
+                if (stateVal === 'FAULT') fault++;
+            }
+
+            document.getElementById('runningMotors').textContent = `${running}/3`;
+            document.getElementById('faultMotors').textContent = fault;
+
+            const now = Date.now();
+            if (now - state.lastUpdateTime >= 1000) {
+                const rate = state.updateCount / ((now - state.lastUpdateTime) / 1000);
+                document.getElementById('updateRate').textContent = `${rate.toFixed(1)} Hz`;
+                state.updateCount = 0;
+                state.lastUpdateTime = now;
+            }
+
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        function sendSpeedCommand(motorNum) {
+            const input = document.getElementById(`motor${motorNum}SpeedInput`);
+            const value = parseInt(input.value);
+            if (isNaN(value) || value < 0 || value > 3000) {
+                alert('请输入有效的转速 (0-3000)');
+                return;
+            }
+            sendCommand(`motor${motorNum}_speed`, value);
+            input.value = '';
+        }
+
+        function sendStateCommand(motorNum) {
+            const select = document.getElementById(`motor${motorNum}StateSelect`);
+            const value = select.value;
+            sendCommand(`motor${motorNum}_state`, value);
+        }
+
+        function sendCommand(tag, value) {
+            if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                alert('WebSocket 未连接');
+                return;
+            }
+            state.ws.send(JSON.stringify({
+                type: 'command',
+                tag: tag,
+                value: value
+            }));
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            state.ws = new WebSocket(wsUrl);
+
+            state.ws.onopen = () => {
+                document.getElementById('connectionStatus').className = 'connection-status status-connected';
+                document.getElementById('connectionStatus').querySelector('span:last-child').textContent = '已连接';
+                console.log('WebSocket connected');
+            };
+
+            state.ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    console.error('Failed to parse message:', e);
+                }
+            };
+
+            state.ws.onclose = () => {
+                document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+                document.getElementById('connectionStatus').querySelector('span:last-child').textContent = '连接已断开，正在重连...';
+                console.log('WebSocket disconnected, reconnecting in 3s...');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            state.ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleMessage(data) {
+            if (data.type === 'initial') {
+                state.values = data.values;
+                state.history = data.history;
+                state.tagConfigs = data.tags;
+                updateAllUI();
+            } else if (data.type === 'update') {
+                state.values[data.tag] = data.value;
+                state.updateCount++;
+
+                if (!state.history[data.tag]) {
+                    state.history[data.tag] = [];
+                }
+                state.history[data.tag].push({
+                    value: data.value,
+                    timestamp: data.timestamp
+                });
+                if (state.history[data.tag].length > 100) {
+                    state.history[data.tag].shift();
+                }
+
+                if (data.tag === 'temperature') {
+                    const tempEl = document.getElementById('tempValue');
+                    if (tempEl) {
+                        tempEl.innerHTML = `${data.value.toFixed(1)}<span class="card-unit">°C</span>`;
+                    }
+                    updateChart();
+                } else if (data.tag.startsWith('motor')) {
+                    const motorNum = data.tag.match(/motor(\d+)/)?.[1];
+                    if (motorNum) {
+                        updateMotorUI(parseInt(motorNum));
+                    }
+                }
+            }
+        }
+
+        function updateAllUI() {
+            const temp = state.values.temperature || 0;
+            document.getElementById('tempValue').innerHTML = `${temp.toFixed(1)}<span class="card-unit">°C</span>`;
+            updateChart();
+
+            for (let i = 1; i <= 3; i++) {
+                updateMotorUI(i);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            createMotorCards();
+            connectWebSocket();
+        });
+    </script>
+</body>
+</html>

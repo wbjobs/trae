@@ -1,0 +1,109 @@
+opcua:
+  endpoint: "opc.tcp://0.0.0.0:4840/freeopcua/server/"
+  namespace: "http://example.org/opcua/simulator"
+  server_name: "FactorySimulator"
+  heartbeat_interval: 5
+  resubscribe_delay: 2
+
+mqtt:
+  broker: "localhost"
+  port: 1883
+  client_id: "opcua_mqtt_bridge"
+  base_topic: "factory/machine1"
+  command_topic: "factory/machine1/cmd"
+  aggregate_window_ms: 100
+  reconnect_interval: 5
+
+dashboard:
+  host: "0.0.0.0"
+  port: 8080
+  max_history_points: 100
+
+simulation:
+  update_interval: 1.0
+  tags:
+    temperature:
+      name: "Temperature"
+      topic: "temp"
+      curve:
+        type: "sine"
+        amplitude: 10.0
+        offset: 25.0
+        period: 30.0
+      unit: "°C"
+
+    motor1_speed:
+      name: "Motor1Speed"
+      topic: "motor1/speed"
+      curve:
+        type: "step"
+        steps:
+          - value: 0
+            duration: 10
+          - value: 1500
+            duration: 20
+          - value: 0
+            duration: 5
+      unit: "RPM"
+
+    motor1_state:
+      name: "Motor1State"
+      topic: "motor1/state"
+      curve:
+        type: "step"
+        steps:
+          - value: "STOPPED"
+            duration: 10
+          - value: "RUNNING"
+            duration: 20
+          - value: "STOPPED"
+            duration: 5
+      unit: ""
+
+    motor2_speed:
+      name: "Motor2Speed"
+      topic: "motor2/speed"
+      curve:
+        type: "sine"
+        amplitude: 500.0
+        offset: 2000.0
+        period: 60.0
+      unit: "RPM"
+
+    motor2_state:
+      name: "Motor2State"
+      topic: "motor2/state"
+      curve:
+        type: "step"
+        steps:
+          - value: "RUNNING"
+            duration: 30
+          - value: "FAULT"
+            duration: 5
+          - value: "RUNNING"
+            duration: 15
+      unit: ""
+
+    motor3_speed:
+      name: "Motor3Speed"
+      topic: "motor3/speed"
+      curve:
+        type: "step"
+        steps:
+          - value: 3000
+            duration: 15
+          - value: 0
+            duration: 5
+      unit: "RPM"
+
+    motor3_state:
+      name: "Motor3State"
+      topic: "motor3/state"
+      curve:
+        type: "step"
+        steps:
+          - value: "RUNNING"
+            duration: 15
+          - value: "STOPPED"
+            duration: 5
+      unit: ""
