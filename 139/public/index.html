@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PBR Material Previewer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>PBR Material Previewer</h1>
+            <span class="subtitle">WebGL + Filament WASM</span>
+            <button id="toggle-node-editor" class="btn-node-editor">Node Editor</button>
+        </header>
+
+        <main class="app-main">
+            <div class="viewport-wrapper">
+            <div class="viewport-container">
+                <canvas id="filament-canvas"></canvas>
+                <div id="loading-overlay" class="loading-overlay">
+                    <div class="loading-content">
+                        <div class="spinner"></div>
+                        <p id="loading-text">Loading Filament Engine...</p>
+                    </div>
+                </div>
+                <div class="viewport-controls">
+                    <div class="control-group">
+                        <label>Model:</label>
+                        <select id="model-select">
+                            <option value="sphere">Sphere</option>
+                            <option value="cube">Cube</option>
+                            <option value="cylinder">Cylinder</option>
+                            <option value="torus">Torus</option>
+                            <option value="plane">Plane</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Environment:</label>
+                        <select id="env-select">
+                            <option value="studio">Studio</option>
+                            <option value="outdoor">Outdoor</option>
+                            <option value="sunset">Sunset</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="controls-panel">
+                <div class="panel-section">
+                    <h2>Material Parameters</h2>
+
+                    <div class="control-group">
+                        <label>Base Color</label>
+                        <input type="color" id="base-color" value="#cccccc">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Metallic: <span id="metallic-value">0.00</span></label>
+                        <input type="range" id="metallic" min="0" max="1" step="0.01" value="0.00">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Roughness: <span id="roughness-value">0.50</span></label>
+                        <input type="range" id="roughness" min="0" max="1" step="0.01" value="0.50">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Ambient Occlusion: <span id="ao-value">1.00</span></label>
+                        <input type="range" id="ao" min="0" max="1" step="0.01" value="1.00">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Normal Scale: <span id="normal-scale-value">1.00</span></label>
+                        <input type="range" id="normal-scale" min="0" max="3" step="0.01" value="1.00">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Normal Map</label>
+                        <div class="texture-upload">
+                            <input type="file" id="normal-map-upload" accept="image/*">
+                            <button id="clear-normal-map" class="btn-secondary">Clear</button>
+                        </div>
+                        <div id="normal-map-preview" class="texture-preview hidden"></div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Base Color Map</label>
+                        <div class="texture-upload">
+                            <input type="file" id="basecolor-map-upload" accept="image/*">
+                            <button id="clear-basecolor-map" class="btn-secondary">Clear</button>
+                        </div>
+                        <div id="basecolor-map-preview" class="texture-preview hidden"></div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Metallic-Roughness Map</label>
+                        <div class="texture-upload">
+                            <input type="file" id="mr-map-upload" accept="image/*">
+                            <button id="clear-mr-map" class="btn-secondary">Clear</button>
+                        </div>
+                        <div id="mr-map-preview" class="texture-preview hidden"></div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Material Presets</h2>
+                    <div class="preset-controls">
+                        <input type="text" id="preset-name" placeholder="Preset name...">
+                        <button id="save-preset" class="btn-primary">Save</button>
+                    </div>
+                    <div id="preset-list" class="preset-list"></div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>glTF Model</h2>
+                    <div class="control-group">
+                        <label>Upload glTF (.glb)</label>
+                        <input type="file" id="gltf-upload" accept=".glb,.gltf">
+                    </div>
+                    <button id="reset-model" class="btn-secondary">Reset to Primitive</button>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Camera</h2>
+                    <div class="control-group">
+                        <label>Auto Rotate</label>
+                        <input type="checkbox" id="auto-rotate" checked>
+                    </div>
+                    <button id="reset-camera" class="btn-secondary">Reset Camera</button>
+                </div>
+            </aside>
+        </div>
+
+        <div id="node-editor-panel" class="node-editor-panel hidden">
+            <div class="node-editor-header">
+                <div class="node-editor-title">Node Editor</div>
+                <div class="node-editor-toolbar">
+                    <button class="node-tool-btn" data-node="noise">Noise</button>
+                    <button class="node-tool-btn" data-node="voronoi">Voronoi</button>
+                    <button class="node-tool-btn" data-node="gradient">Gradient</button>
+                    <span class="tool-sep"></span>
+                    <button class="node-tool-btn" data-node="add">Add</button>
+                    <button class="node-tool-btn" data-node="multiply">Multiply</button>
+                    <button class="node-tool-btn" data-node="mix">Mix</button>
+                    <button class="node-tool-btn" data-node="remap">Remap</button>
+                    <button class="node-tool-btn" data-node="clamp">Clamp</button>
+                    <span class="tool-sep"></span>
+                    <button class="node-tool-btn" data-node="texture">Texture</button>
+                    <button class="node-tool-btn" data-node="color">Color</button>
+                    <span class="tool-sep"></span>
+                    <button class="node-tool-btn" data-node="output">Output</button>
+                    <span class="tool-sep"></span>
+                    <button class="node-tool-btn btn-evaluate" id="btn-evaluate-graph">Evaluate</button>
+                    <button class="node-tool-btn btn-clear" id="btn-clear-graph">Clear</button>
+                </div>
+                <button id="close-node-editor" class="btn-close-node">&times;</button>
+            </div>
+            <div class="node-editor-body">
+                <canvas id="node-canvas"></canvas>
+                <svg id="node-wires" class="node-wires"></svg>
+            </div>
+        </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+<script>
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    async function bootstrap() {
+        const loadingText = document.getElementById('loading-text');
+        try {
+            loadingText.textContent = 'Loading Filament libraries...';
+            
+            window.Filament = {
+                locateFile: (path) => {
+                    console.log('locateFile called:', path);
+                    return '/lib/filament/' + path;
+                }
+            };
+            
+            await Promise.all([
+                loadScript('/lib/filament/filament.js')
+            ]);
+            loadingText.textContent = 'Initializing Filament Engine...';
+            console.log('Creating PBRPreviewer instance...');
+            window.__pbrPreviewer = new PBRPreviewer();
+            console.log('Calling init...');
+            window.__pbrPreviewer.init();
+            console.log('Init called successfully');
+        } catch (e) {
+            loadingText.textContent = 'Failed to load libraries: ' + e.message;
+            console.error('Bootstrap error:', e);
+            console.error('Error stack:', e.stack);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrap);
+    } else {
+        bootstrap();
+    }
+</script>
+</body>
+</html>

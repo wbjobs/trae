@@ -1,0 +1,16 @@
+{
+  "name": "pbr-material-previewer",
+  "version": "1.0.0",
+  "description": "PBR Material Previewer with Filament WASM",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "filament": "^1.53.0",
+    "gl-matrix": "^3.4.3"
+  }
+}
