@@ -1,0 +1,233 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VideoBatchTranscoder.ViewModels"
+        xmlns:converters="using:VideoBatchTranscoder.Converters"
+        x:Class="VideoBatchTranscoder.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="视频批量转码工具"
+        Width="1200"
+        Height="800"
+        MinWidth="900"
+        MinHeight="600"
+        Icon="/Assets/icon.ico">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.header">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBlock.subheader">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,4,0,4"/>
+        </Style>
+    </Window.Styles>
+
+    <Design.DataContext>
+        <vm:MainViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="12">
+        <Border Grid.Row="0" Background="{DynamicResource SystemControlHighlightAltListLowBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="视频批量转码工具" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding StatusMessage}" Opacity="0.8" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding FFmpegStatus}" VerticalAlignment="Center" Margin="0,0,12,0"
+                               Foreground="{Binding FFmpegAvailable, Converter={x:Static converters:BoolToColorConverter.Instance}}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+                <Border Background="{DynamicResource SystemControlHighlightAltListLowBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="输入/输出设置" Classes="header"/>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                            <TextBox Text="{Binding Settings.InputFolder}" Watermark="输入文件夹路径" Grid.Column="0" Margin="0,0,8,0"/>
+                            <Button Content="浏览..." Command="{Binding BrowseInputFolderCommand}" Grid.Column="1" MinWidth="80"/>
+                        </Grid>
+                        <CheckBox Content="递归扫描子文件夹" IsChecked="{Binding Settings.RecursiveScan}" Margin="0,8,0,0"/>
+
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+                            <TextBox Text="{Binding Settings.OutputFolder}" Watermark="输出文件夹路径" Grid.Column="0" Margin="0,0,8,0"/>
+                            <Button Content="浏览..." Command="{Binding BrowseOutputFolderCommand}" Grid.Column="1" MinWidth="80"/>
+                        </Grid>
+
+                        <TextBlock Text="并行任务数" Classes="subheader" Margin="0,12,0,0"/>
+                        <NumericUpDown Value="{Binding TaskManager.MaxParallelTasks}" Minimum="1" Maximum="16" Increment="1" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{DynamicResource SystemControlHighlightAltListLowBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel>
+                            <TextBlock Text="硬件加速检测" Classes="header"/>
+                            <TextBlock Text="{Binding HardwareInfo.Recommendation}" TextWrapping="Wrap" Margin="0,4,0,0" Opacity="0.9"/>
+                            <TextBlock Text="{Binding HardwareInfo.GPUName, StringFormat='GPU: {0}'}" Margin="0,4,0,0"
+                                       IsVisible="{Binding HardwareInfo.GPUName, Converter={x:Static converters:StringToVisibilityConverter.Instance}}"/>
+                            <TextBlock Text="{Binding HardwareInfo.VRAM, StringFormat='VRAM: {0} MB', Converter={x:Static converters:BytesToMBConverter.Instance}}" Margin="0,2,0,0"
+                                       IsVisible="{Binding HardwareInfo.VRAM, Converter={x:Static converters:IntToVisibilityConverter.Instance}}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="重新检测" Command="{Binding DetectHardwareCommand}" Margin="0,0,8,0"
+                                    IsEnabled="{Binding IsDetectingHardware, Converter={x:Static converters:InverseBoolConverter.Instance}}"/>
+                            <Button Content="应用推荐" Command="{Binding ApplyRecommendedPresetCommand}"
+                                    IsEnabled="{Binding HardwareInfo.HasHardwareAcceleration}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Background="{DynamicResource SystemControlHighlightAltListLowBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="转码预设" Classes="header"/>
+                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0">
+                            <ComboBox ItemsSource="{Binding Settings.Presets}"
+                                      SelectedItem="{Binding SelectedPreset}"
+                                      DisplayMemberBinding="{Binding Name}"
+                                      Grid.Column="0" Margin="0,0,8,0"/>
+                            <Button Content="添加" Command="{Binding AddPresetCommand}" Grid.Column="1" Margin="0,0,4,0"/>
+                            <Button Content="删除" Command="{Binding RemovePresetCommand}" Grid.Column="2"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" Margin="0,12,0,0">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="预设名称" Classes="subheader"/>
+                                <TextBox Text="{Binding SelectedPreset.Name}"/>
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="视频编码器" Classes="subheader"/>
+                                <ComboBox ItemsSource="{Binding AvailableCodecs}" SelectedItem="{Binding SelectedPreset.Codec}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <CheckBox Content="使用硬件加速" IsChecked="{Binding SelectedPreset.UseHardwareAcceleration}" Margin="0,8,0,0"/>
+
+                        <Grid ColumnDefinitions="*,*" Margin="0,4,0,0" IsVisible="{Binding SelectedPreset.UseHardwareAcceleration}">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="硬件编码器" Classes="subheader"/>
+                                <ComboBox ItemsSource="{Binding AvailableHardwareEncoders}" SelectedItem="{Binding SelectedPreset.HardwareEncoder}"/>
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="编码预设" Classes="subheader"/>
+                                <TextBox Text="{Binding SelectedPreset.EncoderPreset}" Watermark="medium, p5, balanced..."/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="分辨率" Classes="subheader"/>
+                                <ComboBox ItemsSource="{Binding ResolutionPresets}" SelectedItem="{Binding SelectedPreset.Resolution}"/>
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="比特率 (kbps)" Classes="subheader"/>
+                                <NumericUpDown Value="{Binding SelectedPreset.Bitrate}" Minimum="500" Maximum="100000" Increment="500"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="质量 (CRF/CQ)" Classes="subheader"/>
+                                <NumericUpDown Value="{Binding SelectedPreset.Quality}" Minimum="0" Maximum="51" Increment="1"/>
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="帧率 (fps)" Classes="subheader"/>
+                                <NumericUpDown Value="{Binding SelectedPreset.FrameRate}" Minimum="1" Maximum="120" IsNullable="True"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="输出格式" Classes="subheader"/>
+                                <TextBox Text="{Binding SelectedPreset.OutputFormat}" Watermark="mp4, mkv, etc."/>
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="尺寸" Classes="subheader"/>
+                                <Grid ColumnDefinitions="*,Auto,*">
+                                    <NumericUpDown Value="{Binding SelectedPreset.Width}" Minimum="16" Maximum="7680" IsNullable="True"/>
+                                    <TextBlock Text="x" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="4,0"/>
+                                    <NumericUpDown Value="{Binding SelectedPreset.Height}" Minimum="16" Maximum="4320" IsNullable="True" Grid.Column="2"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{DynamicResource SystemControlHighlightAltListLowBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="完成后操作" Classes="header"/>
+                        <CheckBox Content="转码完成后执行命令" IsChecked="{Binding Settings.ExecuteCommandOnComplete}" Margin="0,8,0,0"/>
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Settings.ExecuteCommandOnComplete}" Margin="0,8,0,0">
+                            <TextBox Text="{Binding Settings.CompletionCommand}" Watermark="命令路径或可执行文件" Grid.Column="0" Margin="0,0,8,0"/>
+                            <Button Content="浏览..." Command="{Binding BrowseCommandCommand}" Grid.Column="1" MinWidth="80"/>
+                        </Grid>
+                        <TextBox Text="{Binding Settings.CompletionCommandArguments}"
+                                 Watermark="命令参数 (可用变量: {input}, {output}, {filename})"
+                                 IsVisible="{Binding Settings.ExecuteCommandOnComplete}"
+                                 Margin="0,8,0,0"/>
+                        <CheckBox Content="每个文件完成后执行" IsChecked="{Binding Settings.RunCompletionCommandForEachFile}"
+                                  IsVisible="{Binding Settings.ExecuteCommandOnComplete}" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" RowDefinitions="Auto,Auto,Auto" Margin="0,12,0,0">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,8">
+                <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.8"/>
+                <Button Content="扫描视频" Command="{Binding ScanVideosCommand}" Grid.Column="1" Margin="0,0,8,0"
+                        IsEnabled="{Binding IsScanning, Converter={x:Static converters:InverseBoolConverter.Instance}}"/>
+                <Button Content="开始转码" Command="{Binding StartTranscodeCommand}" Grid.Column="2" Margin="0,0,8,0"
+                        IsEnabled="{Binding TaskManager.IsProcessing, Converter={x:Static converters:InverseBoolConverter.Instance}}"/>
+                <Button Content="暂停" Command="{Binding PauseTranscodeCommand}" Grid.Column="3" Margin="0,0,8,0"
+                        IsEnabled="{Binding TaskManager.IsProcessing, Converter={x:Static converters:BoolToNotPausedConverter.Instance}}"/>
+                <Button Content="恢复" Command="{Binding ResumeTranscodeCommand}" Grid.Column="4" Margin="0,0,8,0"
+                        IsEnabled="{Binding TaskManager.IsPaused}"/>
+                <Button Content="取消" Command="{Binding CancelTranscodeCommand}" Grid.Column="5"
+                        IsEnabled="{Binding TaskManager.IsProcessing}"/>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+                <TextBlock Text="{Binding TaskManager.OverallProgress, StringFormat='{}{0:F1}%'}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TaskManager.Tasks.Count, StringFormat='总共: {0} 个文件'}" Grid.Column="1" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding TaskManager.CompletedCount, StringFormat='完成: {0}'}" Grid.Column="2" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding TaskManager.FailedCount, StringFormat='失败: {0}'}" Grid.Column="3"/>
+            </Grid>
+
+            <Border Background="{DynamicResource SystemControlHighlightAltListLowBrush}" CornerRadius="8" Height="200">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="2*,2*,*,*,2*" Background="{DynamicResource SystemControlHighlightAltListHighBrush}" Padding="8">
+                        <TextBlock Text="文件名" FontWeight="SemiBold"/>
+                        <TextBlock Text="输出路径" Grid.Column="1" FontWeight="SemiBold"/>
+                        <TextBlock Text="状态" Grid.Column="2" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="进度" Grid.Column="3" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="耗时" Grid.Column="4" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding TaskManager.Tasks}" Grid.Row="1">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="2*,2*,*,*,2*" Padding="8">
+                                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding OutputFilePath}" Grid.Column="1" TextTrimming="CharacterEllipsis" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding Status}" Grid.Column="2" HorizontalAlignment="Center"
+                                               Foreground="{Binding Status, Converter={x:Static converters:StatusToColorConverter.Instance}}"/>
+                                    <ProgressBar Value="{Binding Progress}" Grid.Column="3" Width="120" Height="16" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ElapsedTime, StringFormat='{}{0:hh\\:mm\\:ss}'}" Grid.Column="4" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
