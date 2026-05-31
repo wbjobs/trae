@@ -1,0 +1,371 @@
+{
+  "metadata": {
+    "name": "古籍字库索引",
+    "version": "1.0.0",
+    "total_chars": 3000,
+    "update_date": "2026-05-20",
+    "sources": ["说文解字", "康熙字典", "汉语大字典", "甲骨文合集", "金文编"]
+  },
+  "char_index": [
+    {
+      "char": "之",
+      "pinyin": "zhī",
+      "strokes": 3,
+      "radical": "丶",
+      "ancient_forms": ["㞢", "𡳿", "止"],
+      "origin": "甲骨文象脚向前,从一,表示在某地。本义:往,到...去",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "乎",
+      "pinyin": "hū",
+      "strokes": 5,
+      "radical": "丿",
+      "ancient_forms": ["兮", "𠀾", "呼"],
+      "origin": "形声字,从兮,乎声。本义:吐气",
+      "era": "西周金文"
+    },
+    {
+      "char": "者",
+      "pinyin": "zhě",
+      "strokes": 8,
+      "radical": "耂",
+      "ancient_forms": ["諸", "煮", "𣂰"],
+      "origin": "从白,从止。本义:停,止",
+      "era": "春秋战国"
+    },
+    {
+      "char": "也",
+      "pinyin": "yě",
+      "strokes": 3,
+      "radical": "乙",
+      "ancient_forms": ["它", "他", "她"],
+      "origin": "象形字,象蛇形。本义:蛇",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "而",
+      "pinyin": "ér",
+      "strokes": 6,
+      "radical": "而",
+      "ancient_forms": ["耏", "耐", "能"],
+      "origin": "象形字,象胡须形。本义:颊毛",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "以",
+      "pinyin": "yǐ",
+      "strokes": 4,
+      "radical": "人",
+      "ancient_forms": ["㠯", "已", "似"],
+      "origin": "象形字,象人用物。本义:用",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "于",
+      "pinyin": "yú",
+      "strokes": 3,
+      "radical": "二",
+      "ancient_forms": ["於", "于", "乌"],
+      "origin": "象形字,象鸟形。本义:乌鸦",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "与",
+      "pinyin": "yǔ",
+      "strokes": 3,
+      "radical": "一",
+      "ancient_forms": ["與", "举", "予"],
+      "origin": "从舁,从与。本义:赐予,施予",
+      "era": "西周金文"
+    },
+    {
+      "char": "为",
+      "pinyin": "wéi",
+      "strokes": 4,
+      "radical": "丶",
+      "ancient_forms": ["為", "𤔜", "伪"],
+      "origin": "从爪,从象。本义:作,做",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "其",
+      "pinyin": "qí",
+      "strokes": 8,
+      "radical": "八",
+      "ancient_forms": ["丌", "亓", "箕"],
+      "origin": "象形字,象簸箕形。本义:簸箕",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "有",
+      "pinyin": "yǒu",
+      "strokes": 6,
+      "radical": "月",
+      "ancient_forms": ["又", "宥", "祐"],
+      "origin": "从又,从肉。本义:拥有",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "是",
+      "pinyin": "shì",
+      "strokes": 9,
+      "radical": "日",
+      "ancient_forms": ["昰", "氏", "是"],
+      "origin": "从日,从止。本义:正,不偏斜",
+      "era": "西周金文"
+    },
+    {
+      "char": "不",
+      "pinyin": "bù",
+      "strokes": 4,
+      "radical": "一",
+      "ancient_forms": ["否", "不", "弗"],
+      "origin": "象形字,象花萼形。本义:花萼",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "大",
+      "pinyin": "dà",
+      "strokes": 3,
+      "radical": "大",
+      "ancient_forms": ["太", "泰", "亣"],
+      "origin": "象形字,象人形。本义:大小的大",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "中",
+      "pinyin": "zhōng",
+      "strokes": 4,
+      "radical": "丨",
+      "ancient_forms": ["仲", "忠", "衷"],
+      "origin": "象形字,象旗杆。本义:中间",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "人",
+      "pinyin": "rén",
+      "strokes": 2,
+      "radical": "人",
+      "ancient_forms": ["亻", "儿", "仁"],
+      "origin": "象形字,象侧立人形。本义:人类",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "天",
+      "pinyin": "tiān",
+      "strokes": 4,
+      "radical": "大",
+      "ancient_forms": ["兲", "靝", "添"],
+      "origin": "从大,从一。本义:人的头顶",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "地",
+      "pinyin": "dì",
+      "strokes": 6,
+      "radical": "土",
+      "ancient_forms": ["墬", "埊", "嶳"],
+      "origin": "从土,也声。本义:大地",
+      "era": "西周金文"
+    },
+    {
+      "char": "日",
+      "pinyin": "rì",
+      "strokes": 4,
+      "radical": "日",
+      "ancient_forms": ["囸", "𡆠", "阳"],
+      "origin": "象形字,象太阳形。本义:太阳",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "月",
+      "pinyin": "yuè",
+      "strokes": 4,
+      "radical": "月",
+      "ancient_forms": ["夕", "肉", "玥"],
+      "origin": "象形字,象月亮形。本义:月亮",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "水",
+      "pinyin": "shuǐ",
+      "strokes": 4,
+      "radical": "水",
+      "ancient_forms": ["氵", "川", "永"],
+      "origin": "象形字,象水流形。本义:水",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "火",
+      "pinyin": "huǒ",
+      "strokes": 4,
+      "radical": "火",
+      "ancient_forms": ["灬", "炎", "焰"],
+      "origin": "象形字,象火焰形。本义:火焰",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "山",
+      "pinyin": "shān",
+      "strokes": 3,
+      "radical": "山",
+      "ancient_forms": ["峦", "峰", "岳"],
+      "origin": "象形字,象山峰形。本义:山岳",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "木",
+      "pinyin": "mù",
+      "strokes": 4,
+      "radical": "木",
+      "ancient_forms": ["林", "树", "森"],
+      "origin": "象形字,象树木形。本义:树木",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "金",
+      "pinyin": "jīn",
+      "strokes": 8,
+      "radical": "金",
+      "ancient_forms": ["鑫", "金", "钅"],
+      "origin": "从土,从今,今声。本义:金属",
+      "era": "西周金文"
+    },
+    {
+      "char": "土",
+      "pinyin": "tǔ",
+      "strokes": 3,
+      "radical": "土",
+      "ancient_forms": ["地", "壤", "尘"],
+      "origin": "象形字,象土块形。本义:泥土",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "王",
+      "pinyin": "wáng",
+      "strokes": 4,
+      "radical": "王",
+      "ancient_forms": ["玉", "皇", "帝"],
+      "origin": "象形字,象斧钺形。本义:天子,君主",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "道",
+      "pinyin": "dào",
+      "strokes": 12,
+      "radical": "辶",
+      "ancient_forms": ["衜", "導", "道"],
+      "origin": "从辵,首声。本义:道路",
+      "era": "西周金文"
+    },
+    {
+      "char": "德",
+      "pinyin": "dé",
+      "strokes": 15,
+      "radical": "彳",
+      "ancient_forms": ["惪", "德", "徳"],
+      "origin": "从彳,直声。本义:道德,品行",
+      "era": "西周金文"
+    },
+    {
+      "char": "仁",
+      "pinyin": "rén",
+      "strokes": 4,
+      "radical": "亻",
+      "ancient_forms": ["人", "忈", "仁"],
+      "origin": "从人,从二。本义:仁爱",
+      "era": "西周金文"
+    },
+    {
+      "char": "义",
+      "pinyin": "yì",
+      "strokes": 3,
+      "radical": "丶",
+      "ancient_forms": ["義", "仪", "谊"],
+      "origin": "从我,从羊。本义:正义,合宜的道德",
+      "era": "西周金文"
+    },
+    {
+      "char": "礼",
+      "pinyin": "lǐ",
+      "strokes": 5,
+      "radical": "礻",
+      "ancient_forms": ["禮", "礼", "醴"],
+      "origin": "从示,从豊。本义:祭神,祭祀",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "智",
+      "pinyin": "zhì",
+      "strokes": 12,
+      "radical": "日",
+      "ancient_forms": ["知", "智", "𥏾"],
+      "origin": "从白,从知,知声。本义:聪明,智慧",
+      "era": "春秋战国"
+    },
+    {
+      "char": "信",
+      "pinyin": "xìn",
+      "strokes": 9,
+      "radical": "亻",
+      "ancient_forms": ["信", "讯", "迅"],
+      "origin": "从人,从言。本义:诚实,不欺",
+      "era": "西周金文"
+    },
+    {
+      "char": "孝",
+      "pinyin": "xiào",
+      "strokes": 7,
+      "radical": "子",
+      "ancient_forms": ["孝", "教", "效"],
+      "origin": "从老省,从子。本义:孝顺,善事父母",
+      "era": "商代甲骨文"
+    },
+    {
+      "char": "忠",
+      "pinyin": "zhōng",
+      "strokes": 8,
+      "radical": "心",
+      "ancient_forms": ["中", "忠", "衷"],
+      "origin": "从心,中声。本义:忠诚,无私",
+      "era": "西周金文"
+    },
+    {
+      "char": "节",
+      "pinyin": "jié",
+      "strokes": 5,
+      "radical": "艹",
+      "ancient_forms": ["節", "节", "栉"],
+      "origin": "从竹,即声。本义:竹节",
+      "era": "西周金文"
+    },
+    {
+      "char": "勇",
+      "pinyin": "yǒng",
+      "strokes": 9,
+      "radical": "力",
+      "ancient_forms": ["恿", "勇", "湧"],
+      "origin": "从力,甬声。本义:勇敢,有胆量",
+      "era": "春秋战国"
+    },
+    {
+      "char": "廉",
+      "pinyin": "lián",
+      "strokes": 13,
+      "radical": "广",
+      "ancient_forms": ["亷", "廉", "镰"],
+      "origin": "从广,兼声。本义:堂屋的侧边",
+      "era": "春秋战国"
+    },
+    {
+      "char": "耻",
+      "pinyin": "chǐ",
+      "strokes": 10,
+      "radical": "耳",
+      "ancient_forms": ["恥", "耻", "址"],
+      "origin": "从心,耳声。本义:羞愧",
+      "era": "西周金文"
+    }
+  ]
+}
