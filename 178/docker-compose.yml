@@ -1,0 +1,123 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: traffic-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - traffic-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: traffic-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - traffic-net
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: traffic-kafka-init
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic traffic.events --replication-factor 1 --partitions 8 --config retention.ms=86400000 &&
+       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic traffic.flows --replication-factor 1 --partitions 8 --config retention.ms=604800000"
+    networks:
+      - traffic-net
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: traffic-influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: traffic-admin-2024
+      DOCKER_INFLUXDB_INIT_ORG: traffic-org
+      DOCKER_INFLUXDB_INIT_BUCKET: traffic
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: traffic-token
+    networks:
+      - traffic-net
+
+  grafana:
+    image: grafana/grafana:10.3.0
+    container_name: traffic-grafana
+    depends_on:
+      - influxdb
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: traffic-admin-2024
+      GF_INSTALL_PLUGINS: grafana-influxdb-flightsql-datasource
+    networks:
+      - traffic-net
+
+  kafka-influx-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    container_name: traffic-kafka-influx-consumer
+    depends_on:
+      - kafka
+      - influxdb
+    volumes:
+      - ./configs:/app/configs
+    command: ["python", "-m", "src.kafka_influx_consumer", "-c", "configs/config.yml"]
+    networks:
+      - traffic-net
+    restart: unless-stopped
+
+  deepstream-pipeline:
+    image: nvcr.io/nvidia/deepstream:7.0-triton-multiarch
+    container_name: traffic-deepstream-pipeline
+    runtime: nvidia
+    depends_on:
+      - kafka
+    volumes:
+      - ./src:/opt/nvidia/deepstream/deepstream/sources/traffic-analytics/src
+      - ./configs:/opt/nvidia/deepstream/deepstream/sources/traffic-analytics/configs
+      - ./models:/opt/nvidia/deepstream/deepstream/sources/traffic-analytics/models
+    working_dir: /opt/nvidia/deepstream/deepstream/sources/traffic-analytics
+    command: ["python3", "-m", "src.pipeline", "-c", "configs/config.yml"]
+    networks:
+      - traffic-net
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  influxdb-data:
+  grafana-data:
+
+networks:
+  traffic-net:
+    driver: bridge

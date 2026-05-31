@@ -1,0 +1,186 @@
+streams:
+  - id: cam_001
+    name: east_gate_1
+    uri: rtsp://admin:pass@192.168.1.11:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_002
+    name: east_gate_2
+    uri: rtsp://admin:pass@192.168.1.12:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_003
+    name: west_gate_1
+    uri: rtsp://admin:pass@192.168.1.13:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_004
+    name: west_gate_2
+    uri: rtsp://admin:pass@192.168.1.14:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_005
+    name: north_road_1
+    uri: rtsp://admin:pass@192.168.1.15:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_006
+    name: north_road_2
+    uri: rtsp://admin:pass@192.168.1.16:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_007
+    name: south_road_1
+    uri: rtsp://admin:pass@192.168.1.17:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+  - id: cam_008
+    name: south_road_2
+    uri: rtsp://admin:pass@192.168.1.18:554/Streaming/Channels/101
+    roi: [0, 0, 1920, 1080]
+    speed_line:
+      p1: [400, 540]
+      p2: [1520, 540]
+      direction: vertical
+      pixel_to_meter: 0.08
+
+streammux:
+  width: 1920
+  height: 1080
+  batch_size: 8
+  buffer_pool_size: 10
+  enable_padding: 0
+  nvbuf_memory_type: 3
+
+pgie:
+  config_path: configs/pgie_vehicle.txt
+  interval: 0
+
+sgie_lp:
+  config_path: configs/sgie_lp.txt
+
+sgie_ocr:
+  config_path: configs/sgie_ocr.txt
+
+tracker:
+  config_path: configs/tracker_config.yml
+  ll_lib_file: /opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
+  ll_config_file: configs/tracker_config.yml
+
+osd:
+  process_mode: 1
+  display_text: 1
+  display_bbox: 1
+
+kafka:
+  bootstrap_servers: kafka:9092
+  topic_events: traffic.events
+  topic_flows: traffic.flows
+  flush_interval_ms: 100
+
+influxdb:
+  url: http://influxdb:8086
+  token: traffic-token
+  org: traffic-org
+  bucket: traffic
+
+lowlight:
+  enabled: true
+  brightness_threshold_low: 60.0
+  brightness_threshold_high: 180.0
+  target_luminance: 120.0
+  gamma_min: 0.6
+  gamma_max: 3.5
+  enable_clahe: true
+  clahe_clip_limit: 2.0
+  clahe_tile_grid_size: [8, 8]
+  enable_color_correction: true
+  color_saturation_gain: 1.3
+  color_temperature_compensation: 0.9
+  enable_denoise: true
+  denoise_strength: 5
+  enable_metrics: true
+  metrics_window: 300
+
+adaptive_detection:
+  enabled: true
+  class_confidence:
+    car:
+      min: 0.25
+      max: 0.50
+    truck:
+      min: 0.20
+      max: 0.45
+    bus:
+      min: 0.20
+      max: 0.45
+    motorcycle:
+      min: 0.22
+      max: 0.48
+  class_nms_iou:
+    car:
+      min: 0.55
+      max: 0.45
+    truck:
+      min: 0.60
+      max: 0.45
+    bus:
+      min: 0.60
+      max: 0.45
+    motorcycle:
+      min: 0.55
+      max: 0.45
+  brightness_day_threshold: 120.0
+  brightness_night_threshold: 60.0
+  temporal_smoothing_window: 10
+  min_bbox_size_ratio:
+    car: 0.01
+    truck: 0.015
+    bus: 0.015
+    motorcycle: 0.005
+  min_area_pixels: 200
+
+model:
+  vehicle:
+    engine_path: models/vehicle.engine
+    engine_path_night: models/vehicle_night.engine
+    label_map:
+      1: car
+      2: truck
+      3: bus
+      4: motorcycle
+    use_night_engine: true
+    night_engine_switch_threshold: 70.0
+  lp:
+    engine_path: models/lp.engine
+  ocr:
+    engine_path: models/ocr.engine
+    charset_path: models/charset_en.json

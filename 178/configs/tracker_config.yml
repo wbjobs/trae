@@ -1,0 +1,52 @@
+BaseConfig:
+  min_det_confidence: 0.25
+  min_tracklet_confidence: 0.3
+  track_matching_iou_threshold: 0.7
+
+NvDCF:
+  maxTargetsPerStream: 300
+  maxShadowTrackingAge: 30
+  probationAge: 3
+  earlyTerminationAge: 5
+  minTrackingConfidenceDuringInactive: 0.9
+  keepShadowTracks: true
+  useBufferedOutput: true
+
+  useTrackSmoothing: true
+  trackExponentialSmoothingType: 2
+  trackExpSmoothingWeight: 0.2
+
+  gaussianSigma: 0.75
+  maxDetectorResponse: 1024.0
+  minDetectorResponse: 0.0
+  nmsScoreThreshold: 0.3
+  nmsIouThreshold: 0.3
+  minConfidence: 0.1
+
+  featureType: 1
+  featureImgSizeLevel: 4
+  colorHistFuncType: 1
+  colorHistSimilarityFuncType: 1
+  featureFocusCenter: true
+  featureFocusTopK: 3
+
+  minTrackingConfidence: 0.35
+  maxTrackletMatchingScore: 0.3
+
+  maxTrackerAssociationMatchingScore: 0.5
+  maxTrackletMatchingIOU: 0.3
+  maxAssociationIOU: 0.6
+
+ReID:
+  reidType: 2
+  batchSize: 100
+  outputWorkspaceSize: 1000
+  inputOrder: 0
+  colorFormat: 0
+  maintainAspectRatio: 1
+  symmetricPadding: 1
+  networkScaleFactor: 1.0
+  offsets: 0.0;0.0;0.0
+  networkSize: 0;0
+  filterChannelLRN: 255;0.0;0.0
+  filterChannelLRN2: 255;0.0;0.0

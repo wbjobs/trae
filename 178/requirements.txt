@@ -1,0 +1,7 @@
+pyds>=1.1.10
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+confluent-kafka>=2.3.0
+influxdb-client>=1.39.0
+PyYAML>=6.0
+jsonschema>=4.19.0
