@@ -1,0 +1,150 @@
+{
+  "version": "1.0.0",
+  "description": "操作轨迹溯源规则库",
+  "operationTypes": {
+    "login": {
+      "name": "用户登录",
+      "traceLevel": "high",
+      "alertConditions": [
+        { "field": "consecutiveFailures", "operator": ">", "value": 5, "severity": "high" },
+        { "field": "unusualLocation", "operator": "==", "value": true, "severity": "medium" },
+        { "field": "unusualTime", "operator": "==", "value": true, "severity": "low" }
+      ]
+    },
+    "logout": {
+      "name": "用户登出",
+      "traceLevel": "low",
+      "alertConditions": []
+    },
+    "upload": {
+      "name": "文档上传",
+      "traceLevel": "medium",
+      "alertConditions": [
+        { "field": "fileSize", "operator": ">", "value": 104857600, "severity": "low" },
+        { "field": "secretLevel", "operator": "in", "value": ["top_secret", "secret"], "severity": "medium" }
+      ]
+    },
+    "download": {
+      "name": "文档下载",
+      "traceLevel": "high",
+      "alertConditions": [
+        { "field": "countInWindow", "operator": ">", "value": 10, "windowMinutes": 60, "severity": "medium" },
+        { "field": "secretLevel", "operator": "in", "value": ["top_secret", "secret"], "severity": "high" }
+      ]
+    },
+    "view": {
+      "name": "文档查看",
+      "traceLevel": "low",
+      "alertConditions": [
+        { "field": "countInWindow", "operator": ">", "value": 50, "windowMinutes": 60, "severity": "low" }
+      ]
+    },
+    "edit": {
+      "name": "文档编辑",
+      "traceLevel": "medium",
+      "alertConditions": [
+        { "field": "secretLevel", "operator": "in", "value": ["top_secret", "secret"], "severity": "high" }
+      ]
+    },
+    "delete": {
+      "name": "文档删除",
+      "traceLevel": "high",
+      "alertConditions": [
+        { "field": "batchCount", "operator": ">", "value": 5, "severity": "high" },
+        { "field": "secretLevel", "operator": "in", "value": ["top_secret", "secret"], "severity": "critical" }
+      ]
+    },
+    "share": {
+      "name": "文档分享",
+      "traceLevel": "high",
+      "alertConditions": [
+        { "field": "secretLevel", "operator": "in", "value": ["top_secret", "secret"], "severity": "high" },
+        { "field": "shareWithExternal", "operator": "==", "value": true, "severity": "critical" }
+      ]
+    },
+    "permission_change": {
+      "name": "权限变更",
+      "traceLevel": "high",
+      "alertConditions": [
+        { "field": "targetRole", "operator": "in", "value": ["admin"], "severity": "critical" },
+        { "field": "grantToExternal", "operator": "==", "value": true, "severity": "high" }
+      ]
+    },
+    "watermark_apply": {
+      "name": "水印应用",
+      "traceLevel": "low",
+      "alertConditions": []
+    },
+    "offline_access": {
+      "name": "离线访问",
+      "traceLevel": "medium",
+      "alertConditions": [
+        { "field": "expiredToken", "operator": "==", "value": true, "severity": "high" },
+        { "field": "unusualDevice", "operator": "==", "value": true, "severity": "medium" }
+      ]
+    },
+    "sync": {
+      "name": "数据同步",
+      "traceLevel": "medium",
+      "alertConditions": [
+        { "field": "syncFailed", "operator": ">", "value": 3, "severity": "medium" }
+      ]
+    },
+    "integrity_check": {
+      "name": "完整性校验",
+      "traceLevel": "medium",
+      "alertConditions": [
+        { "field": "tamperingDetected", "operator": "==", "value": true, "severity": "critical" }
+      ]
+    }
+  },
+  "retentionPolicy": {
+    "defaultRetentionDays": 365,
+    "highRiskRetentionDays": 1095,
+    "mediumRiskRetentionDays": 365,
+    "lowRiskRetentionDays": 180,
+    "archiveEnabled": true,
+    "archiveAfterDays": 90
+  },
+  "anomalyDetection": {
+    "enabled": true,
+    "timeWindowHours": 24,
+    "thresholds": {
+      "excessiveDownloads": 10,
+      "excessiveViews": 50,
+      "excessiveDeletes": 5,
+      "unusualLoginTime": { "start": 22, "end": 6 }
+    },
+    "alertNotification": {
+      "email": true,
+      "system": true,
+      "severityLevels": ["high", "critical"]
+    }
+  },
+  "reportTemplates": [
+    {
+      "id": "daily_summary",
+      "name": "每日摘要报告",
+      "includes": ["login_stats", "operation_summary", "anomalies"],
+      "schedule": "daily"
+    },
+    {
+      "id": "document_access",
+      "name": "文档访问报告",
+      "includes": ["document_access_history", "top_viewed", "top_downloaded"],
+      "schedule": "on_demand"
+    },
+    {
+      "id": "user_activity",
+      "name": "用户活动报告",
+      "includes": ["user_operations", "suspicious_activity"],
+      "schedule": "weekly"
+    },
+    {
+      "id": "compliance_audit",
+      "name": "合规审计报告",
+      "includes": ["all_operations", "permission_changes", "integrity_checks"],
+      "schedule": "monthly"
+    }
+  ]
+}

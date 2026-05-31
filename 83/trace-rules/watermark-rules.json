@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "description": "水印规则配置库",
+  "templates": [
+    {
+      "id": "template_001",
+      "name": "标准用户水印",
+      "type": "text",
+      "template": "${realName} - ${department} - ${date}",
+      "fontSize": 14,
+      "opacity": 0.3,
+      "angle": -30,
+      "color": "#ff0000",
+      "position": "full",
+      "applicableRoles": ["user", "auditor"],
+      "applicableLevels": ["internal", "secret"]
+    },
+    {
+      "id": "template_002",
+      "name": "管理员水印",
+      "type": "text",
+      "template": "【管理员】${realName} - ${dateTime}",
+      "fontSize": 16,
+      "opacity": 0.4,
+      "angle": -30,
+      "color": "#0000ff",
+      "position": "full",
+      "applicableRoles": ["admin"],
+      "applicableLevels": ["top_secret", "secret", "internal", "public"]
+    },
+    {
+      "id": "template_003",
+      "name": "绝密文档水印",
+      "type": "text",
+      "template": "绝密文档 - ${realName} - ${dateTime} - 严禁复制",
+      "fontSize": 18,
+      "opacity": 0.5,
+      "angle": -45,
+      "color": "#ff0000",
+      "position": "full",
+      "applicableRoles": ["admin", "auditor"],
+      "applicableLevels": ["top_secret"]
+    },
+    {
+      "id": "template_004",
+      "name": "只读水印",
+      "type": "text",
+      "template": "只读 - ${realName} - ${date}",
+      "fontSize": 12,
+      "opacity": 0.25,
+      "angle": -30,
+      "color": "#888888",
+      "position": "header_footer",
+      "applicableRoles": ["user", "auditor", "admin"],
+      "applicableLevels": ["internal", "public"]
+    }
+  ],
+  "invisibleWatermark": {
+    "enabled": true,
+    "algorithm": "base64_sha256",
+    "fields": ["documentId", "userId", "username", "timestamp", "configId"],
+    "hashSalt": "secure-doc-watermark-salt-2024"
+  },
+  "detectionRules": {
+    "screenshotDetection": true,
+    "cameraCaptureDetection": true,
+    "tamperingThreshold": 0.8,
+    "alertOnRemoval": true
+  },
+  "enforcement": {
+    "applyOnDownload": true,
+    "applyOnView": true,
+    "applyOnShare": true,
+    "allowUserOverride": false
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "version": "1.0.0",
+  "description": "权限管控规则库",
+  "roles": {
+    "admin": {
+      "name": "系统管理员",
+      "permissions": ["*"],
+      "description": "拥有系统所有权限",
+      "level": 100
+    },
+    "auditor": {
+      "name": "审计员",
+      "permissions": [
+        "document:view",
+        "document:download",
+        "document:verify",
+        "log:view",
+        "log:export",
+        "trace:view",
+        "trace:report"
+      ],
+      "description": "审计和查看操作日志",
+      "level": 80
+    },
+    "manager": {
+      "name": "部门经理",
+      "permissions": [
+        "document:upload",
+        "document:view",
+        "document:download",
+        "document:edit",
+        "document:delete",
+        "document:share",
+        "document:verify",
+        "permission:manage:department",
+        "log:view:department"
+      ],
+      "description": "管理部门文档和权限",
+      "level": 60
+    },
+    "user": {
+      "name": "普通用户",
+      "permissions": [
+        "document:upload",
+        "document:view:self",
+        "document:download:self",
+        "document:edit:self",
+        "document:delete:self",
+        "permission:view:self"
+      ],
+      "description": "普通文档操作权限",
+      "level": 10
+    },
+    "guest": {
+      "name": "访客",
+      "permissions": [
+        "document:view:shared"
+      ],
+      "description": "仅可查看被分享的文档",
+      "level": 1
+    }
+  },
+  "secretLevels": {
+    "top_secret": {
+      "name": "绝密",
+      "allowedRoles": ["admin"],
+      "requireApproval": true,
+      "watermarkRequired": true,
+      "downloadRestricted": true,
+      "level": 4
+    },
+    "secret": {
+      "name": "机密",
+      "allowedRoles": ["admin", "auditor", "manager"],
+      "requireApproval": true,
+      "watermarkRequired": true,
+      "downloadRestricted": false,
+      "level": 3
+    },
+    "internal": {
+      "name": "内部",
+      "allowedRoles": ["admin", "auditor", "manager", "user"],
+      "requireApproval": false,
+      "watermarkRequired": false,
+      "downloadRestricted": false,
+      "level": 2
+    },
+    "public": {
+      "name": "公开",
+      "allowedRoles": ["admin", "auditor", "manager", "user", "guest"],
+      "requireApproval": false,
+      "watermarkRequired": false,
+      "downloadRestricted": false,
+      "level": 1
+    }
+  },
+  "permissionTypes": {
+    "full": {
+      "name": "完全控制",
+      "includes": ["read", "write", "delete", "share", "manage"]
+    },
+    "read": {
+      "name": "读取",
+      "includes": ["view", "download"]
+    },
+    "write": {
+      "name": "编辑",
+      "includes": ["view", "edit"]
+    },
+    "download": {
+      "name": "下载",
+      "includes": ["view", "download"]
+    },
+    "share": {
+      "name": "分享",
+      "includes": ["view", "share"]
+    }
+  },
+  "offlineAccess": {
+    "enabled": true,
+    "maxExpireDays": 30,
+    "defaultExpireDays": 7,
+    "allowedRoles": ["admin", "manager", "user"],
+    "requireOnlineReAuth": true,
+    "maxDocumentsPerUser": 50
+  },
+  "approvalWorkflow": {
+    "enabled": true,
+    "requireForLevels": ["top_secret", "secret"],
+    "approverRoles": ["admin", "manager"],
+    "autoApproveForRoles": ["admin"],
+    "expireHours": 72
+  }
+}

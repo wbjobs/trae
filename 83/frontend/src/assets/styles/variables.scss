@@ -1,0 +1,23 @@
+$primary-color: #409eff;
+$success-color: #67c23a;
+$warning-color: #e6a23c;
+$danger-color: #f56c6c;
+$info-color: #909399;
+
+$secret-levels: (
+  top_secret: #ff0000,
+  secret: #ff6600,
+  internal: #0066ff,
+  public: #009933,
+);
+
+@function secret-level-color($level) {
+  @return map-get($secret-levels, $level);
+}
+
+$sidebar-width: 220px;
+$header-height: 60px;
+$transition-duration: 0.3s;
+
+$border-radius: 4px;
+$box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);

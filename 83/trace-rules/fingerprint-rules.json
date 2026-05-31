@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "description": "文件指纹生成规则库",
+  "algorithms": {
+    "primary": "sha256",
+    "secondary": ["sha512", "md5"],
+    "blockHash": "sha256"
+  },
+  "blockSettings": {
+    "defaultBlockSize": 1048576,
+    "minBlockSize": 65536,
+    "maxBlockSize": 4194304,
+    "adaptiveBlockSize": true,
+    "sizeThresholds": [
+      { "maxSize": 10485760, "blockSize": 262144 },
+      { "maxSize": 104857600, "blockSize": 1048576 },
+      { "maxSize": 1073741824, "blockSize": 4194304 }
+    ]
+  },
+  "fingerprintComposition": [
+    { "field": "contentHash", "weight": 0.5 },
+    { "field": "fileSize", "weight": 0.2 },
+    { "field": "blockCount", "weight": 0.15 },
+    { "field": "lastModified", "weight": 0.15 }
+  ],
+  "integrityCheck": {
+    "onUpload": true,
+    "onDownload": true,
+    "onView": false,
+    "periodicCheck": true,
+    "checkIntervalHours": 24,
+    "alertOnTampering": true
+  },
+  "storage": {
+    "includeBlockHashes": true,
+    "includeMetadata": true,
+    "historyRetentionDays": 365,
+    "maxVersions": 10
+  },
+  "tamperingDetection": {
+    "sensitivityLevel": "high",
+    "checkContentHash": true,
+    "checkBlockHashes": true,
+    "checkFileSize": true,
+    "checkMetadata": false,
+    "reportModifiedBlocks": true
+  }
+}

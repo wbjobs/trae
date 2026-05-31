@@ -1,0 +1,256 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  color: #303133;
+  background-color: #f5f7fa;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
+}
+
+.secret-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #fff;
+  font-weight: 500;
+
+  &.top_secret {
+    background-color: #ff0000;
+  }
+
+  &.secret {
+    background-color: #ff6600;
+  }
+
+  &.internal {
+    background-color: #0066ff;
+  }
+
+  &.public {
+    background-color: #009933;
+  }
+}
+
+.page-container {
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+  }
+}
+
+.card-container {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.operation-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+
+  &.success {
+    background: #f0f9eb;
+    color: #67c23a;
+  }
+
+  &.warning {
+    background: #fdf6ec;
+    color: #e6a23c;
+  }
+
+  &.danger {
+    background: #fef0f0;
+    color: #f56c6c;
+  }
+
+  &.info {
+    background: #ecf5ff;
+    color: #409eff;
+  }
+}
+
+.watermark-preview {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .watermark-text {
+    position: absolute;
+    white-space: nowrap;
+    pointer-events: none;
+    transform-origin: center;
+  }
+}
+
+.upload-area {
+  border: 2px dashed #dcdfe6;
+  border-radius: 6px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: #409eff;
+    background-color: #f5f7fa;
+  }
+
+  &.dragover {
+    border-color: #67c23a;
+    background-color: #f0f9eb;
+  }
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
+  .stat-label {
+    font-size: 14px;
+    color: #909399;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .stat-unit {
+    font-size: 14px;
+    color: #909399;
+    margin-left: 4px;
+  }
+
+  .stat-icon {
+    font-size: 32px;
+    color: #409eff;
+  }
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 24px;
+  padding-bottom: 20px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #409eff;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 20px;
+    width: 2px;
+    height: calc(100% - 14px);
+    background: #dcdfe6;
+  }
+
+  &:last-child::after {
+    display: none;
+  }
+}
+
+.permission-matrix {
+  .permission-header {
+    display: flex;
+    background: #f5f7fa;
+    padding: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid #dcdfe6;
+  }
+
+  .permission-row {
+    display: flex;
+    padding: 12px;
+    border-bottom: 1px solid #ebeef5;
+    align-items: center;
+
+    &:hover {
+      background: #f5f7fa;
+    }
+  }
+}
