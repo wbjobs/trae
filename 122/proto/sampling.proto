@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package otel.sampling;
+
+service SamplingService {
+    rpc ShouldSample(ShouldSampleRequest) returns (ShouldSampleResponse);
+    rpc BatchShouldSample(BatchShouldSampleRequest) returns (BatchShouldSampleResponse);
+}
+
+message ShouldSampleRequest {
+    string trace_id = 1;
+    string span_id = 2;
+    string parent_span_id = 3;
+    string service_name = 4;
+    string span_name = 5;
+    map<string, string> attributes = 6;
+    bool parent_sampled = 7;
+    string trace_state = 8;
+}
+
+message ShouldSampleResponse {
+    SampleDecision decision = 1;
+    double sample_rate = 2;
+    string strategy = 3;
+}
+
+enum SampleDecision {
+    SAMPLE_DECISION_UNSPECIFIED = 0;
+    SAMPLE_DECISION_DROP = 1;
+    SAMPLE_DECISION_RECORD_AND_SAMPLE = 2;
+    SAMPLE_DECISION_RECORD_ONLY = 3;
+}
+
+message BatchShouldSampleRequest {
+    repeated ShouldSampleRequest requests = 1;
+}
+
+message BatchShouldSampleResponse {
+    repeated ShouldSampleResponse responses = 1;
+}
