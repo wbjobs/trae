@@ -1,0 +1,162 @@
+{
+  "project_name": "FluidDynamicsSimulation",
+  "version": "1.0.0",
+  "description": "多文件流体力学离线仿真计算项目",
+
+  "mesh": {
+    "nx": 50,
+    "ny": 50,
+    "nz": 1,
+    "x_min": 0.0,
+    "x_max": 1.0,
+    "y_min": 0.0,
+    "y_max": 1.0,
+    "z_min": 0.0,
+    "z_max": 1.0,
+    "mesh_type": "structured",
+    "refinement_level": 1
+  },
+
+  "solver": {
+    "solver_type": "navier_stokes",
+    "time_integration": "implicit",
+    "relaxation_factor": 0.3,
+    "cfl_number": 0.5,
+    "viscosity": 0.001,
+    "density": 1.0,
+    "gravity": [0.0, -9.81, 0.0],
+    "boundary_conditions": {
+      "left": {
+        "type": "dirichlet",
+        "velocity": [1.0, 0.0],
+        "temperature": 300.0
+      },
+      "right": {
+        "type": "dirichlet",
+        "pressure": 0.0
+      },
+      "top": {
+        "type": "dirichlet",
+        "velocity": [0.0, 0.0]
+      },
+      "bottom": {
+        "type": "dirichlet",
+        "velocity": [0.0, 0.0]
+      }
+    }
+  },
+
+  "convergence": {
+    "absolute_tolerance": 1e-6,
+    "relative_tolerance": 1e-4,
+    "max_residual": 1e10,
+    "min_window_size": 5,
+    "oscillation_threshold": 0.1,
+    "required_consecutive": 3
+  },
+
+  "iteration": {
+    "max_iterations": 500,
+    "convergence_threshold": 1e-6,
+    "relaxation_factor": 0.3,
+    "adaptive_stepping": true,
+    "min_step_size": 1e-8,
+    "max_step_size": 1.0
+  },
+
+  "parameter_sweep": {
+    "enabled": false,
+    "sweep_mode": "cartesian",
+    "parameters": [
+      {
+        "name": "viscosity",
+        "min": 1e-4,
+        "max": 1e-2,
+        "num_samples": 5,
+        "distribution": "log"
+      },
+      {
+        "name": "relaxation_factor",
+        "min": 0.1,
+        "max": 0.5,
+        "num_samples": 3,
+        "distribution": "linear"
+      }
+    ]
+  },
+
+  "scheduler": {
+    "max_workers": 4,
+    "max_cpu_cores": 0,
+    "max_memory_gb": 0.0,
+    "cpu_threshold": 80.0,
+    "memory_threshold": 80.0,
+    "reserve_cores": 1,
+    "reserve_memory_gb": 1.0
+  },
+
+  "monitoring": {
+    "enabled": true,
+    "log_dir": "logs",
+    "log_file": "resource_monitor.log",
+    "polling_interval": 1.0,
+    "enable_csv_log": true,
+    "enable_console_log": true,
+    "alert_cpu_threshold": 90.0,
+    "alert_memory_threshold": 90.0,
+    "alert_disk_threshold": 90.0
+  },
+
+  "checkpointing": {
+    "enabled": true,
+    "checkpoint_dir": "checkpoints",
+    "interval": 50,
+    "auto_resume": true
+  },
+
+  "export": {
+    "enabled": true,
+    "export_dir": "exports",
+    "formats": ["csv", "json", "hdf5"],
+    "include_residuals": true,
+    "include_field_data": true,
+    "downsample_factor": 1,
+    "image_dpi": 150,
+    "image_format": "png",
+    "compression_level": 6,
+    "auto_export": true
+  },
+
+  "storage": {
+    "base_dir": "results",
+    "use_hdf5": true,
+    "compression": true,
+    "save_interval": 10,
+    "save_initial_state": true,
+    "save_final_state": true,
+    "save_residual_history": true,
+    "save_mesh_data": true
+  },
+
+  "tasks": [
+    {
+      "name": "lid_driven_cavity_base",
+      "description": "顶盖驱动方腔流基准测试",
+      "estimated_iterations": 200,
+      "priority": "NORMAL",
+      "parameters": {
+        "Reynolds_number": 1000
+      }
+    },
+    {
+      "name": "channel_flow_low_visc",
+      "description": "低粘度通道流仿真",
+      "estimated_iterations": 300,
+      "priority": "HIGH",
+      "parameters": {
+        "viscosity": 0.0005,
+        "Reynolds_number": 2000
+      }
+    }
+  ]
+}
