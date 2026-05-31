@@ -1,0 +1,23 @@
+{
+  "name": "poisson-solver-web",
+  "version": "1.0.0",
+  "description": "2D Poisson Equation Solver with arbitrary polygon support",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "cargo build --release",
+    "build-debug": "cargo build",
+    "dev": "npm run build && node server.js"
+  },
+  "keywords": [
+    "poisson",
+    "fem",
+    "delaunay",
+    "finite-element"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

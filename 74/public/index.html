@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Poisson Equation Solver</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>2D Poisson Equation Solver</h1>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="section">
+                    <h2>1. Input SVG Path</h2>
+                    <textarea id="svgInput" rows="4" placeholder="M 0 0 L 1 0 L 1 1 L 0 1 Z"></textarea>
+                    <div class="preset-buttons">
+                        <button onclick="setPreset('square')">Square</button>
+                        <button onclick="setPreset('circle')">Circle</button>
+                        <button onclick="setPreset('triangle')">Triangle</button>
+                        <button onclick="setPreset('pentagon')">Pentagon</button>
+                        <button onclick="setPreset('lshape')">L-Shape</button>
+                        <button onclick="setPreset('notch')">Notch</button>
+                    </div>
+                    <button onclick="parseSVG()">Parse SVG</button>
+                </div>
+
+                <div class="section">
+                    <h2>2. Mesh Generation</h2>
+                    <label>Point Density: <span id="densityValue">50</span></label>
+                    <input type="range" id="density" min="10" max="200" value="50" oninput="updateDensity()">
+                    <button onclick="generateMesh()">Generate Mesh</button>
+                    <div id="meshInfo" class="info"></div>
+                </div>
+
+                <div class="section">
+                    <h2>3. Boundary Conditions</h2>
+                    <label>Boundary Value (Dirichlet):</label>
+                    <input type="number" id="boundaryValue" value="0" step="0.1">
+                </div>
+
+                <div class="section">
+                    <h2>4. Solver Settings</h2>
+                    <label>Right-hand Side (f):</label>
+                    <input type="number" id="rhsValue" value="-1" step="0.1">
+                    <label>Max Iterations:</label>
+                    <input type="number" id="maxIter" value="1000" min="100">
+                    <label>Tolerance:</label>
+                    <input type="number" id="tolerance" value="1e-6" step="1e-7">
+                    <button onclick="solve()">Solve Poisson Equation</button>
+                </div>
+
+                <div class="section">
+                    <h2>4.5. Adaptive Refinement</h2>
+                    <label>Target Relative Error:</label>
+                    <input type="number" id="targetError" value="0.01" step="0.001">
+                    <label>Max Adaptive Steps:</label>
+                    <input type="number" id="maxAdaptiveSteps" value="5" min="1">
+                    <label>Refine Fraction:</label>
+                    <input type="number" id="refineFraction" value="0.3" step="0.1" min="0.1" max="1">
+                    <label>Animation Speed (ms):</label>
+                    <input type="number" id="animSpeed" value="1000" step="100">
+                    <button onclick="adaptiveSolve()">Run Adaptive Solve</button>
+                    <div id="adaptiveControls" style="display: none; margin-top: 10px;">
+                        <button onclick="playAnimation()">▶ Play</button>
+                        <button onclick="pauseAnimation()">⏸ Pause</button>
+                        <button onclick="resetAnimation()">⏮ Reset</button>
+                        <label style="margin-top: 10px;">Step: <span id="currentStep">0</span> / <span id="totalSteps">0</span></label>
+                        <input type="range" id="stepSlider" min="0" max="0" value="0" oninput="showStep(this.value)" style="margin-top: 5px;">
+                    </div>
+                    <div id="adaptiveInfo" class="info"></div>
+                </div>
+
+                <div class="section">
+                    <h2>5. Export</h2>
+                    <button onclick="downloadVTK()">Download VTK File</button>
+                    <button onclick="downloadCurrentStepVTK()" style="margin-top: 5px;">Download Current Step VTK</button>
+                </div>
+            </div>
+
+            <div class="visualization">
+                <div class="view-controls">
+                    <label>
+                        <input type="checkbox" id="showMesh" checked onchange="render()">
+                        Show Mesh
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showSolution" checked onchange="render()">
+                        Show Solution
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showErrors" onchange="render()">
+                        Show Errors
+                    </label>
+                    <label>
+                        <input type="checkbox" id="highlightBad" checked onchange="render()">
+                        Highlight Bad Elements
+                    </label>
+                    <label>
+                        <input type="checkbox" id="highlightRefine" checked onchange="render()">
+                        Highlight To Refine
+                    </label>
+                    <label>
+                        <input type="range" id="colorScale" min="0" max="1" step="0.01" value="1" onchange="render()">
+                        Color Scale
+                    </label>
+                </div>
+                <canvas id="canvas" width="600" height="600"></canvas>
+                <div id="status" class="status">Ready</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
