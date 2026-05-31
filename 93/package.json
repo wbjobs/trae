@@ -1,0 +1,19 @@
+{
+  "name": "webrtc-file-transfer",
+  "version": "1.0.0",
+  "description": "WebRTC 文件传输工具 - 支持大文件分片、SHA-256 校验、自动重传",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build:client": "cd client && npm run build"
+  },
+  "keywords": ["webrtc", "file-transfer", "react", "nodejs"],
+  "author": "",
+  "license": "MIT"
+}
