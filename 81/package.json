@@ -1,0 +1,32 @@
+{
+  "name": "heterogeneous-terminal-protocol-platform",
+  "version": "1.0.0",
+  "description": "多文件模块化异构终端协议中台",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && cd config-layer/frontend && npm install && cd ../backend && npm install",
+    "dev:backend": "cd config-layer/backend && npm run dev",
+    "dev:frontend": "cd config-layer/frontend && npm run dev",
+    "build:frontend": "cd config-layer/frontend && npm run build",
+    "start": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "keywords": [
+    "protocol",
+    "iot",
+    "mqtt",
+    "modbus",
+    "middleware"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.9.0",
+    "concurrently": "^8.2.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "axios": "^1.16.1"
+  }
+}
