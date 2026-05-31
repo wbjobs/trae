@@ -1,0 +1,68 @@
+[package]
+name = "nfc-access-desktop"
+version = "1.0.0"
+description = "NFC Access Control Desktop App"
+authors = ["NFC Access Team"]
+edition = "2021"
+rust-version = "1.70"
+
+[lib]
+name = "nfc_access_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+tonic-build = { version = "0.11", features = ["prost"] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["shell-open"] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-store = "2.0"
+tauri-plugin-os = "2.0"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+tokio = { version = "1.0", features = ["full"] }
+
+# PCSC for NFC reader communication
+pcsc = "2.8"
+
+# gRPC
+tonic = { version = "0.11", features = ["tls", "prost"] }
+prost = "0.12"
+prost-types = "0.12"
+
+# Async runtime
+tokio-stream = "0.1"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Thread-safe state
+parking_lot = "0.12"
+
+# Hex encoding
+hex = "0.4"
+
+# Random for ML
+rand = "0.8"
+
+# Chrono for timestamps
+chrono = "0.4"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
