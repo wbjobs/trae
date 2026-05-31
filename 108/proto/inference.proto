@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package inference;
+
+service InferenceService {
+    rpc Infer(InferenceRequest) returns (InferenceResponse);
+    rpc GetModelInfo(ModelInfoRequest) returns (ModelInfoResponse);
+    rpc Warmup(WarmupRequest) returns (WarmupResponse);
+}
+
+message InferenceRequest {
+    string model_name = 1;
+    int32 batch_size = 2;
+    int32 height = 3;
+    int32 width = 4;
+    bytes input_data = 5;
+    bool use_fp16 = 6;
+}
+
+message InferenceResponse {
+    string model_name = 1;
+    int32 batch_size = 2;
+    int32 output_size = 3;
+    bytes output_data = 4;
+    double inference_time_ms = 5;
+    bool cache_hit = 6;
+    bool shard_cache_hit = 7;
+    int32 shards_loaded = 8;
+}
+
+message ModelInfoRequest {
+    string model_name = 1;
+}
+
+message ModelInfoResponse {
+    string model_name = 1;
+    string input_name = 2;
+    repeated int32 input_shape = 3;
+    string output_name = 4;
+    repeated int32 output_shape = 5;
+    bool supports_fp16 = 6;
+    int32 min_batch = 7;
+    int32 max_batch = 8;
+    int32 min_resolution = 9;
+    int32 max_resolution = 10;
+    bool is_sharded = 11;
+    int32 num_shards = 12;
+}
+
+message WarmupRequest {
+    string model_name = 1;
+    int32 batch_size = 2;
+    int32 height = 3;
+    int32 width = 4;
+}
+
+message WarmupResponse {
+    bool success = 1;
+    double warmup_time_ms = 2;
+    string message = 3;
+}
