@@ -1,0 +1,55 @@
+model:
+  model_path: "models/esrgan.onnx"
+  device: "cuda"
+  input_width: 854
+  input_height: 480
+  output_width: 1920
+  output_height: 1080
+  scale_factor: 2
+  batch_size: 4
+  fp16: true
+
+rtmp:
+  input_url: "rtmp://localhost:1935/live/input"
+  output_url: "rtmp://localhost:1935/live/output"
+  input_probe_size: 32
+  input_analyze_duration: 100
+  output_bitrate: "8M"
+  output_preset: "veryfast"
+  output_gop: 60
+  output_fps: 60
+
+queue:
+  input_queue_size: 32
+  output_queue_size: 32
+  batch_queue_timeout: 0.05
+
+metrics:
+  enabled: true
+  host: "0.0.0.0"
+  port: 9090
+  psnr_window_size: 100
+
+stabilizer:
+  enabled: true
+  alpha: 0.92
+  strength: 0.85
+  chroma_alpha: 0.97
+  chroma_strength: 0.5
+  reference_history: 5
+
+dynamic_model:
+  enabled: true
+  default_level: "standard"
+  min_hold_frames: 12
+  complexity_mapping:
+    simple: "light"
+    standard: "standard"
+    complex: "heavy"
+  model_paths:
+    light: "models/esrgan_light.onnx"
+    standard: "models/esrgan.onnx"
+    heavy: "models/esrgan_heavy.onnx"
+
+log_level: "INFO"
+graceful_shutdown_timeout: 10
