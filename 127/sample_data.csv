@@ -1,0 +1,21 @@
+id,product_name,price,quantity,order_date,status,score,category
+1,MacBook Pro,1599.99,10,2024-01-15,shipped,4.5,electronics
+2,iPhone 15,899.00,25,01/16/2024,shipped,4.8,electronics
+3,Wireless Mouse,29.99,N/A,Jan 17 2024,pending,4.2,accessories
+4,USB-C Cable,15.50,100,2024/01/18,shipped,N/A,accessories
+5,Mechanical Keyboard,129.99,50,Jan 19, 2024,processing,4.6,accessories
+6,Monitor 27",349.00,15,20240120,shipped,4.3,electronics
+7,Desk Mat,25.00,75,2024年1月21日,shipped,4.1,accessories
+8,Webcam HD,79.99,30,01-22-2024,returned,3.9,electronics
+9,Laptop Stand,45.00,N/A,2024-01-23,shipped,4.4,accessories
+10,Noise Cancelling Headphones,299.99,20,January 24 2024,shipped,4.7,electronics
+11,Tablet Stand,35.00,45,2024-01-25,pending,4.0,accessories
+12,Power Bank 20000mAh,59.99,60,01/26/2024,shipped,4.3,electronics
+13,Bluetooth Speaker,89.99,35,Feb 1 2024,shipped,4.5,electronics
+14,Mouse Pad XL,19.99,80,2024-02-02,processing,4.2,accessories
+15,Smart Watch,199.00,28,02/03/2024,shipped,4.6,electronics
+N/A,USB Hub,24.99,55,2024年2月4日,shipped,4.1,accessories
+17,SD Card 128GB,18.99,120,2024-02-05,shipped,4.4,electronics
+18,HDMI Cable 4K,14.99,N/A,Feb 6 2024,shipped,4.3,accessories
+19,Webcam 4K,119.99,18,2024/02/07,pending,4.5,electronics
+20,Ergonomic Chair,499.00,12,2024-02-08,shipped,4.8,furniture
