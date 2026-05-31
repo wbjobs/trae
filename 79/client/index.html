@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三维地质体模型可视化 - 多钻孔对比分析</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+        
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #canvas-container canvas {
+            display: block;
+        }
+        
+        .control-panel {
+            width: 350px;
+            background: #16213e;
+            color: #fff;
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 1px solid #0f3460;
+            max-height: 100vh;
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #e94560;
+            border-bottom: 2px solid #e94560;
+            padding-bottom: 8px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #a0a0a0;
+        }
+        
+        .control-group button {
+            width: 100%;
+            padding: 8px;
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.3s;
+            margin-bottom: 5px;
+        }
+        
+        .control-group button:hover {
+            background: #e94560;
+        }
+        
+        .control-group button.active {
+            background: #e94560;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .button-row button {
+            flex: 1;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .value-display {
+            font-size: 11px;
+            color: #a0a0a0;
+            text-align: right;
+        }
+        
+        .info-box {
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        
+        .drill-list {
+            background: #0f3460;
+            border-radius: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+        
+        .drill-list-item {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1a1a2e;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        
+        .drill-list-item:hover {
+            background: #1a1a2e;
+        }
+        
+        .drill-list-item.selected {
+            background: #e94560;
+        }
+        
+        .drill-id {
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        
+        .drill-pos {
+            color: #a0a0a0;
+            font-size: 11px;
+        }
+        
+        .drill-depth {
+            color: #ffe66d;
+            font-size: 11px;
+        }
+        
+        .cluster-badge {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .cluster-legend {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .cluster-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            background: #0f3460;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .cluster-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .core-log {
+            margin-top: 15px;
+            background: #0f3460;
+            padding: 12px;
+            border-radius: 4px;
+        }
+        
+        .core-log-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #e94560;
+        }
+        
+        .core-column {
+            display: flex;
+            align-items: stretch;
+            height: 200px;
+            border: 1px solid #333;
+            background: #fff;
+            position: relative;
+        }
+        
+        .core-layers {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .core-layer {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #000;
+            border-bottom: 1px solid #ccc;
+        }
+        
+        .core-depth {
+            width: 40px;
+            background: #f0f0f0;
+            border-right: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3px;
+            font-size: 9px;
+            color: #333;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 18px;
+            background: rgba(0,0,0,0.7);
+            padding: 20px 40px;
+            border-radius: 8px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .axis-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 52, 96, 0.9);
+            padding: 10px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+        }
+        
+        .tool-hint {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(233, 69, 96, 0.9);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .tool-hint.show {
+            opacity: 1;
+        }
+        
+        .comparison-chart {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #16213e;
+            border: 2px solid #e94560;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 2000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .chart-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        .chart-title span {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e94560;
+        }
+        
+        .close-btn {
+            background: #e94560;
+            color: #fff;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+        
+        .close-btn:hover {
+            background: #ff6b6b;
+        }
+        
+        .chart-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .chart-section {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .chart-section h4 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .lithology-chart {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #333;
+            background: #1a1a2e;
+        }
+        
+        .chart-headers {
+            display: flex;
+            background: #0f3460;
+            border-bottom: 1px solid #333;
+        }
+        
+        .chart-headers > div {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #fff;
+            border-right: 1px solid #333;
+        }
+        
+        .chart-headers > div:last-child {
+            border-right: none;
+        }
+        
+        .chart-headers .depth-scale {
+            max-width: 60px;
+            color: #a0a0a0;
+        }
+        
+        .chart-rows {
+            display: flex;
+            height: 200px;
+            position: relative;
+        }
+        
+        .chart-rows .depth-scale {
+            max-width: 60px;
+            width: 60px;
+            background: #1a1a2e;
+            border-right: 1px solid #333;
+            position: relative;
+        }
+        
+        .depth-mark {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            font-size: 10px;
+            color: #a0a0a0;
+            text-align: center;
+            transform: translateY(-50%);
+        }
+        
+        .drill-column {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid #333;
+        }
+        
+        .drill-column:last-child {
+            border-right: none;
+        }
+        
+        .chart-layer {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        
+        .chart-layer:hover {
+            opacity: 0.8;
+        }
+        
+        .resistivity-chart {
+            width: 100%;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+        
+        .resistivity-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .similarity-matrix {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .matrix-row {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .matrix-cell {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 11px;
+            background: #1a1a2e;
+            border-radius: 2px;
+        }
+        
+        .matrix-header .matrix-cell {
+            background: #0f3460;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        
+        .matrix-label {
+            background: #0f3460 !important;
+            font-weight: bold;
+            color: #4ecdc4;
+            min-width: 60px;
+            flex: 0 0 60px;
+        }
+        
+        .section-divider {
+            height: 1px;
+            background: #0f3460;
+            margin: 15px 0;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 5px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        .stats-row:last-child {
+            border-bottom: none;
+        }
+        
+        .stats-label {
+            color: #a0a0a0;
+        }
+        
+        .stats-value {
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="canvas-container">
+            <div id="loading" class="loading">正在加载地质数据...</div>
+            <div id="tool-hint" class="tool-hint"></div>
+            <div class="axis-legend">
+                <div>X: 红色</div>
+                <div>Y: 绿色</div>
+                <div>Z: 蓝色 (深度)</div>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="panel-title">地质体可视化控制台</div>
+            
+            <div class="control-group">
+                <label>显示模式</label>
+                <div class="button-row">
+                    <button id="btn-volume" class="active">体素</button>
+                    <button id="btn-surface">表面</button>
+                    <button id="btn-wireframe">线框</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>切片工具</label>
+                <div class="button-row">
+                    <button id="btn-slice-x">X轴</button>
+                    <button id="btn-slice-y">Y轴</button>
+                    <button id="btn-slice-z">Z轴</button>
+                </div>
+                <div class="button-row">
+                    <button id="btn-slice-reset" style="flex: 2;">重置切片</button>
+                </div>
+            </div>
+            
+            <div class="control-group" id="slice-control-group" style="display: none;">
+                <label>切片位置</label>
+                <input type="range" id="slice-slider" min="0" max="100" value="50">
+                <div class="value-display"><span id="slice-value">50</span>%</div>
+            </div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="control-group">
+                <label>钻井工具</label>
+                <div class="button-row">
+                    <button id="btn-drill">启用钻井</button>
+                    <button id="btn-toggle-labels">标签</button>
+                </div>
+                <div class="button-row">
+                    <button id="btn-compare">对比分析</button>
+                    <button id="btn-cluster">聚类分析</button>
+                </div>
+                <div class="button-row">
+                    <button id="btn-export-log">导出当前</button>
+                    <button id="btn-export-all">导出全部</button>
+                    <button id="btn-clear-drills">清除</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>钻孔列表 (<span id="drill-count">0</span>)</label>
+                <div id="drill-list" class="drill-list">
+                    <div style="padding: 15px; text-align: center; color: #666; font-size: 12px;">
+                        暂无钻孔数据
+                    </div>
+                </div>
+                <div id="cluster-legend" class="cluster-legend"></div>
+            </div>
+            
+            <div id="core-log-container" class="core-log hidden">
+                <div class="core-log-title">岩芯柱状图</div>
+                <div class="core-column">
+                    <div class="core-depth">
+                        <span>0m</span>
+                        <span id="max-depth">100m</span>
+                    </div>
+                    <div class="core-layers" id="core-layers"></div>
+                </div>
+                <div id="drill-info" style="margin-top: 10px; font-size: 11px;">
+                    <div class="stats-row">
+                        <span class="stats-label">钻孔编号:</span>
+                        <span class="stats-value" id="info-id">-</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">位置:</span>
+                        <span class="stats-value" id="info-pos">-</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">总深度:</span>
+                        <span class="stats-value" id="info-depth">-</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">层数:</span>
+                        <span class="stats-value" id="info-layers">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="info-box">
+                    <div><strong>操作说明：</strong></div>
+                    <div>• 左键拖动：旋转视角</div>
+                    <div>• 滚轮：缩放</div>
+                    <div>• 右键拖动：平移</div>
+                    <div>• 钻井模式下点击：创建钻孔</div>
+                    <div>• 点击列表项：选择钻孔</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="comparison-chart" class="comparison-chart hidden"></div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "geological-3d-viewer",
+  "version": "1.0.0",
+  "description": "3D地质体模型可视化应用，支持切片查看和钻井模拟",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "three": "^0.160.0",
+    "vtk.js": "^29.4.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "concurrently": "^8.2.2",
+    "@types/three": "^0.160.0"
+  }
+}
