@@ -1,0 +1,272 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #444;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #4ec9b0;
+}
+
+.header .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #666;
+}
+
+.status-dot.connected {
+  background-color: #4ec9b0;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.disconnected {
+  background-color: #f44747;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  background-color: #252526;
+  border-right: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-section {
+  padding: 16px;
+  border-bottom: 1px solid #444;
+}
+
+.sidebar-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #9cdcfe;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #888;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4ec9b0;
+}
+
+.btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #0e639c;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1177bb;
+}
+
+.btn-primary:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background-color: #7a1f1f;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #a1260d;
+}
+
+.btn-danger:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.stats-panel {
+  padding: 16px;
+}
+
+.stats-item {
+  margin-bottom: 16px;
+}
+
+.stats-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.stats-value {
+  color: #4ec9b0;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: #3c3c3c;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4ec9b0;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.warning {
+  background-color: #d7ba7d;
+}
+
+.progress-fill.danger {
+  background-color: #f44747;
+}
+
+.container-info {
+  font-size: 12px;
+  color: #888;
+}
+
+.container-info div {
+  margin-bottom: 4px;
+}
+
+.terminal-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.terminal-wrapper {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.xterm {
+  height: 100%;
+  padding: 12px;
+}
+
+.xterm-viewport {
+  overflow: hidden !important;
+}
+
+.error-message {
+  padding: 12px;
+  background-color: #7a1f1f;
+  color: white;
+  margin: 12px;
+  border-radius: 4px;
+}
+
+.welcome-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+}
+
+.welcome-screen h2 {
+  color: #4ec9b0;
+  margin-bottom: 16px;
+}
+
+.welcome-screen p {
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.quick-btn {
+  padding: 8px 16px;
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.quick-btn:hover {
+  background-color: #4a4a4a;
+  border-color: #4ec9b0;
+}
+
+.timeout-warning {
+  padding: 8px 12px;
+  background-color: #806000;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+}
