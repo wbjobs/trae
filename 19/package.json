@@ -1,0 +1,18 @@
+{
+  "name": "point-cloud-3d-app",
+  "version": "1.0.0",
+  "description": "Web 3D Point Cloud Application with GPU Clustering",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start-backend": "cd backend && python app.py"
+  },
+  "dependencies": {
+    "three": "^0.160.0",
+    "potree-core": "^1.8.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
