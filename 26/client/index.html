@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SFU 屏幕共享客户端</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .status-bar {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 10px;
+      padding: 15px;
+      color: white;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #e74c3c;
+    }
+
+    .status-dot.connected {
+      background: #27ae60;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .panel h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .video-container {
+      background: #1a1a2e;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+
+    .video-label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .source-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .source-item {
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s;
+    }
+
+    .source-item:hover {
+      background: #f0f0ff;
+    }
+
+    .source-item.selected {
+      background: #667eea;
+      color: white;
+    }
+
+    .source-item img {
+      width: 80px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .source-info {
+      flex: 1;
+    }
+
+    .source-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .source-type {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .participants-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .participant-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .participant-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .participant-info {
+      flex: 1;
+    }
+
+    .participant-name {
+      font-weight: 600;
+    }
+
+    .participant-role {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .recordings-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .recording-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .recording-info {
+      flex: 1;
+    }
+
+    .recording-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .recording-meta {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s;
+    }
+
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .notification.success {
+      border-left: 4px solid #27ae60;
+    }
+
+    .notification.error {
+      border-left: 4px solid #e74c3c;
+    }
+
+    .notification.info {
+      border-left: 4px solid #3498db;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎥 SFU 屏幕共享客户端</h1>
+      <p>基于 WebRTC 的实时屏幕共享与录制系统</p>
+    </header>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot" id="connectionStatus"></div>
+        <span id="connectionText">未连接</span>
+      </div>
+      <div class="status-item">
+        <span>房间: <strong id="currentRoom">-</strong></span>
+      </div>
+      <div class="status-item">
+        <span>角色: <strong id="currentRole">-</strong></span>
+      </div>
+      <div class="status-item">
+        <span>在线: <strong id="participantCount">0</strong> 人</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="panel">
+        <h2>⚙️ 连接设置</h2>
+        
+        <div class="form-group">
+          <label>服务器地址</label>
+          <input type="text" id="serverUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+        </div>
+        
+        <div class="form-group">
+          <label>房间号</label>
+          <input type="text" id="roomId" value="room1" placeholder="输入房间号">
+        </div>
+        
+        <div class="form-group">
+          <label>用户名称</label>
+          <input type="text" id="userName" placeholder="输入您的名称">
+        </div>
+        
+        <div class="form-group">
+          <label>角色</label>
+          <select id="roleSelect">
+            <option value="viewer">观众</option>
+            <option value="host">主播 (共享屏幕)</option>
+          </select>
+        </div>
+        
+        <div class="btn-group" style="margin-bottom: 20px;">
+          <button class="btn btn-primary" id="connectBtn">连接</button>
+          <button class="btn btn-danger" id="disconnectBtn" disabled>断开连接</button>
+        </div>
+
+        <div id="hostControls" style="display: none;">
+          <h2>📹 屏幕共享</h2>
+          
+          <div class="form-group">
+            <label>选择共享源</label>
+            <button class="btn btn-success" id="refreshSourcesBtn" style="width: 100%; margin-bottom: 10px;">刷新源列表</button>
+            <div class="source-list" id="sourceList"></div>
+          </div>
+          
+          <div class="btn-group" style="margin-bottom: 20px;">
+            <button class="btn btn-primary" id="startShareBtn" disabled>开始共享</button>
+            <button class="btn btn-danger" id="stopShareBtn" disabled>停止共享</button>
+          </div>
+
+          <div class="video-container" style="margin-bottom: 20px;">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="video-label">本地预览</div>
+          </div>
+
+          <h2>🎬 录制控制</h2>
+          <div class="form-group">
+            <label>画面布局</label>
+            <select id="layoutSelect">
+              <option value="1x1">单画面</option>
+              <option value="2x2" selected>2x2 网格</option>
+              <option value="3x3">3x3 网格</option>
+              <option value="1x2">1x2 横排</option>
+              <option value="2x1">2x1 竖排</option>
+            </select>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-success" id="startRecordingBtn">开始录制</button>
+            <button class="btn btn-danger" id="stopRecordingBtn" disabled>停止录制</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="tabs">
+          <div class="tab active" data-tab="remote">远程视频</div>
+          <div class="tab" data-tab="participants">参与者</div>
+          <div class="tab" data-tab="recordings">录制文件</div>
+        </div>
+
+        <div class="tab-content active" id="remoteTab">
+          <h2>📺 远程视频</h2>
+          <div id="remoteVideos" style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+            <div style="text-align: center; color: #999; padding: 40px;">
+              暂无远程视频流
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="participantsTab">
+          <h2>👥 参与者列表</h2>
+          <div class="participants-list" id="participantsList">
+            <div style="text-align: center; color: #999; padding: 40px;">
+              暂无参与者
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="recordingsTab">
+          <h2>📁 录制文件</h2>
+          <button class="btn btn-primary" id="refreshRecordingsBtn" style="margin-bottom: 15px;">刷新列表</button>
+          <div class="recordings-list" id="recordingsList">
+            <div style="text-align: center; color: #999; padding: 40px;">
+              暂无录制文件
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
