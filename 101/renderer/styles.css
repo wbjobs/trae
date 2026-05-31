@@ -1,0 +1,647 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  background: #0f1222;
+  color: #e6e8ff;
+  font-size: 14px;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: linear-gradient(90deg, #181a35 0%, #20234a 100%);
+  border-bottom: 1px solid #2a2e58;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand h1 {
+  font-size: 18px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.logo {
+  color: #7aa2ff;
+  font-size: 20px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #b9bde6;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.status-dot.online {
+  background: #3ddc97;
+  color: #3ddc97;
+}
+
+.status-dot.offline {
+  background: #ff6b6b;
+  color: #ff6b6b;
+}
+
+.sep {
+  opacity: 0.4;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "node config history"
+    "node log    history";
+  gap: 16px;
+  padding: 16px;
+  height: calc(100vh - 60px);
+}
+
+.panel {
+  background: #161934;
+  border: 1px solid #272b58;
+  border-radius: 10px;
+  padding: 16px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.node-panel {
+  grid-area: node;
+}
+
+.config-panel {
+  grid-area: config;
+}
+
+.history-panel {
+  grid-area: history;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-panel .panel-tabs {
+  flex-shrink: 0;
+}
+
+.log-panel {
+  grid-area: log;
+}
+
+.panel h2 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #9cb0ff;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #272b58;
+  padding-bottom: 8px;
+}
+
+.panel h3 {
+  margin: 16px 0 8px 0;
+  font-size: 13px;
+  color: #8d93c4;
+  font-weight: 500;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  font-size: 12px;
+  color: #8d93c4;
+}
+
+.form-row input,
+.form-row select {
+  padding: 8px 10px;
+  background: #0f1222;
+  color: #e6e8ff;
+  border: 1px solid #272b58;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: "Consolas", "Menlo", monospace;
+  outline: none;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  border-color: #5f7dff;
+  box-shadow: 0 0 0 2px rgba(95, 125, 255, 0.2);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 16px 0;
+}
+
+button {
+  padding: 8px 14px;
+  background: #2b2f66;
+  color: #e6e8ff;
+  border: 1px solid #3a3f82;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: #3a3f82;
+  border-color: #5f7dff;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: #5f7dff;
+  border-color: #5f7dff;
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #4a66e6;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dht-health {
+  background: #0f1222;
+  border: 1px solid #272b58;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.dht-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+  border-bottom: 1px solid #1e2148;
+}
+
+.dht-row:last-child {
+  border-bottom: none;
+}
+
+.dht-row span:first-child {
+  color: #8d93c4;
+}
+
+.dht-row span:last-child {
+  color: #7aa2ff;
+  font-family: "Consolas", monospace;
+  font-weight: 600;
+}
+
+.stat {
+  background: #0f1222;
+  border: 1px solid #272b58;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #8d93c4;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #7aa2ff;
+  font-family: "Consolas", monospace;
+}
+
+.address-list,
+.peer-list,
+.history-list,
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.address-list li,
+.peer-list li {
+  padding: 6px 8px;
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+  background: #0f1222;
+  border: 1px solid #272b58;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  color: #b9bde6;
+  word-break: break-all;
+}
+
+.muted {
+  color: #5a5f94 !important;
+  font-style: italic;
+  font-family: inherit !important;
+}
+
+.config-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.config-form input {
+  flex: 1;
+  padding: 8px 10px;
+  background: #0f1222;
+  color: #e6e8ff;
+  border: 1px solid #272b58;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: "Consolas", monospace;
+  outline: none;
+}
+
+.config-form input:focus {
+  border-color: #5f7dff;
+  box-shadow: 0 0 0 2px rgba(95, 125, 255, 0.2);
+}
+
+.config-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.config-table th,
+.config-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #272b58;
+}
+
+.config-table th {
+  color: #8d93c4;
+  font-weight: 500;
+  font-size: 12px;
+  background: #1a1d3c;
+  position: sticky;
+  top: 0;
+}
+
+.config-table tr.empty td {
+  text-align: center;
+  color: #5a5f94;
+  font-style: italic;
+  padding: 24px 0;
+}
+
+.config-table td:first-child,
+.config-table td:nth-child(3) {
+  font-family: "Consolas", monospace;
+}
+
+.config-table .del-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #4a2b3a;
+  border-color: #7a3a4a;
+}
+
+.config-table .del-btn:hover {
+  background: #6a3548;
+}
+
+.history-list li {
+  padding: 8px 10px;
+  border-left: 3px solid #5f7dff;
+  background: #0f1222;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.history-list li.delete {
+  border-left-color: #ff6b6b;
+}
+
+.history-list li.remote {
+  border-left-color: #3ddc97;
+}
+
+.history-list .hist-time {
+  color: #8d93c4;
+  font-size: 11px;
+  font-family: "Consolas", monospace;
+}
+
+.history-list .hist-key {
+  color: #7aa2ff;
+  font-weight: 600;
+  font-family: "Consolas", monospace;
+}
+
+.history-list .hist-author {
+  color: #3ddc97;
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+}
+
+.history-list .hist-action {
+  display: inline-block;
+  padding: 1px 6px;
+  background: #2b2f66;
+  border-radius: 3px;
+  font-size: 10px;
+  margin-right: 4px;
+  color: #b9bde6;
+}
+
+.log-list li {
+  padding: 6px 8px;
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+  background: #0f1222;
+  border-left: 3px solid #3a3f82;
+  border-radius: 3px;
+  margin-bottom: 4px;
+  color: #b9bde6;
+  word-break: break-all;
+}
+
+.log-list li.log-update {
+  border-left-color: #7aa2ff;
+}
+
+.log-list li.log-peer {
+  border-left-color: #3ddc97;
+}
+
+.log-list li.log-error {
+  border-left-color: #ff6b6b;
+}
+
+.log-list .log-time {
+  color: #5a5f94;
+  margin-right: 6px;
+}
+
+.log-list .log-event {
+  color: #9cb0ff;
+  margin-right: 6px;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #272b58;
+  padding-bottom: 8px;
+}
+
+.tab-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #272b58;
+  color: #8d93c4;
+  font-size: 12px;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  background: #1a1d3c;
+  color: #b9bde6;
+}
+
+.tab-btn.active {
+  background: #1a1d3c;
+  border-bottom-color: #1a1d3c;
+  color: #7aa2ff;
+  font-weight: 600;
+}
+
+.tab-content {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.tab-content.active {
+  display: flex;
+}
+
+.dag-header {
+  background: #0f1222;
+  border: 1px solid #272b58;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.dag-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.dag-stats > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.dag-label {
+  color: #8d93c4;
+}
+
+.dag-value {
+  color: #7aa2ff;
+  font-family: "Consolas", monospace;
+  font-weight: 600;
+}
+
+.dag-hash {
+  color: #7aa2ff;
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+}
+
+.dag-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.dag-actions select {
+  padding: 5px 8px;
+  background: #0f1222;
+  color: #e6e8ff;
+  border: 1px solid #272b58;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: "Consolas", monospace;
+  outline: none;
+}
+
+.dag-verify-result {
+  font-size: 12px;
+  padding: 6px 8px;
+  background: #0f1222;
+  border-radius: 4px;
+  min-height: 22px;
+}
+
+.dag-chain-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.dag-node {
+  background: #0f1222;
+  border: 1px solid #272b58;
+  border-left: 3px solid #7aa2ff;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.dag-node.delete {
+  border-left-color: #ff6b6b;
+}
+
+.dag-node-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.dag-idx {
+  color: #5a5f94;
+  font-family: "Consolas", monospace;
+  font-weight: 600;
+}
+
+.dag-action {
+  display: inline-block;
+  padding: 1px 6px;
+  background: #2b2f66;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #b9bde6;
+}
+
+.dag-action-delete {
+  background: #4a2b3a;
+  color: #ff9b9b;
+}
+
+.dag-key {
+  color: #7aa2ff;
+  font-weight: 600;
+  font-family: "Consolas", monospace;
+}
+
+.dag-time {
+  color: #8d93c4;
+  font-size: 11px;
+  font-family: "Consolas", monospace;
+  margin-left: auto;
+}
+
+.dag-author {
+  color: #3ddc97;
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+}
+
+.dag-value {
+  color: #b9bde6;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.dag-hashes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+  border-top: 1px solid #1e2148;
+}
+
+.dag-hash-row {
+  display: flex;
+  gap: 6px;
+  font-size: 10px;
+  font-family: "Consolas", monospace;
+}
+
+.dag-hash-label {
+  color: #5a5f94;
+  min-width: 36px;
+}
+
+.dag-hash-val {
+  color: #9cb0ff;
+  word-break: break-all;
+}

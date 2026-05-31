@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+    <title>dConfig Sync</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top-bar">
+      <div class="brand">
+        <span class="logo">◆</span>
+        <h1>dConfig Sync</h1>
+      </div>
+      <div class="status">
+        <span id="nodeStatus" class="status-dot offline"></span>
+        <span id="nodeStatusText">Offline</span>
+        <span class="sep">·</span>
+        <span id="peerIdShort">-</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel node-panel">
+        <h2>节点控制</h2>
+        <div class="form-row">
+          <label for="listenAddr">监听地址</label>
+          <input id="listenAddr" type="text" value="/ip4/0.0.0.0/tcp/0" />
+        </div>
+        <div class="form-row">
+          <label for="bootstrapAddr">Bootstrap (可选)</label>
+          <input id="bootstrapAddr" type="text" placeholder="/ip4/127.0.0.1/tcp/4002/p2p/xxx" />
+        </div>
+        <div class="form-row">
+          <label for="mergeStrategy">合并策略</label>
+          <select id="mergeStrategy">
+            <option value="LWW">Last-Write-Wins (LWW)</option>
+            <option value="CRDT">CRDT (LWW register)</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button id="startBtn" class="primary">启动节点</button>
+          <button id="stopBtn" disabled>停止节点</button>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">网络节点数</div>
+            <div class="stat-value"><span id="peerCount">0</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">配置键数</div>
+            <div class="stat-value"><span id="keyCount">0</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">历史记录</div>
+            <div class="stat-value"><span id="historyCount">0</span></div>
+          </div>
+        </div>
+        <h3>DHT 健康</h3>
+        <div class="dht-health">
+          <div class="dht-row"><span>路由表大小</span><span id="dhtRouting">0</span></div>
+          <div class="dht-row"><span>内容键数</span><span id="dhtContent">0</span></div>
+          <div class="dht-row"><span>PUT 成功/失败</span><span id="dhtPut">0 / 0</span></div>
+          <div class="dht-row"><span>GET 成功/失败</span><span id="dhtGet">0 / 0</span></div>
+          <div class="dht-row"><span>复制次数</span><span id="dhtReplication">0</span></div>
+          <div class="dht-row"><span>上次刷新</span><span id="dhtLastRefresh">-</span></div>
+          <div class="dht-row"><span>上次重发布</span><span id="dhtLastRepublish">-</span></div>
+        </div>
+        <h3>监听地址</h3>
+        <ul id="addressList" class="address-list">
+          <li class="muted">(无)</li>
+        </ul>
+        <h3>已连接节点</h3>
+        <ul id="peerList" class="peer-list">
+          <li class="muted">(无)</li>
+        </ul>
+      </section>
+
+      <section class="panel config-panel">
+        <h2>配置</h2>
+        <form id="configForm" class="config-form">
+          <input id="configKey" placeholder="键 (例如 app.theme)" required />
+          <input id="configValue" placeholder="值 (例如 dark)" required />
+          <button type="submit" class="primary">发布到 DHT</button>
+        </form>
+        <table id="configTable" class="config-table">
+          <thead>
+            <tr>
+              <th>键</th>
+              <th>值</th>
+              <th>作者</th>
+              <th>时间</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="empty">
+              <td colspan="5">暂无配置</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="panel-tabs">
+          <button class="tab-btn active" data-tab="history">版本历史</button>
+          <button class="tab-btn" data-tab="dag">Merkle DAG</button>
+        </div>
+        <div id="tab-history" class="tab-content active">
+          <ul id="historyList" class="history-list">
+            <li class="muted">(暂无)</li>
+          </ul>
+        </div>
+        <div id="tab-dag" class="tab-content">
+          <div class="dag-header">
+            <div class="dag-stats">
+              <div><span class="dag-label">链长度</span><span id="dagSize" class="dag-value">0</span></div>
+              <div><span class="dag-label">Head Hash</span><span id="dagHeadHash" class="dag-hash">-</span></div>
+              <div><span class="dag-label">Genesis Hash</span><span id="dagGenesisHash" class="dag-hash">-</span></div>
+            </div>
+            <div class="dag-actions">
+              <button id="verifyDAGBtn" class="primary">验证本地链</button>
+              <button id="verifyRemoteDAGBtn" disabled>验证远端</button>
+              <select id="remotePeerSelect"></select>
+            </div>
+            <div id="dagVerifyResult" class="dag-verify-result"></div>
+          </div>
+          <ul id="dagChainList" class="dag-chain-list">
+            <li class="muted">(暂无 DAG 节点)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel log-panel">
+        <h2>事件日志</h2>
+        <ul id="logList" class="log-list"></ul>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
